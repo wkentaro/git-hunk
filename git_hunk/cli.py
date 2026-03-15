@@ -13,6 +13,7 @@ from .ui import (
     HELP_LIST,
     HELP_SHOW,
     HELP_STAGE,
+    HELP_UNSTAGE,
     err,
     out,
     print_applied,
@@ -115,6 +116,31 @@ def cmd_stage(args: List[str]) -> None:
     print_applied(selected, verb="staged")
 
 
+def cmd_unstage(args: List[str]) -> None:
+    if "-h" in args or "--help" in args:
+        print_help(HELP_UNSTAGE)
+        return
+
+    ids = [a for a in args if not a.startswith("-")]
+    if not ids:
+        print_error("unstage requires at least one hunk id")
+        print_help(HELP_UNSTAGE)
+        sys.exit(1)
+
+    hunks = _get_hunks(staged=True)
+    selected = _find_hunks_by_ids(hunks, ids)
+    diff_output = get_diff(staged=True)
+    patch = build_patch(selected, diff_output)
+
+    try:
+        apply_patch(patch, cached=True, reverse=True)
+    except RuntimeError as exc:
+        print_error(str(exc))
+        sys.exit(1)
+
+    print_applied(selected, verb="unstaged")
+
+
 def cmd_discard(args: List[str]) -> None:
     if "-h" in args or "--help" in args:
         print_help(HELP_DISCARD)
@@ -148,6 +174,7 @@ COMMANDS = {
     "list": cmd_list,
     "show": cmd_show,
     "stage": cmd_stage,
+    "unstage": cmd_unstage,
     "discard": cmd_discard,
 }
 

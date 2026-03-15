@@ -134,6 +134,7 @@ Non-interactive git hunk tool for AI coding agents.
   [bold cyan]list[/bold cyan]     List hunks
   [bold cyan]show[/bold cyan]     Show a specific hunk's diff
   [bold cyan]stage[/bold cyan]    Stage specific hunks
+  [bold cyan]unstage[/bold cyan]  Unstage specific hunks
   [bold cyan]discard[/bold cyan]  Discard specific hunks (restore from HEAD)
 
 [bold]Options:[/bold]
@@ -172,6 +173,13 @@ HELP_DISCARD = """\
 [bold]Usage:[/bold] git-hunk discard <id> [<id>...]
 
 Discard unstaged changes for one or more specific hunks (restore from HEAD).
+IDs support prefix matching.
+"""
+
+HELP_UNSTAGE = """\
+[bold]Usage:[/bold] git-hunk unstage <id> [<id>...]
+
+Unstage one or more specific hunks (move from index back to working tree).
 IDs support prefix matching.
 """
 
