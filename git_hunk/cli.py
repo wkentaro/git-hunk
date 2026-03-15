@@ -7,6 +7,20 @@ from typing import List, Optional
 from .git import apply_patch, get_diff
 from .hunk import Hunk, parse_diff
 from .patch import build_patch
+from .ui import (
+    HELP,
+    HELP_DISCARD,
+    HELP_LIST,
+    HELP_SHOW,
+    HELP_STAGE,
+    err,
+    out,
+    print_applied,
+    print_error,
+    print_help,
+    print_hunk_diff,
+    print_hunk_list,
+)
 
 
 def _get_hunks(staged: bool, files: Optional[List[str]] = None) -> List[Hunk]:
@@ -15,66 +29,120 @@ def _get_hunks(staged: bool, files: Optional[List[str]] = None) -> List[Hunk]:
 
 
 def _find_hunks_by_ids(hunks: List[Hunk], ids: List[str]) -> List[Hunk]:
-    hunk_map = {h.id: h for h in hunks}
+    """Resolve hunk IDs (with prefix matching) or exit with an error."""
     found = []
     for hunk_id in ids:
-        # Support prefix matching
-        matches = [h for id_, h in hunk_map.items() if id_.startswith(hunk_id)]
+        matches = [h for h in hunks if h.id.startswith(hunk_id)]
         if len(matches) == 0:
-            print(f"error: hunk '{hunk_id}' not found", file=sys.stderr)
+            print_error(f"hunk '{hunk_id}' not found")
             sys.exit(1)
         if len(matches) > 1:
-            print(f"error: ambiguous hunk id '{hunk_id}'", file=sys.stderr)
+            print_error(f"ambiguous hunk id '{hunk_id}' — be more specific")
             sys.exit(1)
         found.append(matches[0])
     return found
 
 
+# ---------------------------------------------------------------------------
+# commands
+# ---------------------------------------------------------------------------
+
+
 def cmd_list(args: List[str]) -> None:
+    if "-h" in args or "--help" in args:
+        print_help(HELP_LIST)
+        return
+
     staged = "--staged" in args
+    force_json = "--json" in args
     files = [a for a in args if not a.startswith("-")]
+
     hunks = _get_hunks(staged=staged, files=files or None)
-    print(json.dumps([h.to_dict() for h in hunks], indent=2))
+
+    # JSON when: explicitly requested, or stdout is not a TTY (pipe/agent mode)
+    if force_json or not sys.stdout.isatty():
+        print(json.dumps([h.to_dict() for h in hunks], indent=2))
+    else:
+        print_hunk_list(hunks)
 
 
 def cmd_show(args: List[str]) -> None:
-    if not args:
-        print("error: git-hunk show requires a hunk id", file=sys.stderr)
+    if "-h" in args or "--help" in args:
+        print_help(HELP_SHOW)
+        return
+
+    positional = [a for a in args if not a.startswith("-")]
+    if not positional:
+        print_error("show requires a hunk id")
+        print_help(HELP_SHOW)
         sys.exit(1)
 
-    hunk_id = args[0]
+    hunk_id = positional[0]
     staged = "--staged" in args
 
     hunks = _get_hunks(staged=staged)
-    found = _find_hunks_by_ids(hunks, [hunk_id])
-    print(found[0].diff)
+    (hunk,) = _find_hunks_by_ids(hunks, [hunk_id])
+
+    if sys.stdout.isatty():
+        print_hunk_diff(hunk)
+    else:
+        # Plain diff text when piped — compatible with patch(1) etc.
+        print(hunk.diff)
 
 
 def cmd_stage(args: List[str]) -> None:
-    if not args:
-        print("error: git-hunk stage requires at least one hunk id", file=sys.stderr)
+    if "-h" in args or "--help" in args:
+        print_help(HELP_STAGE)
+        return
+
+    ids = [a for a in args if not a.startswith("-")]
+    if not ids:
+        print_error("stage requires at least one hunk id")
+        print_help(HELP_STAGE)
         sys.exit(1)
 
     hunks = _get_hunks(staged=False)
-    selected = _find_hunks_by_ids(hunks, args)
+    selected = _find_hunks_by_ids(hunks, ids)
     diff_output = get_diff(staged=False)
     patch = build_patch(selected, diff_output)
-    apply_patch(patch, cached=True)
-    print(f"Staged {len(selected)} hunk(s)", file=sys.stderr)
+
+    try:
+        apply_patch(patch, cached=True)
+    except RuntimeError as exc:
+        print_error(str(exc))
+        sys.exit(1)
+
+    print_applied(selected, verb="staged")
 
 
 def cmd_discard(args: List[str]) -> None:
-    if not args:
-        print("error: git-hunk discard requires at least one hunk id", file=sys.stderr)
+    if "-h" in args or "--help" in args:
+        print_help(HELP_DISCARD)
+        return
+
+    ids = [a for a in args if not a.startswith("-")]
+    if not ids:
+        print_error("discard requires at least one hunk id")
+        print_help(HELP_DISCARD)
         sys.exit(1)
 
     hunks = _get_hunks(staged=False)
-    selected = _find_hunks_by_ids(hunks, args)
+    selected = _find_hunks_by_ids(hunks, ids)
     diff_output = get_diff(staged=False)
     patch = build_patch(selected, diff_output)
-    apply_patch(patch, reverse=True)
-    print(f"Discarded {len(selected)} hunk(s)", file=sys.stderr)
 
+    try:
+        apply_patch(patch, reverse=True)
+    except RuntimeError as exc:
+        print_error(str(exc))
+        sys.exit(1)
+
+    print_applied(selected, verb="discarded")
+
+
+# ---------------------------------------------------------------------------
+# entry point
+# ---------------------------------------------------------------------------
 
 COMMANDS = {
     "list": cmd_list,
@@ -83,33 +151,26 @@ COMMANDS = {
     "discard": cmd_discard,
 }
 
-USAGE = """\
-usage: git-hunk <command> [<args>]
-
-commands:
-  list [--staged] [<file>...]   List hunks as JSON
-  show <id> [--staged]          Show a specific hunk's diff
-  stage <id> [<id>...]          Stage specific hunks
-  discard <id> [<id>...]        Discard specific hunks (restore from HEAD)
-"""
-
 
 def main() -> None:
     args = sys.argv[1:]
 
     if not args or args[0] in ("-h", "--help"):
-        print(USAGE, end="")
+        print_help(HELP)
         sys.exit(0)
 
     if args[0] in ("-V", "--version"):
         from . import __version__
-        print(f"git-hunk {__version__}")
+        err.print(f"git-hunk [dim]{__version__}[/dim]")
         sys.exit(0)
 
     cmd = args[0]
     if cmd not in COMMANDS:
-        print(f"error: unknown command '{cmd}'", file=sys.stderr)
-        print(USAGE, end="", file=sys.stderr)
+        print_error(f"unknown command '{cmd}'")
+        print_help(HELP)
         sys.exit(1)
 
-    COMMANDS[cmd](args[1:])
+    try:
+        COMMANDS[cmd](args[1:])
+    except KeyboardInterrupt:
+        sys.exit(130)
