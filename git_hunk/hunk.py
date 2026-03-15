@@ -2,6 +2,7 @@
 
 import hashlib
 import re
+from collections import Counter
 from dataclasses import dataclass
 from typing import List, Optional
 
@@ -30,8 +31,47 @@ class Hunk:
         }
 
 
-def _make_id(filepath: str, diff_content: str) -> str:
+def _body_id(filepath: str, diff_content: str) -> str:
+    """Hash based on changed lines only, excluding the @@ header.
+
+    This makes IDs stable across partial staging: when hunk N is staged,
+    the @@ line numbers of subsequent hunks shift, but their actual changed
+    lines don't — so their IDs remain valid for the next operation.
+    """
+    body = "\n".join(
+        line for line in diff_content.split("\n") if not line.startswith("@@")
+    )
+    return hashlib.sha256(f"{filepath}:{body}".encode()).hexdigest()[:7]
+
+
+def _full_id(filepath: str, diff_content: str) -> str:
+    """Hash including the @@ header (line numbers).
+
+    Used only as a fallback to disambiguate two hunks whose changed lines
+    are byte-for-byte identical (e.g. repeated identical edits in a file).
+    In that edge case IDs will change when line numbers shift, but there is
+    no stable alternative — the hunks are genuinely indistinguishable by
+    content alone.
+    """
     return hashlib.sha256(f"{filepath}:{diff_content}".encode()).hexdigest()[:7]
+
+
+def _assign_ids(hunks: List[Hunk]) -> None:
+    """Assign stable IDs to hunks in-place using a two-pass strategy.
+
+    Pass 1: assign body-only IDs (stable across staging).
+    Pass 2: for any colliding IDs (identical changed lines in the same parse),
+            upgrade to full IDs (includes @@ line numbers) to disambiguate.
+    """
+    # Pass 1: body-only IDs
+    for hunk in hunks:
+        hunk.id = _body_id(hunk.file, hunk.diff)
+
+    # Pass 2: resolve collisions
+    counts = Counter(hunk.id for hunk in hunks)
+    for hunk in hunks:
+        if counts[hunk.id] > 1:
+            hunk.id = _full_id(hunk.file, hunk.diff)
 
 
 def _count_changes(lines: List[str]) -> tuple:
@@ -84,7 +124,7 @@ def parse_diff(diff_output: str) -> List[Hunk]:
             context_before = _extract_context_before(header_line)
 
             hunk = Hunk(
-                id=_make_id(filepath, hunk_diff),
+                id="",  # assigned below after all hunks are collected
                 file=filepath,
                 index=idx,
                 header=header_line,
@@ -95,4 +135,5 @@ def parse_diff(diff_output: str) -> List[Hunk]:
             )
             hunks.append(hunk)
 
+    _assign_ids(hunks)
     return hunks
