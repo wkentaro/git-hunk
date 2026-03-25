@@ -168,23 +168,35 @@ Show the diff for a specific hunk. IDs support prefix matching.
 """
 
 HELP_STAGE = """\
-[bold]Usage:[/bold] git-hunk stage <id> [<id>...]
+[bold]Usage:[/bold] git-hunk stage <id> [<id>...] [-l <lines>]
 
 Stage one or more specific hunks. IDs support prefix matching.
+
+[bold]Options:[/bold]
+  [dim]-l <lines>  Stage only specific lines within a hunk (requires single id)[/dim]
+             [dim]Examples: -l 3,5-7  (include)   -l ^3,^5-7  (exclude)[/dim]
 """
 
 HELP_DISCARD = """\
-[bold]Usage:[/bold] git-hunk discard <id> [<id>...]
+[bold]Usage:[/bold] git-hunk discard <id> [<id>...] [-l <lines>]
 
 Discard unstaged changes for one or more specific hunks (restore from HEAD).
 IDs support prefix matching.
+
+[bold]Options:[/bold]
+  [dim]-l <lines>  Discard only specific lines within a hunk (requires single id)[/dim]
+             [dim]Examples: -l 3,5-7  (include)   -l ^3,^5-7  (exclude)[/dim]
 """
 
 HELP_UNSTAGE = """\
-[bold]Usage:[/bold] git-hunk unstage <id> [<id>...]
+[bold]Usage:[/bold] git-hunk unstage <id> [<id>...] [-l <lines>]
 
 Unstage one or more specific hunks (move from index back to working tree).
 IDs support prefix matching.
+
+[bold]Options:[/bold]
+  [dim]-l <lines>  Unstage only specific lines within a hunk (requires single id)[/dim]
+             [dim]Examples: -l 3,5-7  (include)   -l ^3,^5-7  (exclude)[/dim]
 """
 
 

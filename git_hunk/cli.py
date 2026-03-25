@@ -6,6 +6,7 @@ from typing import List, Optional
 
 from .git import apply_patch, get_diff
 from .hunk import Hunk, parse_diff
+from .lines import filter_hunk_lines, parse_line_spec
 from .patch import build_patch
 from .ui import (
     HELP,
@@ -42,6 +43,39 @@ def _find_hunks_by_ids(hunks: List[Hunk], ids: List[str]) -> List[Hunk]:
             sys.exit(1)
         found.append(matches[0])
     return found
+
+
+def _extract_line_spec(args: List[str]) -> tuple:
+    """Extract -l flag from args. Returns (remaining_args, line_spec_or_None)."""
+    remaining = []
+    line_spec = None
+    i = 0
+    while i < len(args):
+        if args[i] == "-l" and i + 1 < len(args):
+            line_spec = args[i + 1]
+            i += 2
+        elif args[i].startswith("-l") and len(args[i]) > 2:
+            line_spec = args[i][2:]
+            i += 1
+        else:
+            remaining.append(args[i])
+            i += 1
+    return remaining, line_spec
+
+
+def _apply_line_filter(hunks: List[Hunk], line_spec: Optional[str]) -> List[Hunk]:
+    """Apply line filtering if -l was given. Enforces single hunk."""
+    if line_spec is None:
+        return hunks
+    if len(hunks) != 1:
+        print_error("line selection (-l) requires exactly one hunk id")
+        sys.exit(1)
+    try:
+        lines, exclude = parse_line_spec(line_spec)
+        return [filter_hunk_lines(hunks[0], lines, exclude)]
+    except ValueError as exc:
+        print_error(str(exc))
+        sys.exit(1)
 
 
 # ---------------------------------------------------------------------------
@@ -103,6 +137,7 @@ def cmd_stage(args: List[str]) -> None:
         print_help(HELP_STAGE)
         return
 
+    args, line_spec = _extract_line_spec(args)
     ids = [a for a in args if not a.startswith("-")]
     if not ids:
         print_error("stage requires at least one hunk id")
@@ -111,6 +146,7 @@ def cmd_stage(args: List[str]) -> None:
 
     hunks = _get_hunks(staged=False)
     selected = _find_hunks_by_ids(hunks, ids)
+    selected = _apply_line_filter(selected, line_spec)
     diff_output = get_diff(staged=False)
     patch = build_patch(selected, diff_output)
 
@@ -128,6 +164,7 @@ def cmd_unstage(args: List[str]) -> None:
         print_help(HELP_UNSTAGE)
         return
 
+    args, line_spec = _extract_line_spec(args)
     ids = [a for a in args if not a.startswith("-")]
     if not ids:
         print_error("unstage requires at least one hunk id")
@@ -136,6 +173,7 @@ def cmd_unstage(args: List[str]) -> None:
 
     hunks = _get_hunks(staged=True)
     selected = _find_hunks_by_ids(hunks, ids)
+    selected = _apply_line_filter(selected, line_spec)
     diff_output = get_diff(staged=True)
     patch = build_patch(selected, diff_output)
 
@@ -153,6 +191,7 @@ def cmd_discard(args: List[str]) -> None:
         print_help(HELP_DISCARD)
         return
 
+    args, line_spec = _extract_line_spec(args)
     ids = [a for a in args if not a.startswith("-")]
     if not ids:
         print_error("discard requires at least one hunk id")
@@ -161,6 +200,7 @@ def cmd_discard(args: List[str]) -> None:
 
     hunks = _get_hunks(staged=False)
     selected = _find_hunks_by_ids(hunks, ids)
+    selected = _apply_line_filter(selected, line_spec)
     diff_output = get_diff(staged=False)
     patch = build_patch(selected, diff_output)
 
