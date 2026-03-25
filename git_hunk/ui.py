@@ -63,21 +63,25 @@ def print_hunk_list(hunks: List[Hunk]) -> None:
 
 
 def print_hunk_diff(hunk: Hunk) -> None:
-    """Print a single hunk diff with git-style colors."""
+    """Print a single hunk diff with git-style colors and line numbers."""
     out.print(f"[bold]{hunk.file}[/bold]  [dim]{hunk.id}[/dim]")
     out.print()
+    line_num = 0
     for line in hunk.diff.split("\n"):
         if line.startswith("@@"):
             out.print(Text(line, style="cyan"))
-        elif line.startswith("+"):
-            out.print(Text(line, style="green"))
-        elif line.startswith("-"):
-            out.print(Text(line, style="red"))
-        elif line.startswith("\\"):
-            out.print(Text(line, style="dim"))
         else:
-            # Context line — dim so additions/deletions stand out
-            out.print(Text(line, style="dim"))
+            line_num += 1
+            prefix = Text(f"{line_num:3d} ", style="dim")
+            if line.startswith("+"):
+                content = Text(line, style="green")
+            elif line.startswith("-"):
+                content = Text(line, style="red")
+            elif line.startswith("\\"):
+                content = Text(line, style="dim")
+            else:
+                content = Text(line, style="dim")
+            out.print(Text.assemble(prefix, content))
 
 
 # ---------------------------------------------------------------------------

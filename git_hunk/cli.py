@@ -87,8 +87,15 @@ def cmd_show(args: List[str]) -> None:
     if sys.stdout.isatty():
         print_hunk_diff(hunk)
     else:
-        # Plain diff text when piped — compatible with patch(1) etc.
-        print(hunk.diff)
+        # Numbered diff text when piped — agents can parse line numbers
+        lines = hunk.diff.split("\n")
+        line_num = 0
+        for line in lines:
+            if line.startswith("@@"):
+                print(line)
+            else:
+                line_num += 1
+                print(f"{line_num}: {line}")
 
 
 def cmd_stage(args: List[str]) -> None:
