@@ -13,3 +13,9 @@ dependencies = ["rich>=13"]
 
 [project.scripts]
 git-hunk = "git_hunk.cli:main"
+
+[dependency-groups]
+dev = [
+    "pytest>=7",
+    "ty>=0.0.28",
+]

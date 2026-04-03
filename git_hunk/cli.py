@@ -16,7 +16,6 @@ from .ui import (
     HELP_STAGE,
     HELP_UNSTAGE,
     err,
-    out,
     print_applied,
     print_error,
     print_help,
@@ -26,12 +25,10 @@ from .ui import (
 
 
 def _get_hunks(staged: bool, files: Optional[List[str]] = None) -> List[Hunk]:
-    diff = get_diff(staged=staged, files=files)
-    return parse_diff(diff)
+    return parse_diff(get_diff(staged=staged, files=files))
 
 
 def _find_hunks_by_ids(hunks: List[Hunk], ids: List[str]) -> List[Hunk]:
-    """Resolve hunk IDs (with prefix matching) or exit with an error."""
     found = []
     for hunk_id in ids:
         matches = [h for h in hunks if h.id.startswith(hunk_id)]
@@ -46,7 +43,6 @@ def _find_hunks_by_ids(hunks: List[Hunk], ids: List[str]) -> List[Hunk]:
 
 
 def _extract_line_spec(args: List[str]) -> tuple:
-    """Extract -l flag from args. Returns (remaining_args, line_spec_or_None)."""
     remaining = []
     line_spec = None
     i = 0
@@ -64,7 +60,6 @@ def _extract_line_spec(args: List[str]) -> tuple:
 
 
 def _apply_line_filter(hunks: List[Hunk], line_spec: Optional[str]) -> List[Hunk]:
-    """Apply line filtering if -l was given. Enforces single hunk."""
     if line_spec is None:
         return hunks
     if len(hunks) != 1:
@@ -72,15 +67,46 @@ def _apply_line_filter(hunks: List[Hunk], line_spec: Optional[str]) -> List[Hunk
         sys.exit(1)
     try:
         lines, exclude = parse_line_spec(line_spec)
-        return [filter_hunk_lines(hunks[0], lines, exclude)]
+        return [filter_hunk_lines(hunks[0], lines, exclude=exclude)]
     except ValueError as exc:
         print_error(str(exc))
         sys.exit(1)
 
 
-# ---------------------------------------------------------------------------
-# commands
-# ---------------------------------------------------------------------------
+def _run_patch_command(
+    args: List[str],
+    *,
+    help_text: str,
+    command_name: str,
+    staged: bool,
+    cached: bool,
+    reverse: bool,
+    verb: str,
+) -> None:
+    if "-h" in args or "--help" in args:
+        print_help(help_text)
+        return
+
+    args, line_spec = _extract_line_spec(args)
+    ids = [a for a in args if not a.startswith("-")]
+    if not ids:
+        print_error(f"{command_name} requires at least one hunk id")
+        print_help(help_text)
+        sys.exit(1)
+
+    hunks = _get_hunks(staged=staged)
+    selected = _find_hunks_by_ids(hunks, ids)
+    selected = _apply_line_filter(selected, line_spec)
+    diff_output = get_diff(staged=staged)
+    patch = build_patch(selected, diff_output)
+
+    try:
+        apply_patch(patch, cached=cached, reverse=reverse)
+    except RuntimeError as exc:
+        print_error(str(exc))
+        sys.exit(1)
+
+    print_applied(selected, verb=verb)
 
 
 def cmd_list(args: List[str]) -> None:
@@ -94,7 +120,6 @@ def cmd_list(args: List[str]) -> None:
 
     hunks = _get_hunks(staged=staged, files=files or None)
 
-    # JSON when: explicitly requested, or stdout is not a TTY (pipe/agent mode)
     if force_json or not sys.stdout.isatty():
         print(json.dumps([h.to_dict() for h in hunks], indent=2))
     else:
@@ -121,7 +146,6 @@ def cmd_show(args: List[str]) -> None:
     if sys.stdout.isatty():
         print_hunk_diff(hunk)
     else:
-        # Numbered diff text when piped — agents can parse line numbers
         lines = hunk.diff.split("\n")
         line_num = 0
         for line in lines:
@@ -133,89 +157,40 @@ def cmd_show(args: List[str]) -> None:
 
 
 def cmd_stage(args: List[str]) -> None:
-    if "-h" in args or "--help" in args:
-        print_help(HELP_STAGE)
-        return
-
-    args, line_spec = _extract_line_spec(args)
-    ids = [a for a in args if not a.startswith("-")]
-    if not ids:
-        print_error("stage requires at least one hunk id")
-        print_help(HELP_STAGE)
-        sys.exit(1)
-
-    hunks = _get_hunks(staged=False)
-    selected = _find_hunks_by_ids(hunks, ids)
-    selected = _apply_line_filter(selected, line_spec)
-    diff_output = get_diff(staged=False)
-    patch = build_patch(selected, diff_output)
-
-    try:
-        apply_patch(patch, cached=True)
-    except RuntimeError as exc:
-        print_error(str(exc))
-        sys.exit(1)
-
-    print_applied(selected, verb="staged")
+    _run_patch_command(
+        args,
+        help_text=HELP_STAGE,
+        command_name="stage",
+        staged=False,
+        cached=True,
+        reverse=False,
+        verb="staged",
+    )
 
 
 def cmd_unstage(args: List[str]) -> None:
-    if "-h" in args or "--help" in args:
-        print_help(HELP_UNSTAGE)
-        return
-
-    args, line_spec = _extract_line_spec(args)
-    ids = [a for a in args if not a.startswith("-")]
-    if not ids:
-        print_error("unstage requires at least one hunk id")
-        print_help(HELP_UNSTAGE)
-        sys.exit(1)
-
-    hunks = _get_hunks(staged=True)
-    selected = _find_hunks_by_ids(hunks, ids)
-    selected = _apply_line_filter(selected, line_spec)
-    diff_output = get_diff(staged=True)
-    patch = build_patch(selected, diff_output)
-
-    try:
-        apply_patch(patch, cached=True, reverse=True)
-    except RuntimeError as exc:
-        print_error(str(exc))
-        sys.exit(1)
-
-    print_applied(selected, verb="unstaged")
+    _run_patch_command(
+        args,
+        help_text=HELP_UNSTAGE,
+        command_name="unstage",
+        staged=True,
+        cached=True,
+        reverse=True,
+        verb="unstaged",
+    )
 
 
 def cmd_discard(args: List[str]) -> None:
-    if "-h" in args or "--help" in args:
-        print_help(HELP_DISCARD)
-        return
+    _run_patch_command(
+        args,
+        help_text=HELP_DISCARD,
+        command_name="discard",
+        staged=False,
+        cached=False,
+        reverse=True,
+        verb="discarded",
+    )
 
-    args, line_spec = _extract_line_spec(args)
-    ids = [a for a in args if not a.startswith("-")]
-    if not ids:
-        print_error("discard requires at least one hunk id")
-        print_help(HELP_DISCARD)
-        sys.exit(1)
-
-    hunks = _get_hunks(staged=False)
-    selected = _find_hunks_by_ids(hunks, ids)
-    selected = _apply_line_filter(selected, line_spec)
-    diff_output = get_diff(staged=False)
-    patch = build_patch(selected, diff_output)
-
-    try:
-        apply_patch(patch, reverse=True)
-    except RuntimeError as exc:
-        print_error(str(exc))
-        sys.exit(1)
-
-    print_applied(selected, verb="discarded")
-
-
-# ---------------------------------------------------------------------------
-# entry point
-# ---------------------------------------------------------------------------
 
 COMMANDS = {
     "list": cmd_list,
@@ -235,6 +210,7 @@ def main() -> None:
 
     if args[0] in ("-V", "--version"):
         from . import __version__
+
         err.print(f"git-hunk [dim]{__version__}[/dim]")
         sys.exit(0)
 

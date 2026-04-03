@@ -3,11 +3,11 @@
 import hashlib
 import re
 from collections import Counter
-from dataclasses import dataclass
-from typing import List, Optional
+from dataclasses import dataclass, replace
+from typing import List
 
 
-@dataclass
+@dataclass(frozen=True)
 class Hunk:
     id: str
     file: str
@@ -31,13 +31,14 @@ class Hunk:
         }
 
 
-def _body_id(filepath: str, diff_content: str) -> str:
-    """Hash based on changed lines only, excluding the @@ header.
+def count_changes(lines: List[str]) -> tuple:
+    additions = sum(1 for line in lines if line.startswith("+"))
+    deletions = sum(1 for line in lines if line.startswith("-"))
+    return additions, deletions
 
-    This makes IDs stable across partial staging: when hunk N is staged,
-    the @@ line numbers of subsequent hunks shift, but their actual changed
-    lines don't — so their IDs remain valid for the next operation.
-    """
+
+def _body_id(filepath: str, diff_content: str) -> str:
+    """Stable across partial staging: ignores @@ headers that shift."""
     body = "\n".join(
         line for line in diff_content.split("\n") if not line.startswith("@@")
     )
@@ -45,55 +46,56 @@ def _body_id(filepath: str, diff_content: str) -> str:
 
 
 def _full_id(filepath: str, diff_content: str) -> str:
-    """Hash including the @@ header (line numbers).
-
-    Used only as a fallback to disambiguate two hunks whose changed lines
-    are byte-for-byte identical (e.g. repeated identical edits in a file).
-    In that edge case IDs will change when line numbers shift, but there is
-    no stable alternative — the hunks are genuinely indistinguishable by
-    content alone.
-    """
+    """Fallback for identical changed lines — includes @@ line numbers."""
     return hashlib.sha256(f"{filepath}:{diff_content}".encode()).hexdigest()[:7]
 
 
-def _assign_ids(hunks: List[Hunk]) -> None:
-    """Assign stable IDs to hunks in-place using a two-pass strategy.
+def _with_stable_ids(hunks: List[Hunk]) -> List[Hunk]:
+    """Return hunks with stable IDs assigned via a two-pass strategy.
 
-    Pass 1: assign body-only IDs (stable across staging).
-    Pass 2: for any colliding IDs (identical changed lines in the same parse),
-            upgrade to full IDs (includes @@ line numbers) to disambiguate.
+    Pass 1: body-only IDs (stable across staging).
+    Pass 2: for colliding IDs, upgrade to full IDs to disambiguate.
     """
-    # Pass 1: body-only IDs
-    for hunk in hunks:
-        hunk.id = _body_id(hunk.file, hunk.diff)
+    with_body_ids = [replace(h, id=_body_id(h.file, h.diff)) for h in hunks]
 
-    # Pass 2: resolve collisions
-    counts = Counter(hunk.id for hunk in hunks)
-    for hunk in hunks:
-        if counts[hunk.id] > 1:
-            hunk.id = _full_id(hunk.file, hunk.diff)
-
-
-def _count_changes(lines: List[str]) -> tuple:
-    additions = sum(1 for l in lines if l.startswith("+"))
-    deletions = sum(1 for l in lines if l.startswith("-"))
-    return additions, deletions
-
-
-def _extract_context_before(header: str) -> str:
-    """Extract the function/class context from the @@ header."""
-    match = re.search(r"@@.*@@\s*(.*)", header)
-    return match.group(1).strip() if match and match.group(1).strip() else ""
+    counts = Counter(h.id for h in with_body_ids)
+    return [
+        replace(h, id=_full_id(h.file, h.diff)) if counts[h.id] > 1 else h
+        for h in with_body_ids
+    ]
 
 
 def _is_change(line: str) -> bool:
     return line.startswith("+") or line.startswith("-")
 
 
+def _find_change_regions(body_lines: List[str]) -> List[tuple]:
+    regions = []
+    i = 0
+    while i < len(body_lines):
+        if _is_change(body_lines[i]):
+            start = i
+            while i < len(body_lines) and _is_change(body_lines[i]):
+                i += 1
+            regions.append((start, i - 1))
+        else:
+            i += 1
+    return regions
+
+
+def _find_split_points(regions: List[tuple]) -> List[int]:
+    CONTEXT_LINES = 3
+    MIN_GAP = 2 * CONTEXT_LINES + 1
+    return [
+        r
+        for r in range(1, len(regions))
+        if regions[r][0] - regions[r - 1][1] - 1 >= MIN_GAP
+    ]
+
+
 def _advance_offsets(
     body_lines: List[str], start: int, end: int, old: int, new: int
 ) -> tuple:
-    """Walk diff body lines and return updated (old_offset, new_offset)."""
     for j in range(start, end):
         line = body_lines[j]
         if line.startswith("+"):
@@ -106,42 +108,14 @@ def _advance_offsets(
     return old, new
 
 
-def _split_hunk(
-    filepath: str, header_line: str, body_lines: List[str], context: int = 3
+def _build_sub_hunks(
+    header_line: str,
+    body_lines: List[str],
+    regions: List[tuple],
+    split_points: List[int],
 ) -> List[dict]:
-    """Split a single hunk into sub-hunks where change regions are separated
-    by more than 2*context lines of pure context.
+    CONTEXT_LINES = 3
 
-    Returns a list of dicts with keys: header, body_lines.
-    If the hunk cannot be split further, returns a single-element list.
-    """
-    # Find change regions: contiguous runs of +/- lines
-    regions = []  # list of (first_change_idx, last_change_idx)
-    i = 0
-    while i < len(body_lines):
-        if _is_change(body_lines[i]):
-            start = i
-            while i < len(body_lines) and _is_change(body_lines[i]):
-                i += 1
-            regions.append((start, i - 1))
-        else:
-            i += 1
-
-    if len(regions) <= 1:
-        return [{"header": header_line, "body_lines": body_lines}]
-
-    # Find split points: gaps between regions with > 2*context context lines
-    min_gap = 2 * context + 1  # need at least this many context lines to split
-    split_points = []  # indices into regions where we split *before* that region
-    for r in range(1, len(regions)):
-        gap = regions[r][0] - regions[r - 1][1] - 1
-        if gap >= min_gap:
-            split_points.append(r)
-
-    if not split_points:
-        return [{"header": header_line, "body_lines": body_lines}]
-
-    # Parse old_start and new_start from header
     m = re.match(r"@@ -(\d+)(?:,\d+)? \+(\d+)(?:,\d+)? @@(.*)", header_line)
     if not m:
         return [{"header": header_line, "body_lines": body_lines}]
@@ -150,7 +124,6 @@ def _split_hunk(
     new_start = int(m.group(2))
     tail = m.group(3)
 
-    # Build region groups
     groups = []
     prev = 0
     for sp in split_points:
@@ -166,20 +139,22 @@ def _split_hunk(
         first_region = regions[g_start]
         last_region = regions[g_end - 1]
 
-        body_start = max(0, first_region[0] - context)
-        body_end = min(len(body_lines), last_region[1] + context + 1)
+        body_start = max(0, first_region[0] - CONTEXT_LINES)
+        body_end = min(len(body_lines), last_region[1] + CONTEXT_LINES + 1)
 
         running_old, running_new = _advance_offsets(
             body_lines, prev_body_end, body_start, running_old, running_new
         )
 
         sub_body = body_lines[body_start:body_end]
-        additions, deletions = _count_changes(sub_body)
+        additions, deletions = count_changes(sub_body)
         ctx = sum(1 for line in sub_body if not _is_change(line))
         old_count = ctx + deletions
         new_count = ctx + additions
 
-        sub_header = f"@@ -{running_old},{old_count} +{running_new},{new_count} @@{tail}"
+        sub_header = (
+            f"@@ -{running_old},{old_count} +{running_new},{new_count} @@{tail}"
+        )
         sub_hunks.append({"header": sub_header, "body_lines": sub_body})
 
         running_old, running_new = _advance_offsets(
@@ -190,37 +165,55 @@ def _split_hunk(
     return sub_hunks
 
 
-def parse_diff(diff_output: str) -> List[Hunk]:
-    """Parse git diff output into a list of Hunk objects.
+def _split_hunk(
+    filepath: str,
+    header_line: str,
+    body_lines: List[str],
+) -> List[dict]:
+    """Split a single hunk into sub-hunks where change regions are separated
+    by enough context lines to be independent."""
+    regions = _find_change_regions(body_lines)
+    if len(regions) <= 1:
+        return [{"header": header_line, "body_lines": body_lines}]
 
-    Hunks with multiple change regions separated by enough context lines
-    are automatically split into smaller, more focused sub-hunks.
-    """
+    split_points = _find_split_points(regions)
+    if not split_points:
+        return [{"header": header_line, "body_lines": body_lines}]
+
+    return _build_sub_hunks(header_line, body_lines, regions, split_points)
+
+
+def _extract_context_before(header: str) -> str:
+    match = re.search(r"@@.*@@\s*(.*)", header)
+    return match.group(1).strip() if match and match.group(1).strip() else ""
+
+
+def parse_diff(diff_output: str) -> List[Hunk]:
+    """Parse git diff output into a list of Hunk objects."""
     if not diff_output.strip():
         return []
 
     hunks = []
-    # Split into per-file diffs
     file_diffs = re.split(r"(?=^diff --git )", diff_output, flags=re.MULTILINE)
 
     for file_diff in file_diffs:
         if not file_diff.strip():
             continue
 
-        # Extract filename
         m = re.match(r"diff --git a/(.*?) b/(.*)", file_diff)
         if not m:
             continue
         filepath = m.group(2)
 
-        # Split into header and hunks on @@ lines
         parts = re.split(r"(?=^@@)", file_diff, flags=re.MULTILINE)
 
         hunk_idx = 0
         for part in parts[1:]:
             lines = part.split("\n")
             header_line = lines[0]
-            body_lines = [l for l in lines[1:] if l != "\\ No newline at end of file"]
+            body_lines = [
+                line for line in lines[1:] if line != "\\ No newline at end of file"
+            ]
 
             while body_lines and body_lines[-1] == "":
                 body_lines.pop()
@@ -229,8 +222,7 @@ def parse_diff(diff_output: str) -> List[Hunk]:
                 sub_body = sub["body_lines"]
                 sub_header = sub["header"]
                 hunk_diff = sub_header + "\n" + "\n".join(sub_body)
-                additions, deletions = _count_changes(sub_body)
-                context_before = _extract_context_before(sub_header)
+                additions, deletions = count_changes(sub_body)
 
                 hunk = Hunk(
                     id="",
@@ -239,11 +231,10 @@ def parse_diff(diff_output: str) -> List[Hunk]:
                     header=sub_header,
                     additions=additions,
                     deletions=deletions,
-                    context_before=context_before,
+                    context_before=_extract_context_before(sub_header),
                     diff=hunk_diff,
                 )
                 hunks.append(hunk)
                 hunk_idx += 1
 
-    _assign_ids(hunks)
-    return hunks
+    return _with_stable_ids(hunks)

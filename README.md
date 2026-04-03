@@ -7,13 +7,13 @@ Non-interactive git hunk tool for AI coding agents.
 ## Install
 
 ```bash
-pip install git-hunk
+uv pip install git-hunk
 ```
 
 Or install from source:
 
 ```bash
-pip install -e .
+uv pip install -e .
 ```
 
 ## Usage
@@ -80,4 +80,3 @@ git-hunk discard abc1234
 
 - Python 3.8+
 - Git
-- No external Python dependencies

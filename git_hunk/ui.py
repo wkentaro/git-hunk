@@ -1,12 +1,11 @@
 """Rich-based UI rendering for git-hunk.
 
-Stdout  → data (diff text, JSON, pretty tables)
-Stderr  → status messages and errors
+Stdout  -> data (diff text, JSON, pretty tables)
+Stderr  -> status messages and errors
 
 TTY detection and NO_COLOR are handled automatically by rich.
 """
 
-import sys
 from collections import defaultdict
 from typing import List
 
@@ -15,19 +14,20 @@ from rich.text import Text
 
 from .hunk import Hunk
 
-# Data goes to stdout; status/errors go to stderr.
-# highlight=False: don't auto-highlight arbitrary strings (we color explicitly).
 out = Console(highlight=False)
 err = Console(stderr=True, highlight=False)
 
 
-# ---------------------------------------------------------------------------
-# list
-# ---------------------------------------------------------------------------
+def _append_stats(text: Text, hunk: Hunk) -> None:
+    if hunk.additions:
+        text.append(f"+{hunk.additions}", style="green")
+    if hunk.additions and hunk.deletions:
+        text.append(" ")
+    if hunk.deletions:
+        text.append(f"-{hunk.deletions}", style="red")
 
 
 def print_hunk_list(hunks: List[Hunk]) -> None:
-    """Print hunks grouped by file — human-readable TTY format."""
     if not hunks:
         err.print("[dim]No hunks.[/dim]")
         return
@@ -47,23 +47,12 @@ def print_hunk_list(hunks: List[Hunk]) -> None:
             if hunk.context_before:
                 line.append(f"  {hunk.context_before}", style="dim italic")
             line.append("  ")
-            if hunk.additions:
-                line.append(f"+{hunk.additions}", style="green")
-            if hunk.additions and hunk.deletions:
-                line.append(" ")
-            if hunk.deletions:
-                line.append(f"-{hunk.deletions}", style="red")
+            _append_stats(line, hunk)
             out.print(line)
         out.print()
 
 
-# ---------------------------------------------------------------------------
-# show
-# ---------------------------------------------------------------------------
-
-
 def print_hunk_diff(hunk: Hunk) -> None:
-    """Print a single hunk diff with git-style colors and line numbers."""
     out.print(f"[bold]{hunk.file}[/bold]  [dim]{hunk.id}[/dim]")
     out.print()
     line_num = 0
@@ -74,23 +63,15 @@ def print_hunk_diff(hunk: Hunk) -> None:
             line_num += 1
             prefix = Text(f"{line_num:3d} ", style="dim")
             if line.startswith("+"):
-                content = Text(line, style="green")
+                style = "green"
             elif line.startswith("-"):
-                content = Text(line, style="red")
-            elif line.startswith("\\"):
-                content = Text(line, style="dim")
+                style = "red"
             else:
-                content = Text(line, style="dim")
-            out.print(Text.assemble(prefix, content))
+                style = "dim"
+            out.print(Text.assemble(prefix, Text(line, style=style)))
 
 
-# ---------------------------------------------------------------------------
-# stage / discard
-# ---------------------------------------------------------------------------
-
-
-def print_applied(hunks: List[Hunk], verb: str) -> None:
-    """Print a ✓ confirmation line per hunk to stderr."""
+def print_applied(hunks: List[Hunk], *, verb: str) -> None:
     for hunk in hunks:
         line = Text()
         line.append(f"  {verb} ", style="bold green")
@@ -101,31 +82,13 @@ def print_applied(hunks: List[Hunk], verb: str) -> None:
         if hunk.context_before:
             line.append(f"  {hunk.context_before}", style="dim italic")
         line.append("  ")
-        if hunk.additions:
-            line.append(f"+{hunk.additions}", style="green")
-        if hunk.additions and hunk.deletions:
-            line.append(" ")
-        if hunk.deletions:
-            line.append(f"-{hunk.deletions}", style="red")
+        _append_stats(line, hunk)
         err.print(line)
-
-
-# ---------------------------------------------------------------------------
-# errors
-# ---------------------------------------------------------------------------
 
 
 def print_error(msg: str) -> None:
     err.print(f"[bold red]error[/bold red]: {msg}")
 
-
-def print_warning(msg: str) -> None:
-    err.print(f"[bold yellow]warning[/bold yellow]: {msg}")
-
-
-# ---------------------------------------------------------------------------
-# help
-# ---------------------------------------------------------------------------
 
 HELP = """\
 [bold]git-hunk[/bold] [dim]0.1.0[/dim]

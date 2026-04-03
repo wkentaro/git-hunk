@@ -5,7 +5,6 @@ from typing import List, Optional
 
 
 def run_git(*args: str, input: Optional[str] = None, check: bool = True) -> str:
-    """Run a git command and return stdout."""
     result = subprocess.run(
         ["git"] + list(args),
         capture_output=True,
@@ -18,7 +17,6 @@ def run_git(*args: str, input: Optional[str] = None, check: bool = True) -> str:
 
 
 def get_diff(staged: bool = False, files: Optional[List[str]] = None) -> str:
-    """Get diff output from git."""
     args = ["diff"]
     if staged:
         args.append("--cached")
@@ -28,8 +26,7 @@ def get_diff(staged: bool = False, files: Optional[List[str]] = None) -> str:
     return run_git(*args)
 
 
-def apply_patch(patch: str, cached: bool = False, reverse: bool = False) -> None:
-    """Apply a patch via git apply."""
+def apply_patch(patch: str, *, cached: bool = False, reverse: bool = False) -> None:
     args = ["apply", "--whitespace=nowarn"]
     if cached:
         args.append("--cached")

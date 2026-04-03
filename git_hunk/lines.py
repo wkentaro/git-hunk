@@ -4,17 +4,14 @@ import re
 from dataclasses import replace
 from typing import Set, Tuple
 
-from .hunk import Hunk
+from .hunk import Hunk, count_changes
 
 
 def parse_line_spec(spec: str) -> Tuple[Set[int], bool]:
-    """Parse a line specification string into a set of line numbers and mode.
+    """Parse "-l" value into (line_numbers, exclude_mode).
 
-    Returns (line_numbers, exclude) where exclude=True means "all EXCEPT these".
-
-    Examples:
-        "3,5-7"   -> ({3, 5, 6, 7}, False)  — include mode
-        "^3,^5-7" -> ({3, 5, 6, 7}, True)   — exclude mode
+    "3,5-7"   -> ({3, 5, 6, 7}, False)
+    "^3,^5-7" -> ({3, 5, 6, 7}, True)
     """
     parts = [p.strip() for p in spec.split(",") if p.strip()]
     if not parts:
@@ -47,74 +44,65 @@ def parse_line_spec(spec: str) -> Tuple[Set[int], bool]:
     return lines, exclude
 
 
-def filter_hunk_lines(hunk: Hunk, lines: Set[int], exclude: bool) -> Hunk:
-    """Return a new Hunk with only the selected lines as changes.
-
-    Unselected '+' lines are removed; unselected '-' lines become context.
-    This matches git add -p edit mode semantics.
-    The @@ header is recalculated.
-    """
-    diff_lines = hunk.diff.split("\n")
-
-    # First line is the @@ header
-    header = diff_lines[0]
-    body = diff_lines[1:]
-
-    # Strip trailing empty strings from split
-    while body and body[-1] == "":
-        body.pop()
-
-    total = len(body)
-
-    # Validate line numbers
-    all_requested = lines
-    out_of_range = {n for n in all_requested if n < 1 or n > total}
-    if out_of_range:
-        bad = ", ".join(str(n) for n in sorted(out_of_range))
-        raise ValueError(f"line numbers out of range (hunk has {total} lines): {bad}")
-
-    # Determine which lines are "selected" (will keep their change status)
-    if exclude:
-        selected = {i for i in range(1, total + 1) if i not in lines}
-    else:
-        selected = lines
-
+def _filter_body_lines(
+    body: list,
+    selected: Set[int],
+) -> list:
     new_body = []
     for i, line in enumerate(body, start=1):
         if i in selected:
             new_body.append(line)
         elif line.startswith("+"):
-            # Drop unselected addition (don't stage this new line)
             continue
         elif line.startswith("-"):
-            # Convert unselected deletion to context (keep the old line as-is)
             new_body.append(" " + line[1:])
         else:
-            # Context line — always keep
             new_body.append(line)
+    return new_body
 
-    # Count changes in new body
-    additions = sum(1 for l in new_body if l.startswith("+"))
-    deletions = sum(1 for l in new_body if l.startswith("-"))
 
+def filter_hunk_lines(hunk: Hunk, lines: Set[int], *, exclude: bool) -> Hunk:
+    """Return a new Hunk with only the selected lines as changes.
+
+    Unselected '+' lines are removed; unselected '-' lines become context.
+    This matches git add -p edit mode semantics.
+    """
+    diff_lines = hunk.diff.split("\n")
+    header = diff_lines[0]
+    body = diff_lines[1:]
+
+    while body and body[-1] == "":
+        body.pop()
+
+    total = len(body)
+
+    out_of_range = {n for n in lines if n < 1 or n > total}
+    if out_of_range:
+        bad = ", ".join(str(n) for n in sorted(out_of_range))
+        raise ValueError(f"line numbers out of range (hunk has {total} lines): {bad}")
+
+    if exclude:
+        selected = {i for i in range(1, total + 1) if i not in lines}
+    else:
+        selected = lines
+
+    new_body = _filter_body_lines(body, selected)
+
+    additions, deletions = count_changes(new_body)
     if additions == 0 and deletions == 0:
         raise ValueError("no changes remain after line filtering")
 
-    # Recalculate @@ header
-    context_count = sum(1 for l in new_body if not l.startswith("+") and not l.startswith("-"))
+    context_count = len(new_body) - additions - deletions
     old_count = context_count + deletions
     new_count = context_count + additions
 
-    # Parse original header for start lines
     m = re.match(r"@@ -(\d+)(?:,\d+)? \+(\d+)(?:,\d+)? @@(.*)", header)
     if not m:
         raise ValueError(f"cannot parse hunk header: {header}")
 
-    old_start = m.group(1)
-    new_start = m.group(2)
-    tail = m.group(3)
-    new_header = f"@@ -{old_start},{old_count} +{new_start},{new_count} @@{tail}"
-
+    new_header = (
+        f"@@ -{m.group(1)},{old_count} +{m.group(2)},{new_count} @@{m.group(3)}"
+    )
     new_diff = new_header + "\n" + "\n".join(new_body)
 
     return replace(
