@@ -1,22 +1,18 @@
-"""Shared test fixtures."""
-
 import os
 import subprocess
 import tempfile
-from typing import Optional
+from collections.abc import Generator
 
 import pytest
 
 
 class GitRepo:
-    """Helper for git operations in a temporary repository."""
-
     def __init__(self, path: str) -> None:
         self.path = path
 
     def run(
-        self, *args: str, input: Optional[str] = None
-    ) -> subprocess.CompletedProcess:
+        self, *args: str, input: str | None = None
+    ) -> subprocess.CompletedProcess[str]:
         return subprocess.run(
             list(args),
             capture_output=True,
@@ -38,7 +34,7 @@ class GitRepo:
 
 
 @pytest.fixture
-def git_repo():
+def git_repo() -> Generator[GitRepo]:
     with tempfile.TemporaryDirectory() as tmpdir:
         repo = GitRepo(tmpdir)
         repo.git("init")
