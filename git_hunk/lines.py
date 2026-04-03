@@ -2,9 +2,11 @@
 
 import re
 from dataclasses import replace
-from typing import Set, Tuple
+from typing import Set
+from typing import Tuple
 
-from .hunk import Hunk, count_changes
+from .hunk import Hunk
+from .hunk import count_changes
 
 
 def parse_line_spec(spec: str) -> Tuple[Set[int], bool]:

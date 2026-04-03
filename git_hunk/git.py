@@ -1,7 +1,8 @@
 """Git subprocess helpers."""
 
 import subprocess
-from typing import List, Optional
+from typing import List
+from typing import Optional
 
 
 def run_git(*args: str, input: Optional[str] = None, check: bool = True) -> str:

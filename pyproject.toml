@@ -17,5 +17,20 @@ git-hunk = "git_hunk.cli:main"
 [dependency-groups]
 dev = [
     "pytest>=7",
+    "ruff>=0.15.9",
     "ty>=0.0.28",
 ]
+
+[tool.ruff.lint]
+select = [
+  "E",  # pycodestyle
+  "F",  # pyflakes
+  "I",  # isort
+  "UP",  # pyupgrade
+]
+
+[tool.ruff.lint.isort]
+force-single-line = true
+
+[tool.ruff.lint.per-file-ignores]
+"__init__.py" = ["F401"]

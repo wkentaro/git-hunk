@@ -1,6 +1,7 @@
 """Tests for automatic hunk splitting."""
 
-from git_hunk.hunk import _split_hunk, parse_diff
+from git_hunk.hunk import _split_hunk
+from git_hunk.hunk import parse_diff
 from git_hunk.patch import build_patch
 
 

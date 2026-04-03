@@ -2,26 +2,28 @@
 
 import json
 import sys
-from typing import List, Optional
+from typing import List
+from typing import Optional
 
-from .git import apply_patch, get_diff
-from .hunk import Hunk, parse_diff
-from .lines import filter_hunk_lines, parse_line_spec
+from .git import apply_patch
+from .git import get_diff
+from .hunk import Hunk
+from .hunk import parse_diff
+from .lines import filter_hunk_lines
+from .lines import parse_line_spec
 from .patch import build_patch
-from .ui import (
-    HELP,
-    HELP_DISCARD,
-    HELP_LIST,
-    HELP_SHOW,
-    HELP_STAGE,
-    HELP_UNSTAGE,
-    err,
-    print_applied,
-    print_error,
-    print_help,
-    print_hunk_diff,
-    print_hunk_list,
-)
+from .ui import HELP
+from .ui import HELP_DISCARD
+from .ui import HELP_LIST
+from .ui import HELP_SHOW
+from .ui import HELP_STAGE
+from .ui import HELP_UNSTAGE
+from .ui import err
+from .ui import print_applied
+from .ui import print_error
+from .ui import print_help
+from .ui import print_hunk_diff
+from .ui import print_hunk_list
 
 
 def _get_hunks(staged: bool, files: Optional[List[str]] = None) -> List[Hunk]:

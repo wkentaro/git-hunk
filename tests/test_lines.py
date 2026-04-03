@@ -2,8 +2,10 @@
 
 import pytest
 
-from git_hunk.hunk import Hunk, parse_diff
-from git_hunk.lines import filter_hunk_lines, parse_line_spec
+from git_hunk.hunk import Hunk
+from git_hunk.hunk import parse_diff
+from git_hunk.lines import filter_hunk_lines
+from git_hunk.lines import parse_line_spec
 from git_hunk.patch import build_patch
 
 

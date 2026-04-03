@@ -3,7 +3,8 @@
 import hashlib
 import re
 from collections import Counter
-from dataclasses import dataclass, replace
+from dataclasses import dataclass
+from dataclasses import replace
 from typing import List
 
 
