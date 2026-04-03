@@ -1,4 +1,4 @@
-"""Shared test fixtures for git integration tests."""
+"""Shared test fixtures."""
 
 import os
 import subprocess

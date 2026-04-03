@@ -135,7 +135,7 @@ class TestFilterHunkLines:
         assert "new2" not in result.diff
 
 
-class TestIntegration:
+class TestStagePartialLines:
     def test_stage_partial_lines(self, git_repo):
         git_repo.write_file("test.py", "line1\nline2\nline3\n")
         git_repo.git("add", ".")

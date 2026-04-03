@@ -1,4 +1,4 @@
-"""Tests for automatic hunk splitting."""
+"""Tests for hunk parsing and splitting."""
 
 from git_hunk.hunk import _split_hunk
 from git_hunk.hunk import parse_diff
@@ -193,8 +193,8 @@ class TestParseDiffSplit:
         assert len(hunks) == 1
 
 
-class TestSplitIntegration:
-    def test_split_hunks_stage_independently(self, git_repo):
+class TestSplitHunksStage:
+    def test_stage_first_hunk_only(self, git_repo):
         lines = [f"line{i}" for i in range(1, 21)]
         git_repo.write_file("f.py", "\n".join(lines) + "\n")
         git_repo.git("add", ".")
@@ -225,7 +225,7 @@ class TestSplitIntegration:
         unstaged = git_repo.git("diff")
         assert "CHANGED18" in unstaged
 
-    def test_split_hunks_stage_second_only(self, git_repo):
+    def test_stage_second_hunk_only(self, git_repo):
         lines = [f"line{i}" for i in range(1, 21)]
         git_repo.write_file("f.py", "\n".join(lines) + "\n")
         git_repo.git("add", ".")
