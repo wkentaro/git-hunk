@@ -1,11 +1,9 @@
 """Git subprocess helpers."""
 
 import subprocess
-from typing import List
-from typing import Optional
 
 
-def run_git(*args: str, input: Optional[str] = None, check: bool = True) -> str:
+def run_git(*args: str, input: str | None = None, check: bool = True) -> str:
     result = subprocess.run(
         ["git"] + list(args),
         capture_output=True,
@@ -17,7 +15,7 @@ def run_git(*args: str, input: Optional[str] = None, check: bool = True) -> str:
     return result.stdout
 
 
-def get_diff(staged: bool = False, files: Optional[List[str]] = None) -> str:
+def get_diff(staged: bool = False, files: list[str] | None = None) -> str:
     args = ["diff"]
     if staged:
         args.append("--cached")

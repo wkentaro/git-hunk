@@ -2,8 +2,6 @@
 
 import json
 import sys
-from typing import List
-from typing import Optional
 
 from .git import apply_patch
 from .git import get_diff
@@ -26,11 +24,11 @@ from .ui import print_hunk_diff
 from .ui import print_hunk_list
 
 
-def _get_hunks(staged: bool, files: Optional[List[str]] = None) -> List[Hunk]:
+def _get_hunks(staged: bool, files: list[str] | None = None) -> list[Hunk]:
     return parse_diff(get_diff(staged=staged, files=files))
 
 
-def _find_hunks_by_ids(hunks: List[Hunk], ids: List[str]) -> List[Hunk]:
+def _find_hunks_by_ids(hunks: list[Hunk], ids: list[str]) -> list[Hunk]:
     found = []
     for hunk_id in ids:
         matches = [h for h in hunks if h.id.startswith(hunk_id)]
@@ -44,7 +42,7 @@ def _find_hunks_by_ids(hunks: List[Hunk], ids: List[str]) -> List[Hunk]:
     return found
 
 
-def _extract_line_spec(args: List[str]) -> tuple:
+def _extract_line_spec(args: list[str]) -> tuple:
     remaining = []
     line_spec = None
     i = 0
@@ -61,7 +59,7 @@ def _extract_line_spec(args: List[str]) -> tuple:
     return remaining, line_spec
 
 
-def _apply_line_filter(hunks: List[Hunk], line_spec: Optional[str]) -> List[Hunk]:
+def _apply_line_filter(hunks: list[Hunk], line_spec: str | None) -> list[Hunk]:
     if line_spec is None:
         return hunks
     if len(hunks) != 1:
@@ -76,7 +74,7 @@ def _apply_line_filter(hunks: List[Hunk], line_spec: Optional[str]) -> List[Hunk
 
 
 def _run_patch_command(
-    args: List[str],
+    args: list[str],
     *,
     help_text: str,
     command_name: str,
@@ -111,7 +109,7 @@ def _run_patch_command(
     print_applied(selected, verb=verb)
 
 
-def cmd_list(args: List[str]) -> None:
+def cmd_list(args: list[str]) -> None:
     if "-h" in args or "--help" in args:
         print_help(HELP_LIST)
         return
@@ -128,7 +126,7 @@ def cmd_list(args: List[str]) -> None:
         print_hunk_list(hunks)
 
 
-def cmd_show(args: List[str]) -> None:
+def cmd_show(args: list[str]) -> None:
     if "-h" in args or "--help" in args:
         print_help(HELP_SHOW)
         return
@@ -158,7 +156,7 @@ def cmd_show(args: List[str]) -> None:
                 print(f"{line_num}: {line}")
 
 
-def cmd_stage(args: List[str]) -> None:
+def cmd_stage(args: list[str]) -> None:
     _run_patch_command(
         args,
         help_text=HELP_STAGE,
@@ -170,7 +168,7 @@ def cmd_stage(args: List[str]) -> None:
     )
 
 
-def cmd_unstage(args: List[str]) -> None:
+def cmd_unstage(args: list[str]) -> None:
     _run_patch_command(
         args,
         help_text=HELP_UNSTAGE,
@@ -182,7 +180,7 @@ def cmd_unstage(args: List[str]) -> None:
     )
 
 
-def cmd_discard(args: List[str]) -> None:
+def cmd_discard(args: list[str]) -> None:
     _run_patch_command(
         args,
         help_text=HELP_DISCARD,

@@ -1,7 +1,6 @@
 """Reconstruct patches from hunks."""
 
 import re
-from typing import List
 
 from .hunk import Hunk
 
@@ -18,7 +17,7 @@ def _get_file_header(diff_output: str, filepath: str) -> str:
     raise ValueError(f"File header not found for {filepath}")
 
 
-def build_patch(hunks: List[Hunk], diff_output: str) -> str:
+def build_patch(hunks: list[Hunk], diff_output: str) -> str:
     """Build a patch from selected hunks, grouped by file."""
     # Group hunks by file, preserving order
     files = {}

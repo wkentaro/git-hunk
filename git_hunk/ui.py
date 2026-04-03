@@ -7,7 +7,6 @@ TTY detection and NO_COLOR are handled automatically by rich.
 """
 
 from collections import defaultdict
-from typing import List
 
 from rich.console import Console
 from rich.text import Text
@@ -27,7 +26,7 @@ def _append_stats(text: Text, hunk: Hunk) -> None:
         text.append(f"-{hunk.deletions}", style="red")
 
 
-def print_hunk_list(hunks: List[Hunk]) -> None:
+def print_hunk_list(hunks: list[Hunk]) -> None:
     if not hunks:
         err.print("[dim]No hunks.[/dim]")
         return
@@ -71,7 +70,7 @@ def print_hunk_diff(hunk: Hunk) -> None:
             out.print(Text.assemble(prefix, Text(line, style=style)))
 
 
-def print_applied(hunks: List[Hunk], *, verb: str) -> None:
+def print_applied(hunks: list[Hunk], *, verb: str) -> None:
     for hunk in hunks:
         line = Text()
         line.append(f"  {verb} ", style="bold green")

@@ -5,7 +5,6 @@ import re
 from collections import Counter
 from dataclasses import dataclass
 from dataclasses import replace
-from typing import List
 
 
 @dataclass(frozen=True)
@@ -32,7 +31,7 @@ class Hunk:
         }
 
 
-def count_changes(lines: List[str]) -> tuple:
+def count_changes(lines: list[str]) -> tuple:
     additions = sum(1 for line in lines if line.startswith("+"))
     deletions = sum(1 for line in lines if line.startswith("-"))
     return additions, deletions
@@ -51,7 +50,7 @@ def _full_id(filepath: str, diff_content: str) -> str:
     return hashlib.sha256(f"{filepath}:{diff_content}".encode()).hexdigest()[:7]
 
 
-def _with_stable_ids(hunks: List[Hunk]) -> List[Hunk]:
+def _with_stable_ids(hunks: list[Hunk]) -> list[Hunk]:
     """Return hunks with stable IDs assigned via a two-pass strategy.
 
     Pass 1: body-only IDs (stable across staging).
@@ -70,7 +69,7 @@ def _is_change(line: str) -> bool:
     return line.startswith("+") or line.startswith("-")
 
 
-def _find_change_regions(body_lines: List[str]) -> List[tuple]:
+def _find_change_regions(body_lines: list[str]) -> list[tuple]:
     regions = []
     i = 0
     while i < len(body_lines):
@@ -84,7 +83,7 @@ def _find_change_regions(body_lines: List[str]) -> List[tuple]:
     return regions
 
 
-def _find_split_points(regions: List[tuple]) -> List[int]:
+def _find_split_points(regions: list[tuple]) -> list[int]:
     CONTEXT_LINES = 3
     MIN_GAP = 2 * CONTEXT_LINES + 1
     return [
@@ -95,7 +94,7 @@ def _find_split_points(regions: List[tuple]) -> List[int]:
 
 
 def _advance_offsets(
-    body_lines: List[str], start: int, end: int, old: int, new: int
+    body_lines: list[str], start: int, end: int, old: int, new: int
 ) -> tuple:
     for j in range(start, end):
         line = body_lines[j]
@@ -111,10 +110,10 @@ def _advance_offsets(
 
 def _build_sub_hunks(
     header_line: str,
-    body_lines: List[str],
-    regions: List[tuple],
-    split_points: List[int],
-) -> List[dict]:
+    body_lines: list[str],
+    regions: list[tuple],
+    split_points: list[int],
+) -> list[dict]:
     CONTEXT_LINES = 3
 
     m = re.match(r"@@ -(\d+)(?:,\d+)? \+(\d+)(?:,\d+)? @@(.*)", header_line)
@@ -169,8 +168,8 @@ def _build_sub_hunks(
 def _split_hunk(
     filepath: str,
     header_line: str,
-    body_lines: List[str],
-) -> List[dict]:
+    body_lines: list[str],
+) -> list[dict]:
     """Split a single hunk into sub-hunks where change regions are separated
     by enough context lines to be independent."""
     regions = _find_change_regions(body_lines)
@@ -189,7 +188,7 @@ def _extract_context_before(header: str) -> str:
     return match.group(1).strip() if match and match.group(1).strip() else ""
 
 
-def parse_diff(diff_output: str) -> List[Hunk]:
+def parse_diff(diff_output: str) -> list[Hunk]:
     """Parse git diff output into a list of Hunk objects."""
     if not diff_output.strip():
         return []

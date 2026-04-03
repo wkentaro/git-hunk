@@ -2,14 +2,12 @@
 
 import re
 from dataclasses import replace
-from typing import Set
-from typing import Tuple
 
 from .hunk import Hunk
 from .hunk import count_changes
 
 
-def parse_line_spec(spec: str) -> Tuple[Set[int], bool]:
+def parse_line_spec(spec: str) -> tuple[set[int], bool]:
     """Parse "-l" value into (line_numbers, exclude_mode).
 
     "3,5-7"   -> ({3, 5, 6, 7}, False)
@@ -25,7 +23,7 @@ def parse_line_spec(spec: str) -> Tuple[Set[int], bool]:
         raise ValueError("cannot mix include and exclude (^) in the same -l spec")
 
     exclude = has_exclude
-    lines: Set[int] = set()
+    lines: set[int] = set()
 
     for part in parts:
         raw = part.lstrip("^")
@@ -48,7 +46,7 @@ def parse_line_spec(spec: str) -> Tuple[Set[int], bool]:
 
 def _filter_body_lines(
     body: list,
-    selected: Set[int],
+    selected: set[int],
 ) -> list:
     new_body = []
     for i, line in enumerate(body, start=1):
@@ -63,7 +61,7 @@ def _filter_body_lines(
     return new_body
 
 
-def filter_hunk_lines(hunk: Hunk, lines: Set[int], *, exclude: bool) -> Hunk:
+def filter_hunk_lines(hunk: Hunk, lines: set[int], *, exclude: bool) -> Hunk:
     """Return a new Hunk with only the selected lines as changes.
 
     Unselected '+' lines are removed; unselected '-' lines become context.
