@@ -43,12 +43,14 @@ git-hunk --version
 
 ### Agent skill (optional)
 
-For Claude Code, Codex, and other AI agents, add the skill via
-[skills](https://github.com/vercel-labs/skills):
+If you use [Claude Code](https://claude.ai/code), [Codex](https://openai.com/codex), or similar AI agents:
 
 ```bash
 npx skills add wkentaro/git-hunk
 ```
+
+This installs a `/git-hunk` slash command that teaches the agent how to split
+changes into logical commits.
 
 ## Quick start
 
