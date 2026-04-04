@@ -32,32 +32,75 @@ def _append_stats(text: Text, hunk: Hunk) -> None:
         text.append(f"-{hunk.deletions}", style="red")
 
 
+def _print_hunk_line(out: Console, hunk: Hunk) -> None:
+    line = Text()
+    line.append("  ")
+    line.append(hunk.id, style="cyan")
+    line.append("  ")
+    line.append(hunk.header, style="dim")
+    if hunk.context_before:
+        line.append(f"  {hunk.context_before}", style="dim italic")
+    line.append("  ")
+    _append_stats(line, hunk)
+    out.print(line)
+
+
+def _print_file_group(
+    out: Console, filepath: str, file_hunks: list[Hunk], *, color: str
+) -> None:
+    out.print(f"[{color}]{filepath}[/{color}]")
+    for hunk in file_hunks:
+        _print_hunk_line(out, hunk)
+
+
+def _print_status_section(
+    out: Console,
+    hunks: list[Hunk],
+    *,
+    header: str,
+    color: str,
+    show_hunks: bool = True,
+) -> None:
+    if not hunks:
+        return
+    out.print(f"[dim]{header}[/dim]")
+    by_file: dict[str, list[Hunk]] = defaultdict(list)
+    for hunk in hunks:
+        by_file[hunk.file].append(hunk)
+    for i, (filepath, file_hunks) in enumerate(by_file.items()):
+        if show_hunks:
+            _print_file_group(out, filepath, file_hunks, color=color)
+            if i < len(by_file) - 1:
+                out.print()
+        else:
+            out.print(f"[{color}]{filepath}[/{color}]")
+
+
 def print_hunk_list(hunks: list[Hunk]) -> None:
     if not hunks:
         _err().print("[dim]No hunks.[/dim]")
         return
 
-    by_file: dict = defaultdict(list)
-    for hunk in hunks:
-        by_file[hunk.file].append(hunk)
+    staged = [h for h in hunks if h.status == "staged"]
+    unstaged = [h for h in hunks if h.status == "unstaged"]
+    untracked = [h for h in hunks if h.status == "untracked"]
 
     out = _out()
-    file_items = list(by_file.items())
-    for i, (filepath, file_hunks) in enumerate(file_items):
-        out.print(f"[bold]{filepath}[/bold]")
-        for hunk in file_hunks:
-            line = Text()
-            line.append("  ")
-            line.append(hunk.id, style="cyan")
-            line.append("  ")
-            line.append(hunk.header, style="dim")
-            if hunk.context_before:
-                line.append(f"  {hunk.context_before}", style="dim italic")
-            line.append("  ")
-            _append_stats(line, hunk)
-            out.print(line)
-        if i < len(file_items) - 1:
+    sections_printed = 0
+
+    for section_hunks, header, color, show_hunks in [
+        (staged, "staged:", "green", True),
+        (unstaged, "unstaged:", "red", True),
+        (untracked, "untracked:", "red", False),
+    ]:
+        if not section_hunks:
+            continue
+        if sections_printed > 0:
             out.print()
+        _print_status_section(
+            out, section_hunks, header=header, color=color, show_hunks=show_hunks
+        )
+        sections_printed += 1
 
 
 def print_hunk_diff(hunk: Hunk) -> None:
@@ -143,13 +186,14 @@ Non-interactive git hunk staging for AI agents.
   [bold cyan]-V[/bold cyan], [bold cyan]--version[/bold cyan]  Print version"""
 
 HELP_LIST = """\
-List hunks.
+List hunks (unstaged, staged, and untracked by default).
 
 [bold green]Usage:[/bold green] [bold cyan]git-hunk list[/bold cyan] [cyan][OPTIONS][/cyan] [cyan][<file>...][/cyan]
 
 [bold green]Options:[/bold green]
-  [bold cyan]--staged[/bold cyan]    List staged hunks instead of unstaged
-  [bold cyan]--json[/bold cyan]      Output as JSON"""  # noqa: E501
+  [bold cyan]--staged[/bold cyan]      Show only staged hunks
+  [bold cyan]--unstaged[/bold cyan]    Show only unstaged hunks
+  [bold cyan]--json[/bold cyan]        Output as JSON"""  # noqa: E501
 
 HELP_SHOW = f"""\
 Show the diff for a specific hunk. IDs support prefix matching.

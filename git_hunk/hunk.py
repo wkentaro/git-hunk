@@ -15,11 +15,13 @@ class Hunk:
     deletions: int
     context_before: str
     diff: str
+    status: str = "unstaged"
 
     def to_dict(self) -> dict:
         return {
             "id": self.id,
             "file": self.file,
+            "status": self.status,
             "index": self.index,
             "header": self.header,
             "additions": self.additions,

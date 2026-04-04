@@ -93,3 +93,61 @@ def test_list_new_file(cli: GitHunkCLI) -> None:
     assert hunks[0]["file"] == "new.py"
     assert int(hunks[0]["additions"]) >= 1
     assert hunks[0]["deletions"] == 0
+
+
+def test_list_default_shows_staged_and_unstaged(cli: GitHunkCLI) -> None:
+    cli.repo.write_file("f.py", "old\n")
+    cli.repo.git("add", ".")
+    cli.repo.git("commit", "-m", "init")
+
+    cli.repo.write_file("f.py", "staged\n")
+    cli.repo.git("add", "f.py")
+    cli.repo.write_file("f.py", "unstaged\n")
+
+    hunks = cli.run_json("list", "--json")
+    statuses = {h["status"] for h in hunks}
+    assert statuses == {"staged", "unstaged"}
+
+
+def test_list_default_shows_untracked(cli: GitHunkCLI) -> None:
+    cli.repo.write_file("f.py", "init\n")
+    cli.repo.git("add", ".")
+    cli.repo.git("commit", "-m", "init")
+
+    cli.repo.write_file("untracked.py", "new\n")
+
+    hunks = cli.run_json("list", "--json")
+    untracked = [h for h in hunks if h["status"] == "untracked"]
+    assert len(untracked) == 1
+    assert untracked[0]["file"] == "untracked.py"
+
+
+def test_list_unstaged_filter(cli: GitHunkCLI) -> None:
+    cli.repo.write_file("f.py", "old\n")
+    cli.repo.git("add", ".")
+    cli.repo.git("commit", "-m", "init")
+
+    cli.repo.write_file("f.py", "staged\n")
+    cli.repo.git("add", "f.py")
+    cli.repo.write_file("f.py", "unstaged\n")
+
+    hunks = cli.run_json("list", "--unstaged", "--json")
+    assert all(h["status"] == "unstaged" for h in hunks)
+    assert len(hunks) == 1
+
+
+def test_list_staged_and_unstaged_mutual_exclusion(cli: GitHunkCLI) -> None:
+    r = cli.run("list", "--staged", "--unstaged")
+    assert r.returncode != 0
+
+
+def test_list_status_field_in_json(cli: GitHunkCLI) -> None:
+    cli.repo.write_file("f.py", "old\n")
+    cli.repo.git("add", ".")
+    cli.repo.git("commit", "-m", "init")
+
+    cli.repo.write_file("f.py", "new\n")
+
+    hunks = cli.run_json("list", "--json")
+    assert all("status" in h for h in hunks)
+    assert hunks[0]["status"] == "unstaged"

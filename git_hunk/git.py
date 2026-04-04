@@ -32,6 +32,11 @@ def get_diff(staged: bool = False, files: list[str] | None = None) -> str:
     return run_git(*args)
 
 
+def get_untracked_files() -> list[str]:
+    output = run_git("ls-files", "--others", "--exclude-standard")
+    return [f for f in output.strip().split("\n") if f]
+
+
 def apply_patch(patch: str, *, cached: bool = False, reverse: bool = False) -> None:
     args = ["apply", "--whitespace=nowarn"]
     if cached:

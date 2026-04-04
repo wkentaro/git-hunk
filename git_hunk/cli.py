@@ -1,10 +1,12 @@
 import json
+from dataclasses import replace
 
 import click
 
 from . import __version__
 from .git import apply_patch
 from .git import get_diff
+from .git import get_untracked_files
 from .git import is_git_repo
 from .hunk import Hunk
 from .hunk import parse_diff
@@ -70,9 +72,14 @@ def _require_git_repo() -> None:
         raise CliError("not a git repository")
 
 
-def _get_hunks(staged: bool, files: list[str] | None = None) -> list[Hunk]:
+def _get_hunks(
+    staged: bool, files: list[str] | None = None, status: str = "unstaged"
+) -> list[Hunk]:
     _require_git_repo()
-    return parse_diff(get_diff(staged=staged, files=files))
+    hunks = parse_diff(get_diff(staged=staged, files=files))
+    if status != "unstaged":
+        hunks = [replace(h, status=status) for h in hunks]
+    return hunks
 
 
 def _find_hunks_by_ids(hunks: list[Hunk], ids: list[str]) -> list[Hunk]:
@@ -148,19 +155,57 @@ def cli(ctx: click.Context, show_help: bool, show_version: bool) -> None:
         print_help(HELP)
 
 
+def _get_untracked_entries(files: list[str] | None = None) -> list[Hunk]:
+    _require_git_repo()
+    paths = get_untracked_files()
+    if files:
+        paths = [p for p in paths if p in files]
+    return [
+        Hunk(
+            id="",
+            file=p,
+            index=0,
+            header="",
+            additions=0,
+            deletions=0,
+            context_before="",
+            diff="",
+            status="untracked",
+        )
+        for p in paths
+    ]
+
+
 @cli.command("list", add_help_option=False)
 @click.option("--staged", is_flag=True)
+@click.option("--unstaged", is_flag=True)
 @click.option("--json", "force_json", is_flag=True)
 @click.option("-h", "--help", "show_help", is_flag=True)
 @click.argument("files", nargs=-1)
 def cmd_list(
-    staged: bool, force_json: bool, show_help: bool, files: tuple[str, ...]
+    staged: bool,
+    unstaged: bool,
+    force_json: bool,
+    show_help: bool,
+    files: tuple[str, ...],
 ) -> None:
     if show_help:
         print_help(HELP_LIST)
         return
 
-    hunks = _get_hunks(staged=staged, files=list(files) if files else None)
+    file_list = list(files) if files else None
+
+    if staged and unstaged:
+        raise CliError("cannot use --staged and --unstaged together")
+
+    if staged:
+        hunks = _get_hunks(staged=True, files=file_list, status="staged")
+    elif unstaged:
+        hunks = _get_hunks(staged=False, files=file_list)
+    else:
+        hunks = _get_hunks(staged=True, files=file_list, status="staged")
+        hunks += _get_hunks(staged=False, files=file_list)
+        hunks += _get_untracked_entries(files=file_list)
 
     if force_json:
         click.echo(json.dumps([h.to_dict() for h in hunks], indent=2))
