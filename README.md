@@ -3,7 +3,7 @@
 [![PyPI](https://img.shields.io/pypi/v/git-hunk.svg)](https://pypi.python.org/pypi/git-hunk)
 [![License](https://img.shields.io/pypi/l/git-hunk.svg)](https://pypi.python.org/pypi/git-hunk)
 
-Non-interactive git hunk staging for AI coding agents.
+Non-interactive git hunk staging for AI agents.
 
 ## Highlights
 

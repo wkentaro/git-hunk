@@ -127,7 +127,7 @@ USAGE_UNSTAGE = "[bold green]Usage:[/bold green] [bold cyan]git-hunk unstage[/bo
 USAGE_DISCARD = "[bold green]Usage:[/bold green] [bold cyan]git-hunk discard[/bold cyan] [cyan]<id>[/cyan] [cyan][<id>...][/cyan] [cyan][OPTIONS][/cyan]"  # noqa: E501
 
 HELP = f"""\
-Non-interactive git hunk tool for AI coding agents.
+Non-interactive git hunk staging for AI agents.
 
 {USAGE}
 

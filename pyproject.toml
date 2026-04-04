@@ -5,7 +5,7 @@ build-backend = "setuptools.build_meta"
 [project]
 name = "git-hunk"
 version = "0.1.0"
-description = "Non-interactive git hunk tool for AI coding agents"
+description = "Non-interactive git hunk staging for AI agents."
 requires-python = ">=3.10"
 license = "MIT"
 authors = [{name = "Kentaro Wada"}]
