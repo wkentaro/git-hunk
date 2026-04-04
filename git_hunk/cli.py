@@ -3,6 +3,7 @@ import sys
 
 import click
 
+from . import __version__
 from .git import apply_patch
 from .git import get_diff
 from .hunk import Hunk
@@ -135,8 +136,6 @@ def _run_patch_command(
 @click.pass_context
 def cli(ctx: click.Context, show_help: bool, show_version: bool) -> None:
     if show_version:
-        from . import __version__
-
         print_version(__version__)
         return
     if show_help or ctx.invoked_subcommand is None:
