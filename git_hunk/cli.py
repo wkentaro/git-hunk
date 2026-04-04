@@ -234,14 +234,22 @@ def cmd_list(
 @cli.command("show", add_help_option=False)
 @click.option("--all", "show_all", is_flag=True)
 @click.option("--staged", is_flag=True)
+@click.option("--unstaged", is_flag=True)
 @click.option("-h", "--help", "show_help", is_flag=True)
 @click.argument("ids", nargs=-1)
 def cmd_show(
-    show_all: bool, staged: bool, show_help: bool, ids: tuple[str, ...]
+    show_all: bool,
+    staged: bool,
+    unstaged: bool,
+    show_help: bool,
+    ids: tuple[str, ...],
 ) -> None:
     if show_help:
         print_help(HELP_SHOW)
         return
+
+    if staged and unstaged:
+        raise CliError("cannot use --staged and --unstaged together")
 
     if show_all and ids:
         raise CliError("--all cannot be combined with specific hunk ids")
@@ -249,7 +257,13 @@ def cmd_show(
     if not show_all and not ids:
         raise CliError("show requires at least one hunk id", usage=USAGE_SHOW)
 
-    hunks = _get_hunks(staged=staged)
+    if staged:
+        hunks = _get_hunks(staged=True, status="staged")
+    elif unstaged:
+        hunks = _get_hunks(staged=False)
+    else:
+        hunks = _get_hunks(staged=True, status="staged")
+        hunks += _get_hunks(staged=False)
 
     if show_all:
         matched = hunks

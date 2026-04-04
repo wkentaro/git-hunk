@@ -208,8 +208,9 @@ Show the diff for one or more hunks. IDs support prefix matching.
 {USAGE_SHOW}
 
 [bold green]Options:[/bold green]
-  [bold cyan]--all[/bold cyan]       Show all hunks
-  [bold cyan]--staged[/bold cyan]    Look in staged hunks"""
+  [bold cyan]--all[/bold cyan]        Show all hunks
+  [bold cyan]--staged[/bold cyan]     Show only staged hunks
+  [bold cyan]--unstaged[/bold cyan]   Show only unstaged hunks"""
 
 HELP_STAGE = f"""\
 Stage one or more specific hunks. IDs support prefix matching.
