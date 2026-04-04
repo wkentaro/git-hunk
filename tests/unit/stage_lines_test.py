@@ -1,8 +1,7 @@
 from git_hunk.hunk import parse_diff
 from git_hunk.lines import filter_hunk_lines
 from git_hunk.patch import build_patch
-
-from .conftest import GitRepo
+from tests.conftest import GitRepo
 
 
 def test_stage_partial_lines(git_repo: GitRepo) -> None:

@@ -28,6 +28,7 @@ class GitRepo:
 
     def write_file(self, name: str, content: str) -> str:
         filepath = os.path.join(self.path, name)
+        os.makedirs(os.path.dirname(filepath), exist_ok=True)
         with open(filepath, "w") as f:
             f.write(content)
         return filepath
