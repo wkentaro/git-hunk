@@ -1,3 +1,18 @@
+# Build artifacts
 /build/
+/dist/
+/*.egg-info/
 
+# Test / lint caches
 /.coverage
+/.mypy_cache/
+/.pytest_cache/
+/.ruff_cache/
+
+# Environment
+/.env
+/.env.*
+/.venv/
+
+# Tools
+/.claude/
