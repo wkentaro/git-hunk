@@ -45,16 +45,21 @@ $ git-hunk stage d161935
 ### List hunks
 
 ```bash
-git-hunk list                          # unstaged hunks
-git-hunk list --staged                 # staged hunks
+git-hunk list                          # all hunks (unstaged + staged + untracked)
+git-hunk list --unstaged               # unstaged hunks only
+git-hunk list --staged                 # staged hunks only
 git-hunk list src/foo.py src/bar.py    # specific files
 git-hunk list --json                   # JSON output
 ```
 
-### Show a hunk
+### Show hunks
 
 ```bash
-git-hunk show d161935
+git-hunk show d161935                  # show a single hunk
+git-hunk show d161935 a3f82c1          # show multiple hunks
+git-hunk show --all                    # show all hunks (staged + unstaged)
+git-hunk show --all --staged           # show all staged hunks
+git-hunk show --all --unstaged         # show all unstaged hunks
 ```
 
 ### Stage, unstage, discard
@@ -64,7 +69,11 @@ git-hunk stage d161935                 # stage a hunk
 git-hunk stage d161935 a3f82c1         # stage multiple hunks
 git-hunk stage d161935 -l 3,5-7        # stage specific lines only
 git-hunk unstage d161935               # move back to working tree
+git-hunk unstage d161935 a3f82c1       # unstage multiple hunks
+git-hunk unstage d161935 -l 3,5-7      # unstage specific lines only
 git-hunk discard d161935               # restore from HEAD
+git-hunk discard d161935 a3f82c1       # discard multiple hunks
+git-hunk discard d161935 -l ^3,^5-7    # discard excluding specific lines
 ```
 
 ## How it works
