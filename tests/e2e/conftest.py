@@ -1,9 +1,11 @@
 import json
+import os
 import subprocess
-import sys
 
 import pytest
+from click.testing import CliRunner
 
+from git_hunk.cli import cli as git_hunk_cli
 from tests.conftest import GitRepo
 
 
@@ -12,11 +14,22 @@ class GitHunkCLI:
         self.repo = repo
 
     def run(self, *args: str) -> subprocess.CompletedProcess[str]:
-        return subprocess.run(
-            [sys.executable, "-m", "git_hunk", *args],
-            capture_output=True,
-            text=True,
-            cwd=self.repo.path,
+        runner = CliRunner()
+        old_cwd = os.getcwd()
+        try:
+            os.chdir(self.repo.path)
+            result = runner.invoke(git_hunk_cli, list(args))
+        finally:
+            os.chdir(old_cwd)
+
+        if result.exception and not isinstance(result.exception, SystemExit):
+            raise result.exception
+
+        return subprocess.CompletedProcess(
+            args=["git-hunk", *args],
+            returncode=result.exit_code,
+            stdout=result.output or "",
+            stderr=result.stderr or "",
         )
 
     def run_ok(self, *args: str) -> str:

@@ -9,14 +9,15 @@ description = "Non-interactive git hunk tool for AI coding agents"
 requires-python = ">=3.10"
 license = "MIT"
 authors = [{name = "Kentaro Wada"}]
-dependencies = ["rich>=13"]
+dependencies = ["click>=8", "rich>=13"]
 
 [project.scripts]
-git-hunk = "git_hunk.__main__:main"
+git-hunk = "git_hunk.cli:cli"
 
 [dependency-groups]
 dev = [
     "pytest>=7",
+    "pytest-cov>=4",
     "pytest-xdist>=3.8.0",
     "ruff>=0.15.9",
     "ty>=0.0.28",

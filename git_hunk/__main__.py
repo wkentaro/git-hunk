@@ -1,3 +1,3 @@
-from git_hunk.cli import main
+from git_hunk.cli import cli
 
-main()
+cli()

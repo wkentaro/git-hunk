@@ -36,3 +36,6 @@ lint:
 
 test:  # Run tests
 	$(call exec,uv run pytest -v tests/ --numprocesses=auto)
+
+coverage:  # Run tests with coverage
+	$(call exec,uv run pytest -v tests/ --cov=git_hunk --cov-report=term-missing)

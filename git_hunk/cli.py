@@ -1,6 +1,8 @@
 import json
 import sys
 
+import click
+
 from .git import apply_patch
 from .git import get_diff
 from .hunk import Hunk
@@ -14,12 +16,31 @@ from .ui import HELP_LIST
 from .ui import HELP_SHOW
 from .ui import HELP_STAGE
 from .ui import HELP_UNSTAGE
-from .ui import err
 from .ui import print_applied
 from .ui import print_error
 from .ui import print_help
 from .ui import print_hunk_diff
 from .ui import print_hunk_list
+from .ui import print_version
+
+
+class CliError(Exception):
+    def __init__(self, message: str, *, help_text: str | None = None) -> None:
+        super().__init__(message)
+        self.help_text = help_text
+
+
+class CliGroup(click.Group):
+    def invoke(self, ctx: click.Context) -> None:
+        try:
+            super().invoke(ctx)
+        except CliError as exc:
+            print_error(str(exc))
+            if exc.help_text:
+                print_help(exc.help_text)
+            ctx.exit(1)
+        except KeyboardInterrupt:
+            ctx.exit(130)
 
 
 def _get_hunks(staged: bool, files: list[str] | None = None) -> list[Hunk]:
@@ -31,48 +52,28 @@ def _find_hunks_by_ids(hunks: list[Hunk], ids: list[str]) -> list[Hunk]:
     for hunk_id in ids:
         matches = [h for h in hunks if h.id.startswith(hunk_id)]
         if len(matches) == 0:
-            print_error(f"hunk '{hunk_id}' not found")
-            sys.exit(1)
+            raise CliError(f"hunk '{hunk_id}' not found")
         if len(matches) > 1:
-            print_error(f"ambiguous hunk id '{hunk_id}' — be more specific")
-            sys.exit(1)
+            raise CliError(f"ambiguous hunk id '{hunk_id}' — be more specific")
         found.append(matches[0])
     return found
-
-
-def _extract_line_spec(args: list[str]) -> tuple:
-    remaining = []
-    line_spec = None
-    i = 0
-    while i < len(args):
-        if args[i] == "-l" and i + 1 < len(args):
-            line_spec = args[i + 1]
-            i += 2
-        elif args[i].startswith("-l") and len(args[i]) > 2:
-            line_spec = args[i][2:]
-            i += 1
-        else:
-            remaining.append(args[i])
-            i += 1
-    return remaining, line_spec
 
 
 def _apply_line_filter(hunks: list[Hunk], line_spec: str | None) -> list[Hunk]:
     if line_spec is None:
         return hunks
     if len(hunks) != 1:
-        print_error("line selection (-l) requires exactly one hunk id")
-        sys.exit(1)
+        raise CliError("line selection (-l) requires exactly one hunk id")
     try:
         lines, exclude = parse_line_spec(line_spec)
         return [filter_hunk_lines(hunks[0], lines, exclude=exclude)]
     except ValueError as exc:
-        print_error(str(exc))
-        sys.exit(1)
+        raise CliError(str(exc)) from exc
 
 
 def _run_patch_command(
-    args: list[str],
+    ids: list[str],
+    line_spec: str | None,
     *,
     help_text: str,
     command_name: str,
@@ -81,16 +82,11 @@ def _run_patch_command(
     reverse: bool,
     verb: str,
 ) -> None:
-    if "-h" in args or "--help" in args:
-        print_help(help_text)
-        return
-
-    args, line_spec = _extract_line_spec(args)
-    ids = [a for a in args if not a.startswith("-")]
     if not ids:
-        print_error(f"{command_name} requires at least one hunk id")
-        print_help(help_text)
-        sys.exit(1)
+        raise CliError(
+            f"{command_name} requires at least one hunk id",
+            help_text=help_text,
+        )
 
     hunks = _get_hunks(staged=staged)
     selected = _find_hunks_by_ids(hunks, ids)
@@ -101,42 +97,56 @@ def _run_patch_command(
     try:
         apply_patch(patch, cached=cached, reverse=reverse)
     except RuntimeError as exc:
-        print_error(str(exc))
-        sys.exit(1)
+        raise CliError(str(exc)) from exc
 
     print_applied(selected, verb=verb)
 
 
-def cmd_list(args: list[str]) -> None:
-    if "-h" in args or "--help" in args:
+@click.group(cls=CliGroup, invoke_without_command=True, add_help_option=False)
+@click.option("-h", "--help", "show_help", is_flag=True)
+@click.option("-V", "--version", "show_version", is_flag=True)
+@click.pass_context
+def cli(ctx: click.Context, show_help: bool, show_version: bool) -> None:
+    if show_version:
+        from . import __version__
+
+        print_version(__version__)
+        return
+    if show_help or ctx.invoked_subcommand is None:
+        print_help(HELP)
+
+
+@cli.command("list", add_help_option=False)
+@click.option("--staged", is_flag=True)
+@click.option("--json", "force_json", is_flag=True)
+@click.option("-h", "--help", "show_help", is_flag=True)
+@click.argument("files", nargs=-1)
+def cmd_list(
+    staged: bool, force_json: bool, show_help: bool, files: tuple[str, ...]
+) -> None:
+    if show_help:
         print_help(HELP_LIST)
         return
 
-    staged = "--staged" in args
-    force_json = "--json" in args
-    files = [a for a in args if not a.startswith("-")]
-
-    hunks = _get_hunks(staged=staged, files=files or None)
+    hunks = _get_hunks(staged=staged, files=list(files) if files else None)
 
     if force_json or not sys.stdout.isatty():
-        print(json.dumps([h.to_dict() for h in hunks], indent=2))
+        click.echo(json.dumps([h.to_dict() for h in hunks], indent=2))
     else:
         print_hunk_list(hunks)
 
 
-def cmd_show(args: list[str]) -> None:
-    if "-h" in args or "--help" in args:
+@cli.command("show", add_help_option=False)
+@click.option("--staged", is_flag=True)
+@click.option("-h", "--help", "show_help", is_flag=True)
+@click.argument("hunk_id", required=False)
+def cmd_show(staged: bool, show_help: bool, hunk_id: str | None) -> None:
+    if show_help:
         print_help(HELP_SHOW)
         return
 
-    positional = [a for a in args if not a.startswith("-")]
-    if not positional:
-        print_error("show requires a hunk id")
-        print_help(HELP_SHOW)
-        sys.exit(1)
-
-    hunk_id = positional[0]
-    staged = "--staged" in args
+    if not hunk_id:
+        raise CliError("show requires a hunk id", help_text=HELP_SHOW)
 
     hunks = _get_hunks(staged=staged)
     (hunk,) = _find_hunks_by_ids(hunks, [hunk_id])
@@ -148,15 +158,23 @@ def cmd_show(args: list[str]) -> None:
         line_num = 0
         for line in lines:
             if line.startswith("@@"):
-                print(line)
+                click.echo(line)
             else:
                 line_num += 1
-                print(f"{line_num}: {line}")
+                click.echo(f"{line_num}: {line}")
 
 
-def cmd_stage(args: list[str]) -> None:
+@cli.command("stage", add_help_option=False)
+@click.option("-l", "line_spec", default=None)
+@click.option("-h", "--help", "show_help", is_flag=True)
+@click.argument("ids", nargs=-1)
+def cmd_stage(ids: tuple[str, ...], line_spec: str | None, show_help: bool) -> None:
+    if show_help:
+        print_help(HELP_STAGE)
+        return
     _run_patch_command(
-        args,
+        list(ids),
+        line_spec,
         help_text=HELP_STAGE,
         command_name="stage",
         staged=False,
@@ -166,9 +184,17 @@ def cmd_stage(args: list[str]) -> None:
     )
 
 
-def cmd_unstage(args: list[str]) -> None:
+@cli.command("unstage", add_help_option=False)
+@click.option("-l", "line_spec", default=None)
+@click.option("-h", "--help", "show_help", is_flag=True)
+@click.argument("ids", nargs=-1)
+def cmd_unstage(ids: tuple[str, ...], line_spec: str | None, show_help: bool) -> None:
+    if show_help:
+        print_help(HELP_UNSTAGE)
+        return
     _run_patch_command(
-        args,
+        list(ids),
+        line_spec,
         help_text=HELP_UNSTAGE,
         command_name="unstage",
         staged=True,
@@ -178,9 +204,17 @@ def cmd_unstage(args: list[str]) -> None:
     )
 
 
-def cmd_discard(args: list[str]) -> None:
+@cli.command("discard", add_help_option=False)
+@click.option("-l", "line_spec", default=None)
+@click.option("-h", "--help", "show_help", is_flag=True)
+@click.argument("ids", nargs=-1)
+def cmd_discard(ids: tuple[str, ...], line_spec: str | None, show_help: bool) -> None:
+    if show_help:
+        print_help(HELP_DISCARD)
+        return
     _run_patch_command(
-        args,
+        list(ids),
+        line_spec,
         help_text=HELP_DISCARD,
         command_name="discard",
         staged=False,
@@ -188,37 +222,3 @@ def cmd_discard(args: list[str]) -> None:
         reverse=True,
         verb="discarded",
     )
-
-
-COMMANDS = {
-    "list": cmd_list,
-    "show": cmd_show,
-    "stage": cmd_stage,
-    "unstage": cmd_unstage,
-    "discard": cmd_discard,
-}
-
-
-def main() -> None:
-    args = sys.argv[1:]
-
-    if not args or args[0] in ("-h", "--help"):
-        print_help(HELP)
-        sys.exit(0)
-
-    if args[0] in ("-V", "--version"):
-        from . import __version__
-
-        err.print(f"git-hunk [dim]{__version__}[/dim]")
-        sys.exit(0)
-
-    cmd = args[0]
-    if cmd not in COMMANDS:
-        print_error(f"unknown command '{cmd}'")
-        print_help(HELP)
-        sys.exit(1)
-
-    try:
-        COMMANDS[cmd](args[1:])
-    except KeyboardInterrupt:
-        sys.exit(130)

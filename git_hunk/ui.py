@@ -3,7 +3,8 @@
 Stdout  -> data (diff text, JSON, pretty tables)
 Stderr  -> status messages and errors
 
-TTY detection and NO_COLOR are handled automatically by rich.
+Console objects are created at call time (not module level) so that
+CliRunner's stream replacement works during testing.
 """
 
 from collections import defaultdict
@@ -13,8 +14,13 @@ from rich.text import Text
 
 from .hunk import Hunk
 
-out = Console(highlight=False)
-err = Console(stderr=True, highlight=False)
+
+def _out() -> Console:
+    return Console(highlight=False)
+
+
+def _err() -> Console:
+    return Console(stderr=True, highlight=False)
 
 
 def _append_stats(text: Text, hunk: Hunk) -> None:
@@ -28,13 +34,14 @@ def _append_stats(text: Text, hunk: Hunk) -> None:
 
 def print_hunk_list(hunks: list[Hunk]) -> None:
     if not hunks:
-        err.print("[dim]No hunks.[/dim]")
+        _err().print("[dim]No hunks.[/dim]")
         return
 
     by_file: dict = defaultdict(list)
     for hunk in hunks:
         by_file[hunk.file].append(hunk)
 
+    out = _out()
     for filepath, file_hunks in by_file.items():
         out.print(f"[bold]{filepath}[/bold]")
         for hunk in file_hunks:
@@ -52,6 +59,7 @@ def print_hunk_list(hunks: list[Hunk]) -> None:
 
 
 def print_hunk_diff(hunk: Hunk) -> None:
+    out = _out()
     out.print(f"[bold]{hunk.file}[/bold]  [dim]{hunk.id}[/dim]")
     out.print()
     line_num = 0
@@ -71,6 +79,7 @@ def print_hunk_diff(hunk: Hunk) -> None:
 
 
 def print_applied(hunks: list[Hunk], *, verb: str) -> None:
+    err = _err()
     for hunk in hunks:
         line = Text()
         line.append(f"  {verb} ", style="bold green")
@@ -86,7 +95,11 @@ def print_applied(hunks: list[Hunk], *, verb: str) -> None:
 
 
 def print_error(msg: str) -> None:
-    err.print(f"[bold red]error[/bold red]: {msg}")
+    _err().print(f"[bold red]error[/bold red]: {msg}")
+
+
+def print_version(version: str) -> None:
+    _err().print(f"git-hunk [dim]{version}[/dim]")
 
 
 HELP = """\
@@ -163,4 +176,4 @@ IDs support prefix matching.
 
 
 def print_help(text: str) -> None:
-    err.print(text)
+    _err().print(text)
