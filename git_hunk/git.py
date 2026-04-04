@@ -3,10 +3,11 @@ import subprocess
 
 def is_git_repo() -> bool:
     result = subprocess.run(
-        ["git", "rev-parse", "--git-dir"],
+        ["git", "rev-parse", "--is-inside-work-tree"],
         capture_output=True,
+        text=True,
     )
-    return result.returncode == 0
+    return result.stdout.strip() == "true"
 
 
 def run_git(*args: str, input: str | None = None, check: bool = True) -> str:

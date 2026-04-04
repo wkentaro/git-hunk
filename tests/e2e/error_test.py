@@ -13,6 +13,15 @@ def test_not_a_git_repo(tmp_path: Path) -> None:
     assert "not a git repository" in r.stderr
 
 
+def test_bare_repo(tmp_path: Path) -> None:
+    repo = GitRepo(str(tmp_path))
+    repo.run("git", "init", "--bare")
+    cli = GitHunkCLI(repo)
+    r = cli.run("list")
+    assert r.returncode != 0
+    assert "not a git repository" in r.stderr
+
+
 def test_version(cli: GitHunkCLI) -> None:
     r = cli.run("--version")
     assert r.returncode == 0
