@@ -42,12 +42,13 @@ def print_hunk_list(hunks: list[Hunk]) -> None:
         by_file[hunk.file].append(hunk)
 
     out = _out()
-    for filepath, file_hunks in by_file.items():
+    file_items = list(by_file.items())
+    for i, (filepath, file_hunks) in enumerate(file_items):
         out.print(f"[bold]{filepath}[/bold]")
         for hunk in file_hunks:
             line = Text()
             line.append("  ")
-            line.append(hunk.id, style="bold cyan")
+            line.append(hunk.id, style="cyan")
             line.append("  ")
             line.append(hunk.header, style="dim")
             if hunk.context_before:
@@ -55,7 +56,8 @@ def print_hunk_list(hunks: list[Hunk]) -> None:
             line.append("  ")
             _append_stats(line, hunk)
             out.print(line)
-        out.print()
+        if i < len(file_items) - 1:
+            out.print()
 
 
 def print_hunk_diff(hunk: Hunk) -> None:
@@ -74,7 +76,7 @@ def print_hunk_diff(hunk: Hunk) -> None:
             elif line.startswith("-"):
                 style = "red"
             else:
-                style = "dim"
+                style = ""
             out.print(Text.assemble(prefix, Text(line, style=style)))
 
 
@@ -83,7 +85,7 @@ def print_applied(hunks: list[Hunk], *, verb: str) -> None:
     for hunk in hunks:
         line = Text()
         line.append(f"  {verb} ", style="bold green")
-        line.append(hunk.id, style="bold cyan")
+        line.append(hunk.id, style="cyan")
         line.append("  ")
         line.append(hunk.file, style="bold")
         line.append(f"  {hunk.header}", style="dim")
@@ -94,8 +96,11 @@ def print_applied(hunks: list[Hunk], *, verb: str) -> None:
         err.print(line)
 
 
-def print_error(msg: str) -> None:
-    _err().print(f"[bold red]error[/bold red]: {msg}")
+def print_error(msg: str, *, tip: str | None = None) -> None:
+    err = _err()
+    err.print(f"[bold red]error[/bold red]: {msg}")
+    if tip:
+        err.print(f"\n  [green]tip[/green]: {tip}")
 
 
 def print_version(version: str) -> None:
@@ -103,77 +108,67 @@ def print_version(version: str) -> None:
 
 
 HELP = """\
-[bold]git-hunk[/bold] [dim]0.1.0[/dim]
-
 Non-interactive git hunk tool for AI coding agents.
 
-[bold]Usage:[/bold] git-hunk <command> [options]
+[bold green]Usage:[/bold green] [bold cyan]git-hunk[/bold cyan] [cyan]<COMMAND>[/cyan]
 
-[bold]Commands:[/bold]
+[bold green]Commands:[/bold green]
   [bold cyan]list[/bold cyan]     List hunks
   [bold cyan]show[/bold cyan]     Show a specific hunk's diff
   [bold cyan]stage[/bold cyan]    Stage specific hunks
   [bold cyan]unstage[/bold cyan]  Unstage specific hunks
   [bold cyan]discard[/bold cyan]  Discard specific hunks (restore from HEAD)
 
-[bold]Options:[/bold]
-  [dim]-h, --help     Show this message and exit[/dim]
-  [dim]-V, --version  Show version and exit[/dim]
-
-Run [italic]git-hunk <command> --help[/italic] for command-specific help.
-"""
+[bold green]Options:[/bold green]
+  [bold cyan]-h[/bold cyan], [bold cyan]--help[/bold cyan]     Show this message and exit
+  [bold cyan]-V[/bold cyan], [bold cyan]--version[/bold cyan]  Show version and exit"""
 
 HELP_LIST = """\
-[bold]Usage:[/bold] git-hunk list [--staged] [--json] [<file>...]
-
 List hunks. Outputs JSON when stdout is not a TTY (pipe-friendly).
 
-[bold]Options:[/bold]
-  [dim]--staged    List staged hunks instead of unstaged[/dim]
-  [dim]--json      Force JSON output even on a TTY[/dim]
-"""
+[bold green]Usage:[/bold green] [bold cyan]git-hunk list[/bold cyan] [cyan][OPTIONS][/cyan] [cyan][<file>...][/cyan]
+
+[bold green]Options:[/bold green]
+  [bold cyan]--staged[/bold cyan]    List staged hunks instead of unstaged
+  [bold cyan]--json[/bold cyan]      Force JSON output even on a TTY"""
 
 HELP_SHOW = """\
-[bold]Usage:[/bold] git-hunk show <id> [--staged]
-
 Show the diff for a specific hunk. IDs support prefix matching.
 
-[bold]Options:[/bold]
-  [dim]--staged    Look in staged hunks[/dim]
-"""
+[bold green]Usage:[/bold green] [bold cyan]git-hunk show[/bold cyan] [cyan]<id>[/cyan] [cyan][OPTIONS][/cyan]
+
+[bold green]Options:[/bold green]
+  [bold cyan]--staged[/bold cyan]    Look in staged hunks"""
 
 HELP_STAGE = """\
-[bold]Usage:[/bold] git-hunk stage <id> [<id>...] [-l <lines>]
-
 Stage one or more specific hunks. IDs support prefix matching.
 
-[bold]Options:[/bold]
-  [dim]-l <lines>  Stage only specific lines within a hunk (requires single id)[/dim]
-             [dim]Examples: -l 3,5-7  (include)   -l ^3,^5-7  (exclude)[/dim]
-"""
+[bold green]Usage:[/bold green] [bold cyan]git-hunk stage[/bold cyan] [cyan]<id>[/cyan] [cyan][<id>...][/cyan] [cyan][OPTIONS][/cyan]
+
+[bold green]Options:[/bold green]
+  [bold cyan]-l[/bold cyan] [cyan]<lines>[/cyan]  Stage only specific lines within a hunk (requires single id)
+             Examples: -l 3,5-7  (include)   -l ^3,^5-7  (exclude)"""
 
 HELP_DISCARD = """\
-[bold]Usage:[/bold] git-hunk discard <id> [<id>...] [-l <lines>]
-
 Discard unstaged changes for one or more specific hunks (restore from HEAD).
 IDs support prefix matching.
 
-[bold]Options:[/bold]
-  [dim]-l <lines>  Discard only specific lines within a hunk (requires single id)[/dim]
-             [dim]Examples: -l 3,5-7  (include)   -l ^3,^5-7  (exclude)[/dim]
-"""
+[bold green]Usage:[/bold green] [bold cyan]git-hunk discard[/bold cyan] [cyan]<id>[/cyan] [cyan][<id>...][/cyan] [cyan][OPTIONS][/cyan]
+
+[bold green]Options:[/bold green]
+  [bold cyan]-l[/bold cyan] [cyan]<lines>[/cyan]  Discard only specific lines within a hunk (requires single id)
+             Examples: -l 3,5-7  (include)   -l ^3,^5-7  (exclude)"""
 
 HELP_UNSTAGE = """\
-[bold]Usage:[/bold] git-hunk unstage <id> [<id>...] [-l <lines>]
-
 Unstage one or more specific hunks (move from index back to working tree).
 IDs support prefix matching.
 
-[bold]Options:[/bold]
-  [dim]-l <lines>  Unstage only specific lines within a hunk (requires single id)[/dim]
-             [dim]Examples: -l 3,5-7  (include)   -l ^3,^5-7  (exclude)[/dim]
-"""
+[bold green]Usage:[/bold green] [bold cyan]git-hunk unstage[/bold cyan] [cyan]<id>[/cyan] [cyan][<id>...][/cyan] [cyan][OPTIONS][/cyan]
+
+[bold green]Options:[/bold green]
+  [bold cyan]-l[/bold cyan] [cyan]<lines>[/cyan]  Unstage only specific lines within a hunk (requires single id)
+             Examples: -l 3,5-7  (include)   -l ^3,^5-7  (exclude)"""
 
 
 def print_help(text: str) -> None:
-    _err().print(text)
+    _err().print(text, end="")

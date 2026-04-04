@@ -25,8 +25,15 @@ from .ui import print_version
 
 
 class CliError(Exception):
-    def __init__(self, message: str, *, help_text: str | None = None) -> None:
+    def __init__(
+        self,
+        message: str,
+        *,
+        tip: str | None = None,
+        help_text: str | None = None,
+    ) -> None:
         super().__init__(message)
+        self.tip = tip
         self.help_text = help_text
 
 
@@ -35,7 +42,7 @@ class CliGroup(click.Group):
         try:
             super().invoke(ctx)
         except CliError as exc:
-            print_error(str(exc))
+            print_error(str(exc), tip=exc.tip)
             if exc.help_text:
                 print_help(exc.help_text)
             ctx.exit(1)
@@ -52,9 +59,15 @@ def _find_hunks_by_ids(hunks: list[Hunk], ids: list[str]) -> list[Hunk]:
     for hunk_id in ids:
         matches = [h for h in hunks if h.id.startswith(hunk_id)]
         if len(matches) == 0:
-            raise CliError(f"hunk '{hunk_id}' not found")
+            available = [h.id for h in hunks]
+            tip = f"available hunk ids: {', '.join(available)}" if available else None
+            raise CliError(f"hunk '{hunk_id}' not found", tip=tip)
         if len(matches) > 1:
-            raise CliError(f"ambiguous hunk id '{hunk_id}' — be more specific")
+            candidates = ", ".join(m.id for m in matches)
+            raise CliError(
+                f"ambiguous hunk id '{hunk_id}'",
+                tip=f"matches: {candidates}",
+            )
         found.append(matches[0])
     return found
 
