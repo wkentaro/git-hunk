@@ -12,7 +12,7 @@ authors = [{name = "Kentaro Wada"}]
 dependencies = ["rich>=13"]
 
 [project.scripts]
-git-hunk = "git_hunk.cli:main"
+git-hunk = "git_hunk.__main__:main"
 
 [dependency-groups]
 dev = [
