@@ -1,5 +1,4 @@
 import json
-import sys
 
 import click
 
@@ -163,7 +162,7 @@ def cmd_list(
 
     hunks = _get_hunks(staged=staged, files=list(files) if files else None)
 
-    if force_json or not sys.stdout.isatty():
+    if force_json:
         click.echo(json.dumps([h.to_dict() for h in hunks], indent=2))
     else:
         print_hunk_list(hunks)
@@ -184,17 +183,7 @@ def cmd_show(staged: bool, show_help: bool, hunk_id: str | None) -> None:
     hunks = _get_hunks(staged=staged)
     (hunk,) = _find_hunks_by_ids(hunks, [hunk_id])
 
-    if sys.stdout.isatty():
-        print_hunk_diff(hunk)
-    else:
-        lines = hunk.diff.split("\n")
-        line_num = 0
-        for line in lines:
-            if line.startswith("@@"):
-                click.echo(line)
-            else:
-                line_num += 1
-                click.echo(f"{line_num}: {line}")
+    print_hunk_diff(hunk)
 
 
 @cli.command("stage", add_help_option=False)

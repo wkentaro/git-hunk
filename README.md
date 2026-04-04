@@ -10,7 +10,7 @@ Non-interactive git hunk staging for AI coding agents.
 - Scriptable alternative to `git add -p` - no interactive prompts
 - Stable, content-based hunk IDs (SHA-256 prefix) that survive partial staging
 - Line-level filtering within hunks (`-l 3,5-7` or `-l ^3,^5-7`)
-- JSON output by default when piped - built for AI agents and shell scripts
+- JSON output via `--json` flag - built for AI agents and shell scripts
 - Stage, unstage, and discard individual hunks by ID
 
 ## Getting started

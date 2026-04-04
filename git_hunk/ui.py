@@ -143,13 +143,13 @@ Non-interactive git hunk tool for AI coding agents.
   [bold cyan]-V[/bold cyan], [bold cyan]--version[/bold cyan]  Print version"""
 
 HELP_LIST = """\
-List hunks. Outputs JSON when stdout is not a TTY (pipe-friendly).
+List hunks.
 
 [bold green]Usage:[/bold green] [bold cyan]git-hunk list[/bold cyan] [cyan][OPTIONS][/cyan] [cyan][<file>...][/cyan]
 
 [bold green]Options:[/bold green]
   [bold cyan]--staged[/bold cyan]    List staged hunks instead of unstaged
-  [bold cyan]--json[/bold cyan]      Force JSON output even on a TTY"""  # noqa: E501
+  [bold cyan]--json[/bold cyan]      Output as JSON"""  # noqa: E501
 
 HELP_SHOW = f"""\
 Show the diff for a specific hunk. IDs support prefix matching.
