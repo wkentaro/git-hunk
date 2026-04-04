@@ -1,5 +1,3 @@
-"""CLI entry point for git-hunk."""
-
 import json
 import sys
 

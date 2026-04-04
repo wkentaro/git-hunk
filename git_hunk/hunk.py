@@ -1,5 +1,3 @@
-"""Hunk dataclass and diff parsing."""
-
 import hashlib
 import re
 from collections import Counter
@@ -51,11 +49,8 @@ def _full_id(filepath: str, diff_content: str) -> str:
 
 
 def _with_stable_ids(hunks: list[Hunk]) -> list[Hunk]:
-    """Return hunks with stable IDs assigned via a two-pass strategy.
-
-    Pass 1: body-only IDs (stable across staging).
-    Pass 2: for colliding IDs, upgrade to full IDs to disambiguate.
-    """
+    # Pass 1: body-only IDs (stable across staging).
+    # Pass 2: for colliding IDs, upgrade to full IDs to disambiguate.
     with_body_ids = [replace(h, id=_body_id(h.file, h.diff)) for h in hunks]
 
     counts = Counter(h.id for h in with_body_ids)
@@ -170,8 +165,6 @@ def _split_hunk(
     header_line: str,
     body_lines: list[str],
 ) -> list[dict]:
-    """Split a single hunk into sub-hunks where change regions are separated
-    by enough context lines to be independent."""
     regions = _find_change_regions(body_lines)
     if len(regions) <= 1:
         return [{"header": header_line, "body_lines": body_lines}]
@@ -189,7 +182,6 @@ def _extract_context_before(header: str) -> str:
 
 
 def parse_diff(diff_output: str) -> list[Hunk]:
-    """Parse git diff output into a list of Hunk objects."""
     if not diff_output.strip():
         return []
 
@@ -216,7 +208,7 @@ def parse_diff(diff_output: str) -> list[Hunk]:
             ]
 
             while body_lines and body_lines[-1] == "":
-                body_lines.pop()
+                body_lines = body_lines[:-1]
 
             for sub in _split_hunk(filepath, header_line, body_lines):
                 sub_body = sub["body_lines"]

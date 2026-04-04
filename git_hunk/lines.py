@@ -1,5 +1,3 @@
-"""Line-level filtering for partial hunk staging."""
-
 import re
 from dataclasses import replace
 
@@ -72,7 +70,7 @@ def filter_hunk_lines(hunk: Hunk, lines: set[int], *, exclude: bool) -> Hunk:
     body = diff_lines[1:]
 
     while body and body[-1] == "":
-        body.pop()
+        body = body[:-1]
 
     total = len(body)
 

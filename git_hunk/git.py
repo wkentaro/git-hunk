@@ -1,5 +1,3 @@
-"""Git subprocess helpers."""
-
 import subprocess
 
 
