@@ -5,6 +5,8 @@
 
 Non-interactive git hunk staging for AI agents.
 
+<img src="assets/teaser.png" alt="git-hunk teaser" width="800">
+
 ## Why?
 
 `git add -p` is interactive, so AI agents can't (really) use it. `git-hunk` gives
