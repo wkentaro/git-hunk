@@ -5,21 +5,27 @@
 
 Non-interactive git hunk staging for AI agents.
 
+## Why?
+
+`git add -p` is interactive, so AI agents can't (really) use it. `git-hunk` gives
+every hunk a stable ID so agents can inspect, filter, and stage changes
+programmatically.
+
 ## Highlights
 
-- Scriptable alternative to `git add -p` (no interactive prompts)
-- Stage, unstage, and discard individual hunks by ID
-- Stable, content-based hunk IDs (SHA-256 prefix) that survive partial staging
-- Line-level filtering within hunks (`-l 3,5-7` or `-l ^3,^5-7`)
-- JSON output via `--json` flag (built for AI agents)
+- Non-interactive alternative to `git add -p` (no interactive prompts)
+- Stage, unstage, and discard individual hunks by ID and lines (`-l 3,5-7` or `-l ^3,^5-7`)
+- JSON output via `--json`
 
 ## Getting started
 
 Install git-hunk with [uv](https://docs.astral.sh/uv/):
 
-```console
-$ uv tool install git-hunk
+```bash
+uv tool install git-hunk
 ```
+
+(Or: `pip install git-hunk`)
 
 List hunks, then stage one by ID:
 
@@ -40,7 +46,7 @@ $ git-hunk stage d161935
 git-hunk list                          # unstaged hunks
 git-hunk list --staged                 # staged hunks
 git-hunk list src/foo.py src/bar.py    # specific files
-git-hunk list --json                   # force JSON output on a TTY
+git-hunk list --json                   # JSON output
 ```
 
 ### Show a hunk
@@ -65,6 +71,11 @@ git-hunk discard d161935               # restore from HEAD
 2. Assigns each hunk a stable, content-based ID (SHA-256 prefix)
 3. For staging: reconstructs a minimal patch and pipes it through `git apply --cached`
 4. For discarding: reconstructs a reverse patch and applies it to the working tree
+
+## Contributing
+
+Bug reports, feature requests, and pull requests are welcome on
+[GitHub](https://github.com/wkentaro/git-hunk).
 
 ## License
 
