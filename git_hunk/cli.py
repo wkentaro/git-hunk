@@ -16,6 +16,11 @@ from .ui import HELP_LIST
 from .ui import HELP_SHOW
 from .ui import HELP_STAGE
 from .ui import HELP_UNSTAGE
+from .ui import USAGE
+from .ui import USAGE_DISCARD
+from .ui import USAGE_SHOW
+from .ui import USAGE_STAGE
+from .ui import USAGE_UNSTAGE
 from .ui import print_applied
 from .ui import print_error
 from .ui import print_help
@@ -30,22 +35,31 @@ class CliError(Exception):
         message: str,
         *,
         tip: str | None = None,
-        help_text: str | None = None,
+        usage: str | None = None,
     ) -> None:
         super().__init__(message)
         self.tip = tip
-        self.help_text = help_text
+        self.usage = usage
 
 
 class CliGroup(click.Group):
+    def resolve_command(
+        self, ctx: click.Context, args: list[str]
+    ) -> tuple[str | None, click.Command | None, list[str]]:
+        try:
+            return super().resolve_command(ctx, args)
+        except click.UsageError:
+            cmd_name = args[0] if args else ""
+            raise CliError(
+                f"unrecognized subcommand '{cmd_name}'", usage=USAGE
+            ) from None
+
     def invoke(self, ctx: click.Context) -> None:
         try:
             super().invoke(ctx)
         except CliError as exc:
-            print_error(str(exc), tip=exc.tip)
-            if exc.help_text:
-                print_help(exc.help_text)
-            ctx.exit(1)
+            print_error(str(exc), tip=exc.tip, usage=exc.usage)
+            ctx.exit(2 if exc.usage else 1)
         except KeyboardInterrupt:
             ctx.exit(130)
 
@@ -88,7 +102,7 @@ def _run_patch_command(
     ids: list[str],
     line_spec: str | None,
     *,
-    help_text: str,
+    usage: str,
     command_name: str,
     staged: bool,
     cached: bool,
@@ -98,7 +112,7 @@ def _run_patch_command(
     if not ids:
         raise CliError(
             f"{command_name} requires at least one hunk id",
-            help_text=help_text,
+            usage=usage,
         )
 
     hunks = _get_hunks(staged=staged)
@@ -159,7 +173,7 @@ def cmd_show(staged: bool, show_help: bool, hunk_id: str | None) -> None:
         return
 
     if not hunk_id:
-        raise CliError("show requires a hunk id", help_text=HELP_SHOW)
+        raise CliError("show requires a hunk id", usage=USAGE_SHOW)
 
     hunks = _get_hunks(staged=staged)
     (hunk,) = _find_hunks_by_ids(hunks, [hunk_id])
@@ -188,7 +202,7 @@ def cmd_stage(ids: tuple[str, ...], line_spec: str | None, show_help: bool) -> N
     _run_patch_command(
         list(ids),
         line_spec,
-        help_text=HELP_STAGE,
+        usage=USAGE_STAGE,
         command_name="stage",
         staged=False,
         cached=True,
@@ -208,7 +222,7 @@ def cmd_unstage(ids: tuple[str, ...], line_spec: str | None, show_help: bool) ->
     _run_patch_command(
         list(ids),
         line_spec,
-        help_text=HELP_UNSTAGE,
+        usage=USAGE_UNSTAGE,
         command_name="unstage",
         staged=True,
         cached=True,
@@ -228,7 +242,7 @@ def cmd_discard(ids: tuple[str, ...], line_spec: str | None, show_help: bool) ->
     _run_patch_command(
         list(ids),
         line_spec,
-        help_text=HELP_DISCARD,
+        usage=USAGE_DISCARD,
         command_name="discard",
         staged=False,
         cached=False,
