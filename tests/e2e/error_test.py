@@ -1,4 +1,16 @@
+from pathlib import Path
+
+from tests.conftest import GitRepo
+
 from .conftest import GitHunkCLI
+
+
+def test_not_a_git_repo(tmp_path: Path) -> None:
+    repo = GitRepo(str(tmp_path))
+    cli = GitHunkCLI(repo)
+    r = cli.run("list")
+    assert r.returncode != 0
+    assert "not a git repository" in r.stderr
 
 
 def test_version(cli: GitHunkCLI) -> None:

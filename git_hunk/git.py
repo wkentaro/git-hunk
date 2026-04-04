@@ -1,6 +1,14 @@
 import subprocess
 
 
+def is_git_repo() -> bool:
+    result = subprocess.run(
+        ["git", "rev-parse", "--git-dir"],
+        capture_output=True,
+    )
+    return result.returncode == 0
+
+
 def run_git(*args: str, input: str | None = None, check: bool = True) -> str:
     result = subprocess.run(
         ["git"] + list(args),

@@ -6,6 +6,7 @@ import click
 from . import __version__
 from .git import apply_patch
 from .git import get_diff
+from .git import is_git_repo
 from .hunk import Hunk
 from .hunk import parse_diff
 from .lines import filter_hunk_lines
@@ -65,7 +66,13 @@ class CliGroup(click.Group):
             ctx.exit(130)
 
 
+def _require_git_repo() -> None:
+    if not is_git_repo():
+        raise CliError("not a git repository")
+
+
 def _get_hunks(staged: bool, files: list[str] | None = None) -> list[Hunk]:
+    _require_git_repo()
     return parse_diff(get_diff(staged=staged, files=files))
 
 
