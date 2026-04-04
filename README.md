@@ -21,23 +21,23 @@ programmatically.
 
 ## Getting started
 
-Install git-hunk with [uv](https://docs.astral.sh/uv/):
-
 ```bash
-uv tool install git-hunk
+uv tool install git-hunk        # or: pip install git-hunk
+npx skills add wkentaro/git-hunk  # for Claude Code, Codex, etc.
 ```
 
-(Or: `pip install git-hunk`)
+You edit a bunch of files, then tell your agent to split the changes:
 
-List hunks, then stage one by ID:
+```
+> /git-hunk
+```
 
-```console
-$ git-hunk list
-src/foo.py
-  d161935  @@ -47,7 +47,7 @@ def bar():  +1 -1
-  a3f82c1  @@ -92,4 +92,8 @@ class Foo   +4 -0
+It figures out which hunks go together and commits them separately:
 
-$ git-hunk stage d161935
+```
+$ git log --oneline
+a1b2c3d feat: add validation for user input
+d4e5f6a fix: handle empty response in API client
 ```
 
 ## Usage
