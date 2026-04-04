@@ -118,13 +118,13 @@ def print_version(version: str) -> None:
 _LINE_OPTS = """\
 [bold green]Options:[/bold green]
   [bold cyan]-l[/bold cyan] [cyan]<lines>[/cyan]  Select specific lines within a hunk (requires single id)
-             Examples: -l 3,5-7  (include)   -l ^3,^5-7  (exclude)"""
+             Examples: -l 3,5-7  (include)   -l ^3,^5-7  (exclude)"""  # noqa: E501
 
-USAGE = "[bold green]Usage:[/bold green] [bold cyan]git-hunk[/bold cyan] [cyan]<COMMAND>[/cyan]"
-USAGE_SHOW = "[bold green]Usage:[/bold green] [bold cyan]git-hunk show[/bold cyan] [cyan]<id>[/cyan] [cyan][OPTIONS][/cyan]"
-USAGE_STAGE = "[bold green]Usage:[/bold green] [bold cyan]git-hunk stage[/bold cyan] [cyan]<id>[/cyan] [cyan][<id>...][/cyan] [cyan][OPTIONS][/cyan]"
-USAGE_UNSTAGE = "[bold green]Usage:[/bold green] [bold cyan]git-hunk unstage[/bold cyan] [cyan]<id>[/cyan] [cyan][<id>...][/cyan] [cyan][OPTIONS][/cyan]"
-USAGE_DISCARD = "[bold green]Usage:[/bold green] [bold cyan]git-hunk discard[/bold cyan] [cyan]<id>[/cyan] [cyan][<id>...][/cyan] [cyan][OPTIONS][/cyan]"
+USAGE = "[bold green]Usage:[/bold green] [bold cyan]git-hunk[/bold cyan] [cyan]<COMMAND>[/cyan]"  # noqa: E501
+USAGE_SHOW = "[bold green]Usage:[/bold green] [bold cyan]git-hunk show[/bold cyan] [cyan]<id>[/cyan] [cyan][OPTIONS][/cyan]"  # noqa: E501
+USAGE_STAGE = "[bold green]Usage:[/bold green] [bold cyan]git-hunk stage[/bold cyan] [cyan]<id>[/cyan] [cyan][<id>...][/cyan] [cyan][OPTIONS][/cyan]"  # noqa: E501
+USAGE_UNSTAGE = "[bold green]Usage:[/bold green] [bold cyan]git-hunk unstage[/bold cyan] [cyan]<id>[/cyan] [cyan][<id>...][/cyan] [cyan][OPTIONS][/cyan]"  # noqa: E501
+USAGE_DISCARD = "[bold green]Usage:[/bold green] [bold cyan]git-hunk discard[/bold cyan] [cyan]<id>[/cyan] [cyan][<id>...][/cyan] [cyan][OPTIONS][/cyan]"  # noqa: E501
 
 HELP = f"""\
 Non-interactive git hunk tool for AI coding agents.
@@ -149,7 +149,7 @@ List hunks. Outputs JSON when stdout is not a TTY (pipe-friendly).
 
 [bold green]Options:[/bold green]
   [bold cyan]--staged[/bold cyan]    List staged hunks instead of unstaged
-  [bold cyan]--json[/bold cyan]      Force JSON output even on a TTY"""
+  [bold cyan]--json[/bold cyan]      Force JSON output even on a TTY"""  # noqa: E501
 
 HELP_SHOW = f"""\
 Show the diff for a specific hunk. IDs support prefix matching.
