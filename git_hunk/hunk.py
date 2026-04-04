@@ -16,18 +16,16 @@ class Hunk:
     diff: str
     status: str = "unstaged"
 
-    def to_dict(self, *, include_diff: bool = False) -> dict:
-        d = {
+    def to_dict(self) -> dict:
+        return {
             "id": self.id,
             "file": self.file,
             "status": self.status,
             "header": self.header,
             "additions": self.additions,
             "deletions": self.deletions,
+            "diff": self.diff,
         }
-        if include_diff:
-            d["diff"] = self.diff
-        return d
 
 
 def count_changes(lines: list[str]) -> tuple:

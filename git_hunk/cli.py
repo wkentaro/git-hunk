@@ -198,14 +198,12 @@ def _get_untracked_entries(files: list[str] | None = None) -> list[Hunk]:
 @click.option("--staged", is_flag=True)
 @click.option("--unstaged", is_flag=True)
 @click.option("--json", "force_json", is_flag=True)
-@click.option("--diff", "include_diff", is_flag=True)
 @click.option("-h", "--help", "show_help", is_flag=True)
 @click.argument("files", nargs=-1)
 def cmd_list(
     staged: bool,
     unstaged: bool,
     force_json: bool,
-    include_diff: bool,
     show_help: bool,
     files: tuple[str, ...],
 ) -> None:
@@ -228,9 +226,7 @@ def cmd_list(
         hunks += _get_untracked_entries(files=file_list)
 
     if force_json:
-        click.echo(
-            json.dumps([h.to_dict(include_diff=include_diff) for h in hunks], indent=2)
-        )
+        click.echo(json.dumps([h.to_dict() for h in hunks], indent=2))
     else:
         print_hunk_list(hunks)
 
