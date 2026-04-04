@@ -10,6 +10,7 @@ CliRunner's stream replacement works during testing.
 from collections import defaultdict
 
 from rich.console import Console
+from rich.rule import Rule
 from rich.text import Text
 
 from .hunk import Hunk
@@ -103,10 +104,8 @@ def print_hunk_list(hunks: list[Hunk]) -> None:
         sections_printed += 1
 
 
-def print_hunk_diff(hunk: Hunk) -> None:
-    out = _out()
+def _print_hunk_diff(out: Console, hunk: Hunk) -> None:
     out.print(f"[bold]{hunk.file}[/bold]  [dim]{hunk.id}[/dim]")
-    out.print()
     line_num = 0
     for line in hunk.diff.split("\n"):
         if line.startswith("@@"):
@@ -121,6 +120,14 @@ def print_hunk_diff(hunk: Hunk) -> None:
             else:
                 style = ""
             out.print(Text.assemble(prefix, Text(line, style=style)))
+
+
+def print_hunk_diffs(hunks: list[Hunk]) -> None:
+    out = _out()
+    for i, hunk in enumerate(hunks):
+        if i > 0:
+            out.print(Rule(style="dim"))
+        _print_hunk_diff(out, hunk)
 
 
 def print_applied(hunks: list[Hunk], *, verb: str) -> None:
@@ -164,7 +171,7 @@ _LINE_OPTS = """\
              Examples: -l 3,5-7  (include)   -l ^3,^5-7  (exclude)"""  # noqa: E501
 
 USAGE = "[bold green]Usage:[/bold green] [bold cyan]git-hunk[/bold cyan] [cyan]<COMMAND>[/cyan]"  # noqa: E501
-USAGE_SHOW = "[bold green]Usage:[/bold green] [bold cyan]git-hunk show[/bold cyan] [cyan]<id>[/cyan] [cyan][OPTIONS][/cyan]"  # noqa: E501
+USAGE_SHOW = "[bold green]Usage:[/bold green] [bold cyan]git-hunk show[/bold cyan] [cyan]<id>[/cyan] [cyan][<id>...][/cyan] [cyan][OPTIONS][/cyan]"  # noqa: E501
 USAGE_STAGE = "[bold green]Usage:[/bold green] [bold cyan]git-hunk stage[/bold cyan] [cyan]<id>[/cyan] [cyan][<id>...][/cyan] [cyan][OPTIONS][/cyan]"  # noqa: E501
 USAGE_UNSTAGE = "[bold green]Usage:[/bold green] [bold cyan]git-hunk unstage[/bold cyan] [cyan]<id>[/cyan] [cyan][<id>...][/cyan] [cyan][OPTIONS][/cyan]"  # noqa: E501
 USAGE_DISCARD = "[bold green]Usage:[/bold green] [bold cyan]git-hunk discard[/bold cyan] [cyan]<id>[/cyan] [cyan][<id>...][/cyan] [cyan][OPTIONS][/cyan]"  # noqa: E501
@@ -176,7 +183,7 @@ Non-interactive git hunk staging for AI agents.
 
 [bold green]Commands:[/bold green]
   [bold cyan]list[/bold cyan]     List hunks
-  [bold cyan]show[/bold cyan]     Show a specific hunk's diff
+  [bold cyan]show[/bold cyan]     Show diff for one or more hunks
   [bold cyan]stage[/bold cyan]    Stage specific hunks
   [bold cyan]unstage[/bold cyan]  Unstage specific hunks
   [bold cyan]discard[/bold cyan]  Discard specific hunks (restore from HEAD)
@@ -196,11 +203,12 @@ List hunks (unstaged, staged, and untracked by default).
   [bold cyan]--json[/bold cyan]        Output as JSON"""  # noqa: E501
 
 HELP_SHOW = f"""\
-Show the diff for a specific hunk. IDs support prefix matching.
+Show the diff for one or more hunks. IDs support prefix matching.
 
 {USAGE_SHOW}
 
 [bold green]Options:[/bold green]
+  [bold cyan]--all[/bold cyan]       Show all hunks
   [bold cyan]--staged[/bold cyan]    Look in staged hunks"""
 
 HELP_STAGE = f"""\

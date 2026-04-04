@@ -30,7 +30,7 @@ from .ui import USAGE_UNSTAGE
 from .ui import print_applied
 from .ui import print_error
 from .ui import print_help
-from .ui import print_hunk_diff
+from .ui import print_hunk_diffs
 from .ui import print_hunk_list
 from .ui import print_version
 
@@ -232,21 +232,31 @@ def cmd_list(
 
 
 @cli.command("show", add_help_option=False)
+@click.option("--all", "show_all", is_flag=True)
 @click.option("--staged", is_flag=True)
 @click.option("-h", "--help", "show_help", is_flag=True)
-@click.argument("hunk_id", required=False)
-def cmd_show(staged: bool, show_help: bool, hunk_id: str | None) -> None:
+@click.argument("ids", nargs=-1)
+def cmd_show(
+    show_all: bool, staged: bool, show_help: bool, ids: tuple[str, ...]
+) -> None:
     if show_help:
         print_help(HELP_SHOW)
         return
 
-    if not hunk_id:
-        raise CliError("show requires a hunk id", usage=USAGE_SHOW)
+    if show_all and ids:
+        raise CliError("--all cannot be combined with specific hunk ids")
+
+    if not show_all and not ids:
+        raise CliError("show requires at least one hunk id", usage=USAGE_SHOW)
 
     hunks = _get_hunks(staged=staged)
-    (hunk,) = _find_hunks_by_ids(hunks, [hunk_id])
 
-    print_hunk_diff(hunk)
+    if show_all:
+        matched = hunks
+    else:
+        matched = _find_hunks_by_ids(hunks, list(ids))
+
+    print_hunk_diffs(matched)
 
 
 @cli.command("stage", add_help_option=False)
