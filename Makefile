@@ -33,3 +33,6 @@ lint:
 	$(call exec,uv run ruff format --check)
 	$(call exec,uv run ruff check)
 	$(call exec,uv run ty check --no-progress)
+
+test:  # Run tests
+	$(call exec,uv run pytest -v tests/ --numprocesses=auto)

@@ -17,6 +17,7 @@ git-hunk = "git_hunk.cli:main"
 [dependency-groups]
 dev = [
     "pytest>=7",
+    "pytest-xdist>=3.8.0",
     "ruff>=0.15.9",
     "ty>=0.0.28",
 ]
