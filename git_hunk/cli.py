@@ -5,9 +5,12 @@ import click
 
 from . import __version__
 from .git import apply_patch
+from .git import discard_files
 from .git import get_diff
 from .git import get_untracked_files
 from .git import is_git_repo
+from .git import stage_files
+from .git import unstage_files
 from .hunk import Hunk
 from .hunk import parse_diff
 from .lines import filter_hunk_lines
@@ -112,6 +115,10 @@ def _apply_line_filter(hunks: list[Hunk], line_spec: str | None) -> list[Hunk]:
         raise CliError(str(exc)) from exc
 
 
+def _is_binary_hunk(hunk: Hunk) -> bool:
+    return hunk.header == "Binary file"
+
+
 def _run_patch_command(
     ids: list[str],
     line_spec: str | None,
@@ -132,11 +139,23 @@ def _run_patch_command(
     hunks = _get_hunks(staged=staged)
     selected = _find_hunks_by_ids(hunks, ids)
     selected = _apply_line_filter(selected, line_spec)
-    diff_output = get_diff(staged=staged)
-    patch = build_patch(selected, diff_output)
+
+    binary = [h for h in selected if _is_binary_hunk(h)]
+    text = [h for h in selected if not _is_binary_hunk(h)]
 
     try:
-        apply_patch(patch, cached=cached, reverse=reverse)
+        if text:
+            diff_output = get_diff(staged=staged)
+            patch = build_patch(text, diff_output)
+            apply_patch(patch, cached=cached, reverse=reverse)
+        if binary:
+            binary_files = [h.file for h in binary]
+            if reverse and not cached:
+                discard_files(binary_files)
+            elif reverse:
+                unstage_files(binary_files)
+            else:
+                stage_files(binary_files)
     except RuntimeError as exc:
         raise CliError(str(exc)) from exc
 

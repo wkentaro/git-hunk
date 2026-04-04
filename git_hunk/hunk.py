@@ -198,6 +198,20 @@ def parse_diff(diff_output: str) -> list[Hunk]:
             continue
         filepath = m.group(2)
 
+        if re.search(r"^Binary files .* differ$", file_diff, flags=re.MULTILINE):
+            hunks.append(
+                Hunk(
+                    id="",
+                    file=filepath,
+                    header="Binary file",
+                    additions=0,
+                    deletions=0,
+                    context_before="",
+                    diff="",
+                )
+            )
+            continue
+
         parts = re.split(r"(?=^@@)", file_diff, flags=re.MULTILINE)
 
         for part in parts[1:]:

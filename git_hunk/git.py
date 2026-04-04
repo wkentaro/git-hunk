@@ -44,3 +44,15 @@ def apply_patch(patch: str, *, cached: bool = False, reverse: bool = False) -> N
     if reverse:
         args.append("--reverse")
     run_git(*args, input=patch)
+
+
+def stage_files(files: list[str]) -> None:
+    run_git("add", "--", *files)
+
+
+def unstage_files(files: list[str]) -> None:
+    run_git("reset", "HEAD", "--", *files)
+
+
+def discard_files(files: list[str]) -> None:
+    run_git("checkout", "--", *files)
