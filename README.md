@@ -21,9 +21,11 @@ programmatically.
 
 ## Getting started
 
+Install with [uv](https://docs.astral.sh/uv/) (or pip), then add the agent skill via [skills](https://github.com/vercel-labs/skills) (for Claude Code, Codex, etc.):
+
 ```bash
-uv tool install git-hunk        # or: pip install git-hunk
-npx skills add wkentaro/git-hunk  # for Claude Code, Codex, etc.
+uv tool install git-hunk
+npx skills add wkentaro/git-hunk
 ```
 
 You edit a bunch of files, then tell your agent to split the changes:
