@@ -1,45 +1,71 @@
 # git-hunk
 
 [![PyPI](https://img.shields.io/pypi/v/git-hunk.svg)](https://pypi.python.org/pypi/git-hunk)
+[![Python](https://img.shields.io/pypi/pyversions/git-hunk.svg)](https://pypi.python.org/pypi/git-hunk)
+[![Build](https://github.com/wkentaro/git-hunk/actions/workflows/test.yml/badge.svg)](https://github.com/wkentaro/git-hunk/actions/workflows/test.yml)
 [![License](https://img.shields.io/pypi/l/git-hunk.svg)](https://pypi.python.org/pypi/git-hunk)
 
-Non-interactive git hunk staging for AI agents.
+Non-interactive, programmatic alternative to `git add -p`.
+
+Every hunk gets a stable, content-based ID so you can inspect, filter, and
+stage changes without interactive prompts.
 
 <img src="assets/teaser.png" alt="git-hunk teaser" width="800">
 
 ## Why?
 
-`git add -p` is interactive, so AI agents can't (really) use it. `git-hunk` gives
-every hunk a stable ID so agents can inspect, filter, and stage changes
-programmatically.
+`git add -p` requires interactive input. That makes it unusable for:
 
-## Highlights
+- **AI agents** (Claude Code, Codex, etc.) that need to split changes into logical commits
+- **Scripts & CI/CD** that automate commit organization
+- **Editor integrations** that want hunk-level staging without shelling out to a TUI
 
-- Non-interactive alternative to `git add -p` (no interactive prompts)
-- Stage, unstage, and discard individual hunks by ID and lines (`-l 3,5-7` or `-l ^3,^5-7`)
-- JSON output via `--json`
+`git-hunk` solves this by assigning each hunk a stable ID and exposing simple
+stage/unstage/discard commands.
 
-## Getting started
+## Install
 
-Install with [uv](https://docs.astral.sh/uv/) (or pip), then add the agent skill via [skills](https://github.com/vercel-labs/skills) (for Claude Code, Codex, etc.):
+```bash
+pip install git-hunk
+```
+
+Or with [uv](https://docs.astral.sh/uv/):
 
 ```bash
 uv tool install git-hunk
+```
+
+Verify it works:
+
+```bash
+git-hunk --version
+```
+
+### Agent skill (optional)
+
+For Claude Code, Codex, and other AI agents, add the skill via
+[skills](https://github.com/vercel-labs/skills):
+
+```bash
 npx skills add wkentaro/git-hunk
 ```
 
-You edit a bunch of files, then tell your agent to split the changes:
+## Quick start
 
-```
-> /git-hunk
-```
+```bash
+# See all hunks across staged, unstaged, and untracked files
+git-hunk list
 
-It figures out which hunks go together and commits them separately:
+# Show the diff for a specific hunk
+git-hunk show d161935
 
-```
-$ git log --oneline
-a1b2c3d feat: add validation for user input
-d4e5f6a fix: handle empty response in API client
+# Stage specific hunks, then commit
+git-hunk stage d161935 a3f82c1
+git commit -m "feat: add validation for user input"
+
+# Stage the remaining hunks
+git-hunk stage e7b4012
+git commit -m "fix: handle empty response in API client"
 ```
 
 ## Usage
@@ -51,7 +77,7 @@ git-hunk list                          # all hunks (unstaged + staged + untracke
 git-hunk list --unstaged               # unstaged hunks only
 git-hunk list --staged                 # staged hunks only
 git-hunk list src/foo.py src/bar.py    # specific files
-git-hunk list --json                   # JSON output
+git-hunk list --json                   # JSON output for scripting
 ```
 
 ### Show hunks
@@ -71,12 +97,38 @@ git-hunk stage d161935                 # stage a hunk
 git-hunk stage d161935 a3f82c1         # stage multiple hunks
 git-hunk stage d161935 -l 3,5-7        # stage specific lines only
 git-hunk unstage d161935               # move back to working tree
-git-hunk unstage d161935 a3f82c1       # unstage multiple hunks
 git-hunk unstage d161935 -l 3,5-7      # unstage specific lines only
 git-hunk discard d161935               # restore from HEAD
-git-hunk discard d161935 a3f82c1       # discard multiple hunks
 git-hunk discard d161935 -l ^3,^5-7    # discard excluding specific lines
 ```
+
+### JSON output
+
+```bash
+git-hunk list --json
+```
+
+```json
+[
+  {
+    "id": "d161935",
+    "file": "src/main.py",
+    "status": "unstaged",
+    "header": "@@ -10,3 +10,5 @@",
+    "additions": 2,
+    "deletions": 0,
+    "diff": "..."
+  }
+]
+```
+
+## Comparison
+
+| | Interactive | Programmatic | Hunk IDs | Line-level control | JSON output |
+|---|---|---|---|---|---|
+| `git add -p` | Yes | No | No | Yes | No |
+| `git add <file>` | No | Yes | No | No | No |
+| **`git-hunk`** | **No** | **Yes** | **Yes** | **Yes** | **Yes** |
 
 ## How it works
 
@@ -85,12 +137,22 @@ git-hunk discard d161935 -l ^3,^5-7    # discard excluding specific lines
 3. For staging: reconstructs a minimal patch and pipes it through `git apply --cached`
 4. For discarding: reconstructs a reverse patch and applies it to the working tree
 
+IDs are stable across partial staging -- they are derived from the changed lines,
+not the `@@` line numbers that shift as you stage hunks.
+
 ## Contributing
 
 Bug reports, feature requests, and pull requests are welcome on
 [GitHub](https://github.com/wkentaro/git-hunk).
 
+```bash
+git clone https://github.com/wkentaro/git-hunk.git
+cd git-hunk
+make setup   # install dependencies
+make test    # run tests
+make lint    # run linters
+```
+
 ## License
 
-git-hunk is licensed under the MIT license ([LICENSE](LICENSE) or
-<https://opensource.org/licenses/MIT>).
+MIT ([LICENSE](LICENSE))
