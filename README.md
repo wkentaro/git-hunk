@@ -1,19 +1,35 @@
 # git-hunk
 
-Non-interactive git hunk tool for AI coding agents.
+[![PyPI](https://img.shields.io/pypi/v/git-hunk.svg)](https://pypi.python.org/pypi/git-hunk)
+[![License](https://img.shields.io/pypi/l/git-hunk.svg)](https://pypi.python.org/pypi/git-hunk)
 
-`git add -p` is interactive and human-only. `git-hunk` exposes hunk-level staging and discarding as simple, scriptable CLI commands with JSON output — designed for AI coding agents (Claude Code, Codex, etc.) and shell scripts.
+Non-interactive git hunk staging for AI coding agents.
 
-## Install
+## Highlights
 
-```bash
-uv pip install git-hunk
+- Scriptable alternative to `git add -p` - no interactive prompts
+- Stable, content-based hunk IDs (SHA-256 prefix) that survive partial staging
+- Line-level filtering within hunks (`-l 3,5-7` or `-l ^3,^5-7`)
+- JSON output by default when piped - built for AI agents and shell scripts
+- Stage, unstage, and discard individual hunks by ID
+
+## Getting started
+
+Install git-hunk with [uv](https://docs.astral.sh/uv/):
+
+```console
+$ uv tool install git-hunk
 ```
 
-Or install from source:
+List hunks, then stage one by ID:
 
-```bash
-uv pip install -e .
+```console
+$ git-hunk list
+src/foo.py
+  d161935  @@ -47,7 +47,7 @@ def bar():  +1 -1
+  a3f82c1  @@ -92,4 +92,8 @@ class Foo   +4 -0
+
+$ git-hunk stage d161935
 ```
 
 ## Usage
@@ -21,62 +37,36 @@ uv pip install -e .
 ### List hunks
 
 ```bash
-# List unstaged hunks as JSON
-git-hunk list
-
-# List staged hunks
-git-hunk list --staged
-
-# List hunks for specific files
-git-hunk list src/foo.py src/bar.py
-```
-
-Output:
-
-```json
-[
-  {
-    "id": "abc1234",
-    "file": "src/foo.py",
-    "index": 0,
-    "header": "@@ -10,7 +10,9 @@ def bar():",
-    "additions": 3,
-    "deletions": 1,
-    "context_before": "def bar():",
-    "diff": "@@ -10,7 +10,9 @@ def bar():\n ..."
-  }
-]
+git-hunk list                          # unstaged hunks
+git-hunk list --staged                 # staged hunks
+git-hunk list src/foo.py src/bar.py    # specific files
+git-hunk list --json                   # force JSON output on a TTY
 ```
 
 ### Show a hunk
 
 ```bash
-git-hunk show abc1234
+git-hunk show d161935
 ```
 
-### Stage specific hunks
+### Stage, unstage, discard
 
 ```bash
-# Stage one or more hunks by ID
-git-hunk stage abc1234
-git-hunk stage abc1234 def5678
-```
-
-### Discard specific hunks
-
-```bash
-# Discard unstaged changes for specific hunks (restore from HEAD)
-git-hunk discard abc1234
+git-hunk stage d161935                 # stage a hunk
+git-hunk stage d161935 a3f82c1         # stage multiple hunks
+git-hunk stage d161935 -l 3,5-7        # stage specific lines only
+git-hunk unstage d161935               # move back to working tree
+git-hunk discard d161935               # restore from HEAD
 ```
 
 ## How it works
 
 1. Parses `git diff` output into individual hunks
 2. Assigns each hunk a stable, content-based ID (SHA-256 prefix)
-3. For staging: reconstructs a minimal patch with just the selected hunks and pipes it through `git apply --cached`
+3. For staging: reconstructs a minimal patch and pipes it through `git apply --cached`
 4. For discarding: reconstructs a reverse patch and applies it to the working tree
 
-## Requirements
+## License
 
-- Python 3.8+
-- Git
+git-hunk is licensed under the MIT license ([LICENSE](LICENSE) or
+<https://opensource.org/licenses/MIT>).
