@@ -18,7 +18,7 @@ Requires: `uv tool install git-hunk` (or `pip install git-hunk`)
 
 ## Workflow
 
-1. `git-hunk list` - see all hunks (file, id, +/- stats). No diffs.
+1. `git-hunk list` — see all hunks (file, id, +/- stats). No diffs.
 2. `git-hunk show <id> [<id>...]` or `git-hunk show --all` when headers aren't clear enough.
 3. Group hunks into logical commits. Ask the user if grouping is ambiguous.
 4. Stage and commit each group:
@@ -28,7 +28,18 @@ Requires: `uv tool install git-hunk` (or `pip install git-hunk`)
    ```
 5. `git-hunk list` again to check nothing got left behind.
 
-For partial hunks: `git-hunk stage <id> -l 3,5-7` (include) or `-l ^3,^5-7` (exclude).
+## Partial hunks
+
+Line selection (`-l`) works with `stage`, `unstage`, and `discard` (requires single id):
+- Include lines: `git-hunk stage <id> -l 3,5-7`
+- Exclude lines: `git-hunk stage <id> -l ^3,^5-7`
+
+## Fixing mistakes
+
+- `git-hunk unstage <id1> <id2> ...` — move staged hunks back to working tree.
+- `git-hunk unstage <id> -l 3,5-7` — partially unstage specific lines.
+- `git-hunk discard <id1> <id2> ...` — permanently discard unstaged hunks (restore from HEAD).
+- `git-hunk discard <id> -l 3,5-7` — partially discard specific lines.
 
 ## Example `git-hunk list` output
 
@@ -44,6 +55,7 @@ labelme/translate/de_DE.qm
 ## Notes
 
 - IDs are content-based hashes, stable across partial staging, and support prefix matching
-- `--staged` / `--unstaged` to filter the view
+- `git-hunk list [<file>...]` — filter hunks by file path
+- `--staged` / `--unstaged` to filter `list` and `show` (both search staged+unstaged by default)
 - `--json` exists but plain output is usually enough
 - One logical change per commit, conventional commit messages
