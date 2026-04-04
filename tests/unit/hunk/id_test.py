@@ -28,11 +28,10 @@ def test_full_id_includes_header() -> None:
     assert _full_id("f.py", diff_a) != _full_id("f.py", diff_b)
 
 
-def _make_hunk(*, file: str, diff: str, index: int = 0) -> Hunk:
+def _make_hunk(*, file: str, diff: str) -> Hunk:
     return Hunk(
         id="",
         file=file,
-        index=index,
         header="",
         additions=0,
         deletions=0,

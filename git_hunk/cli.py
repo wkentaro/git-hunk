@@ -164,7 +164,6 @@ def _get_untracked_entries(files: list[str] | None = None) -> list[Hunk]:
         Hunk(
             id="",
             file=p,
-            index=0,
             header="",
             additions=0,
             deletions=0,

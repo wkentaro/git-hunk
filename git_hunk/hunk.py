@@ -9,7 +9,6 @@ from dataclasses import replace
 class Hunk:
     id: str
     file: str
-    index: int
     header: str
     additions: int
     deletions: int
@@ -22,7 +21,6 @@ class Hunk:
             "id": self.id,
             "file": self.file,
             "status": self.status,
-            "index": self.index,
             "header": self.header,
             "additions": self.additions,
             "deletions": self.deletions,
@@ -202,7 +200,6 @@ def parse_diff(diff_output: str) -> list[Hunk]:
 
         parts = re.split(r"(?=^@@)", file_diff, flags=re.MULTILINE)
 
-        hunk_idx = 0
         for part in parts[1:]:
             lines = part.split("\n")
             header_line = lines[0]
@@ -222,7 +219,6 @@ def parse_diff(diff_output: str) -> list[Hunk]:
                 hunk = Hunk(
                     id="",
                     file=filepath,
-                    index=hunk_idx,
                     header=sub_header,
                     additions=additions,
                     deletions=deletions,
@@ -230,6 +226,5 @@ def parse_diff(diff_output: str) -> list[Hunk]:
                     diff=hunk_diff,
                 )
                 hunks.append(hunk)
-                hunk_idx += 1
 
     return _with_stable_ids(hunks)

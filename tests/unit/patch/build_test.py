@@ -40,7 +40,6 @@ def _make_hunk(*, file: str, diff: str) -> Hunk:
     return Hunk(
         id="abc",
         file=file,
-        index=0,
         header="",
         additions=1,
         deletions=0,

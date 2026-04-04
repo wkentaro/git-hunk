@@ -13,7 +13,6 @@ def _make_hunk(diff: str) -> Hunk:
     return Hunk(
         id="abc1234",
         file="test.py",
-        index=0,
         header=header,
         additions=additions,
         deletions=deletions,
