@@ -1,9 +1,9 @@
 # git-hunk
 
-[![PyPI](https://img.shields.io/pypi/v/git-hunk.svg)](https://pypi.python.org/pypi/git-hunk)
-[![Python](https://img.shields.io/pypi/pyversions/git-hunk.svg)](https://pypi.python.org/pypi/git-hunk)
+[![PyPI](https://img.shields.io/pypi/v/git_hunk.svg)](https://pypi.org/project/git-hunk/)
+[![Python](https://img.shields.io/pypi/pyversions/git_hunk.svg)](https://pypi.org/project/git-hunk/)
 [![Build](https://github.com/wkentaro/git-hunk/actions/workflows/test.yml/badge.svg)](https://github.com/wkentaro/git-hunk/actions/workflows/test.yml)
-[![License](https://img.shields.io/pypi/l/git-hunk.svg)](https://pypi.python.org/pypi/git-hunk)
+[![License](https://img.shields.io/pypi/l/git_hunk.svg)](https://pypi.org/project/git-hunk/)
 
 Non-interactive, programmatic alternative to `git add -p`.
 
