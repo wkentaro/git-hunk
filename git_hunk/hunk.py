@@ -3,6 +3,8 @@ import re
 from collections import Counter
 from dataclasses import dataclass
 from dataclasses import replace
+from typing import Any
+from typing import TypedDict
 
 
 @dataclass(frozen=True)
@@ -16,7 +18,7 @@ class Hunk:
     diff: str
     status: str = "unstaged"
 
-    def to_dict(self) -> dict:
+    def to_dict(self) -> dict[str, Any]:
         return {
             "id": self.id,
             "file": self.file,
@@ -28,7 +30,7 @@ class Hunk:
         }
 
 
-def count_changes(lines: list[str]) -> tuple:
+def count_changes(lines: list[str]) -> tuple[int, int]:
     additions = sum(1 for line in lines if line.startswith("+"))
     deletions = sum(1 for line in lines if line.startswith("-"))
     return additions, deletions
@@ -59,11 +61,19 @@ def _with_stable_ids(hunks: list[Hunk]) -> list[Hunk]:
     ]
 
 
+class _SubHunk(TypedDict):
+    header: str
+    body_lines: list[str]
+
+
+_CONTEXT_LINES = 3
+
+
 def _is_change(line: str) -> bool:
     return line.startswith("+") or line.startswith("-")
 
 
-def _find_change_regions(body_lines: list[str]) -> list[tuple]:
+def _find_change_regions(body_lines: list[str]) -> list[tuple[int, int]]:
     regions = []
     i = 0
     while i < len(body_lines):
@@ -77,9 +87,8 @@ def _find_change_regions(body_lines: list[str]) -> list[tuple]:
     return regions
 
 
-def _find_split_points(regions: list[tuple]) -> list[int]:
-    CONTEXT_LINES = 3
-    MIN_GAP = 2 * CONTEXT_LINES + 1
+def _find_split_points(regions: list[tuple[int, int]]) -> list[int]:
+    MIN_GAP = 2 * _CONTEXT_LINES + 1
     return [
         r
         for r in range(1, len(regions))
@@ -89,7 +98,7 @@ def _find_split_points(regions: list[tuple]) -> list[int]:
 
 def _advance_offsets(
     body_lines: list[str], start: int, end: int, old: int, new: int
-) -> tuple:
+) -> tuple[int, int]:
     for j in range(start, end):
         line = body_lines[j]
         if line.startswith("+"):
@@ -105,14 +114,12 @@ def _advance_offsets(
 def _build_sub_hunks(
     header_line: str,
     body_lines: list[str],
-    regions: list[tuple],
+    regions: list[tuple[int, int]],
     split_points: list[int],
-) -> list[dict]:
-    CONTEXT_LINES = 3
-
+) -> list[_SubHunk]:
     m = re.match(r"@@ -(\d+)(?:,\d+)? \+(\d+)(?:,\d+)? @@(.*)", header_line)
     if not m:
-        return [{"header": header_line, "body_lines": body_lines}]
+        return [_SubHunk(header=header_line, body_lines=body_lines)]
 
     old_start = int(m.group(1))
     new_start = int(m.group(2))
@@ -133,8 +140,8 @@ def _build_sub_hunks(
         first_region = regions[g_start]
         last_region = regions[g_end - 1]
 
-        body_start = max(0, first_region[0] - CONTEXT_LINES)
-        body_end = min(len(body_lines), last_region[1] + CONTEXT_LINES + 1)
+        body_start = max(0, first_region[0] - _CONTEXT_LINES)
+        body_end = min(len(body_lines), last_region[1] + _CONTEXT_LINES + 1)
 
         running_old, running_new = _advance_offsets(
             body_lines, prev_body_end, body_start, running_old, running_new
@@ -149,7 +156,7 @@ def _build_sub_hunks(
         sub_header = (
             f"@@ -{running_old},{old_count} +{running_new},{new_count} @@{tail}"
         )
-        sub_hunks.append({"header": sub_header, "body_lines": sub_body})
+        sub_hunks.append(_SubHunk(header=sub_header, body_lines=sub_body))
 
         running_old, running_new = _advance_offsets(
             body_lines, body_start, body_end, running_old, running_new
@@ -163,14 +170,14 @@ def _split_hunk(
     filepath: str,
     header_line: str,
     body_lines: list[str],
-) -> list[dict]:
+) -> list[_SubHunk]:
     regions = _find_change_regions(body_lines)
     if len(regions) <= 1:
-        return [{"header": header_line, "body_lines": body_lines}]
+        return [_SubHunk(header=header_line, body_lines=body_lines)]
 
     split_points = _find_split_points(regions)
     if not split_points:
-        return [{"header": header_line, "body_lines": body_lines}]
+        return [_SubHunk(header=header_line, body_lines=body_lines)]
 
     return _build_sub_hunks(header_line, body_lines, regions, split_points)
 

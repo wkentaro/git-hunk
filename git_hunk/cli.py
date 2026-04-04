@@ -75,14 +75,13 @@ def _require_git_repo() -> None:
         raise CliError("not a git repository")
 
 
-def _get_hunks(
-    staged: bool, files: list[str] | None = None, status: str = "unstaged"
-) -> list[Hunk]:
+def _get_hunks(staged: bool, files: list[str] | None = None) -> tuple[list[Hunk], str]:
     _require_git_repo()
-    hunks = parse_diff(get_diff(staged=staged, files=files))
-    if status != "unstaged":
-        hunks = [replace(h, status=status) for h in hunks]
-    return hunks
+    diff_output = get_diff(staged=staged, files=files)
+    hunks = parse_diff(diff_output)
+    status = "staged" if staged else "unstaged"
+    hunks = [replace(h, status=status) for h in hunks]
+    return hunks, diff_output
 
 
 def _find_hunks_by_ids(hunks: list[Hunk], ids: list[str]) -> list[Hunk]:
@@ -136,7 +135,7 @@ def _run_patch_command(
             usage=usage,
         )
 
-    hunks = _get_hunks(staged=staged)
+    hunks, diff_output = _get_hunks(staged=staged)
     selected = _find_hunks_by_ids(hunks, ids)
     selected = _apply_line_filter(selected, line_spec)
 
@@ -145,7 +144,6 @@ def _run_patch_command(
 
     try:
         if text:
-            diff_output = get_diff(staged=staged)
             patch = build_patch(text, diff_output)
             apply_patch(patch, cached=cached, reverse=reverse)
         if binary:
@@ -217,13 +215,13 @@ def cmd_list(
         raise CliError("cannot use --staged and --unstaged together")
 
     if staged:
-        hunks = _get_hunks(staged=True, files=file_list, status="staged")
+        hunks, _ = _get_hunks(staged=True, files=file_list)
     elif unstaged:
-        hunks = _get_hunks(staged=False, files=file_list)
+        hunks, _ = _get_hunks(staged=False, files=file_list)
     else:
-        hunks = _get_hunks(staged=True, files=file_list, status="staged")
-        hunks += _get_hunks(staged=False, files=file_list)
-        hunks += _get_untracked_entries(files=file_list)
+        hunks_staged, _ = _get_hunks(staged=True, files=file_list)
+        hunks_unstaged, _ = _get_hunks(staged=False, files=file_list)
+        hunks = hunks_staged + hunks_unstaged + _get_untracked_entries(files=file_list)
 
     if force_json:
         click.echo(json.dumps([h.to_dict() for h in hunks], indent=2))
@@ -258,12 +256,13 @@ def cmd_show(
         raise CliError("show requires at least one hunk id", usage=USAGE_SHOW)
 
     if staged:
-        hunks = _get_hunks(staged=True, status="staged")
+        hunks, _ = _get_hunks(staged=True)
     elif unstaged:
-        hunks = _get_hunks(staged=False)
+        hunks, _ = _get_hunks(staged=False)
     else:
-        hunks = _get_hunks(staged=True, status="staged")
-        hunks += _get_hunks(staged=False)
+        hunks_staged, _ = _get_hunks(staged=True)
+        hunks_unstaged, _ = _get_hunks(staged=False)
+        hunks = hunks_staged + hunks_unstaged
 
     if show_all:
         matched = hunks

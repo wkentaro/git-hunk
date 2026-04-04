@@ -51,8 +51,8 @@ def stage_files(files: list[str]) -> None:
 
 
 def unstage_files(files: list[str]) -> None:
-    run_git("reset", "HEAD", "--", *files)
+    run_git("restore", "--staged", "--", *files)
 
 
 def discard_files(files: list[str]) -> None:
-    run_git("checkout", "--", *files)
+    run_git("restore", "--", *files)
