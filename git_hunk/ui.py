@@ -182,5 +182,6 @@ IDs support prefix matching.
 
 {_LINE_OPTS}"""
 
+
 def print_help(text: str) -> None:
     _err().print(text)
