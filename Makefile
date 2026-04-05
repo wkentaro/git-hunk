@@ -44,6 +44,7 @@ lint:  # Lint code
 	$(call exec,uv run taplo fmt --check)
 	$(call exec,uv run mdformat --check $$(git ls-files *.md))
 	$(call exec,uv run yamlfix --check $$(git ls-files *.yml *.yaml))
+	$(call exec,uv run typos)
 
 test:  # Run tests
 	$(call exec,uv run pytest -v tests/ $(PYTEST_ARGS))
