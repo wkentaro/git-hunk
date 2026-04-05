@@ -7,7 +7,7 @@ description: |
 license: MIT
 metadata:
   author: wkentaro
-  version: "0.1.0"
+  version: 0.1.0
 allowed-tools:
   - Bash
 ---
@@ -19,18 +19,19 @@ Requires: `uv tool install git-hunk` (or `pip install git-hunk`)
 ## Workflow
 
 1. `git-hunk list` — see all hunks (file, id, +/- stats). No diffs.
-2. `git-hunk show <id> [<id>...]` or `git-hunk show --all` when headers aren't clear enough.
-3. Group hunks into logical commits. Ask the user if grouping is ambiguous.
-4. Stage and commit each group:
+1. `git-hunk show <id> [<id>...]` or `git-hunk show --all` when headers aren't clear enough.
+1. Group hunks into logical commits. Ask the user if grouping is ambiguous.
+1. Stage and commit each group:
    ```bash
    git-hunk stage <id1> <id2> ...
    git commit -m "<type>: <description>"
    ```
-5. `git-hunk list` again to check nothing got left behind.
+1. `git-hunk list` again to check nothing got left behind.
 
 ## Partial hunks
 
 Line selection (`-l`) works with `stage`, `unstage`, and `discard` (requires single id):
+
 - Include lines: `git-hunk stage <id> -l 3,5-7`
 - Exclude lines: `git-hunk stage <id> -l ^3,^5-7`
 
