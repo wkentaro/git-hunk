@@ -1,12 +1,5 @@
 ifneq ($(OS),Windows_NT)
-	# On Unix-based systems, use ANSI codes
-	BLUE = \033[36m
-	BOLD_BLUE = \033[1;36m
-	BOLD_GREEN = \033[1;32m
-	RED = \033[31m
-	YELLOW = \033[33m
-	BOLD = \033[1m
-	NC = \033[0m
+	SHELL := bash
 endif
 
 .PHONY: help setup format lint test coverage
@@ -14,18 +7,13 @@ endif
 
 PYTEST_ARGS ?= --numprocesses=auto
 
-escape = $(subst $$,\$$,$(subst ",\",$(subst ',\',$(1))))
-
 define exec
-	@printf '$(BOLD_BLUE)%s$(NC)\n' '$(call escape,$(1))'
+	@uv run --no-sync python -c "print('\033[1;36m$(1)\033[0m')"
 	@$(1)
 endef
 
 help:
-	@echo "$(BOLD_GREEN)Available targets:$(NC)"
-	@grep -E '^[a-zA-Z_-]+:.*?# .*$$' $(MAKEFILE_LIST) | \
-		awk 'BEGIN {FS = ":.*?# "}; \
-		{printf "  $(BOLD_BLUE)%-20s$(NC) %s\n", $$1, $$2}'
+	@uv run --no-sync python -c "import re; lines=open('Makefile').read().splitlines(); print('\033[1;32mAvailable targets:\033[0m'); [print(f'  \033[1;36m{m.group(1):<20s}\033[0m {m.group(2)}') for l in lines if (m:=re.match(r'^([a-zA-Z_-]+):.*?# (.+)$$',l))]"
 
 setup:  # Setup the development environment
 	$(call exec,uv sync)
@@ -34,16 +22,16 @@ format:  # Format code
 	$(call exec,uv run ruff format)
 	$(call exec,uv run ruff check --fix)
 	$(call exec,uv run taplo fmt)
-	$(call exec,uv run mdformat $$(git ls-files *.md))
-	$(call exec,uv run yamlfix $$(git ls-files *.yml *.yaml))
+	$(call exec,uv run mdformat $(shell git ls-files "*.md"))
+	$(call exec,uv run yamlfix $(shell git ls-files "*.yml" "*.yaml"))
 
 lint:  # Lint code
 	$(call exec,uv run ruff format --check)
 	$(call exec,uv run ruff check)
 	$(call exec,uv run ty check --no-progress)
 	$(call exec,uv run taplo fmt --check)
-	$(call exec,uv run mdformat --check $$(git ls-files *.md))
-	$(call exec,uv run yamlfix --check $$(git ls-files *.yml *.yaml))
+	$(call exec,uv run mdformat --check $(shell git ls-files "*.md"))
+	$(call exec,uv run yamlfix --check $(shell git ls-files "*.yml" "*.yaml"))
 	$(call exec,uv run typos)
 
 test:  # Run tests
