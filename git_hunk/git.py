@@ -14,12 +14,13 @@ def run_git(*args: str, input: str | None = None, check: bool = True) -> str:
     result = subprocess.run(
         ["git"] + list(args),
         capture_output=True,
-        text=True,
-        input=input,
+        input=input.encode() if input is not None else None,
     )
     if check and result.returncode != 0:
-        raise RuntimeError(f"git {' '.join(args)} failed: {result.stderr.strip()}")
-    return result.stdout
+        raise RuntimeError(
+            f"git {' '.join(args)} failed: {result.stderr.decode().strip()}"
+        )
+    return result.stdout.decode()
 
 
 def get_diff(staged: bool = False, files: list[str] | None = None) -> str:
