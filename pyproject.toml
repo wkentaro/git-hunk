@@ -47,6 +47,7 @@ dev = [
   "mdformat>=0.7",
   "yamlfix>=1.17",
   "taplo>=0.9",
+  "mdformat-frontmatter>=2.0.10",
 ]
 
 [tool.ruff.lint]
