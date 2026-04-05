@@ -1,6 +1,6 @@
 import pytest
 
-from git_hunk.lines import parse_line_spec
+from git_hunk._lines import parse_line_spec
 
 
 def test_single_line() -> None:

@@ -1,4 +1,4 @@
-from git_hunk.hunk import _split_hunk
+from git_hunk._hunk import _split_hunk
 
 
 def test_single_region_no_split() -> None:

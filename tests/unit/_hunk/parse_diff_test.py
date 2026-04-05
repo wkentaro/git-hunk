@@ -1,4 +1,4 @@
-from git_hunk.hunk import parse_diff
+from git_hunk._hunk import parse_diff
 
 
 def test_splits_large_hunk() -> None:

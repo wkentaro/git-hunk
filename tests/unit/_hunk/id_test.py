@@ -1,8 +1,8 @@
-from git_hunk.hunk import Hunk
-from git_hunk.hunk import _body_id
-from git_hunk.hunk import _full_id
-from git_hunk.hunk import _with_stable_ids
-from git_hunk.hunk import count_changes
+from git_hunk._hunk import Hunk
+from git_hunk._hunk import _body_id
+from git_hunk._hunk import _full_id
+from git_hunk._hunk import _with_stable_ids
+from git_hunk._hunk import count_changes
 
 
 def test_body_id_ignores_header_line_numbers() -> None:
