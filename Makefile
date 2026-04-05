@@ -9,16 +9,21 @@ ifneq ($(OS),Windows_NT)
 	NC = \033[0m
 endif
 
+.PHONY: help setup format lint test coverage
+.DEFAULT_GOAL := help
+
+PYTEST_ARGS ?= --numprocesses=auto
+
 escape = $(subst $$,\$$,$(subst ",\",$(subst ',\',$(1))))
 
 define exec
-	@echo "$(BOLD_BLUE)$(call escape,$(1))$(NC)"
+	@printf '$(BOLD_BLUE)%s$(NC)\n' '$(call escape,$(1))'
 	@$(1)
 endef
 
 help:
 	@echo "$(BOLD_GREEN)Available targets:$(NC)"
-	@grep -E '^[a-zA-Z_-].+:.*?# .*$$' $(MAKEFILE_LIST) | \
+	@grep -E '^[a-zA-Z_-]+:.*?# .*$$' $(MAKEFILE_LIST) | \
 		awk 'BEGIN {FS = ":.*?# "}; \
 		{printf "  $(BOLD_BLUE)%-20s$(NC) %s\n", $$1, $$2}'
 
@@ -32,7 +37,7 @@ format:  # Format code
 	$(call exec,uv run mdformat $$(git ls-files *.md))
 	$(call exec,uv run yamlfix $$(git ls-files *.yml *.yaml))
 
-lint:
+lint:  # Lint code
 	$(call exec,uv run ruff format --check)
 	$(call exec,uv run ruff check)
 	$(call exec,uv run ty check --no-progress)
@@ -41,7 +46,7 @@ lint:
 	$(call exec,uv run yamlfix --check $$(git ls-files *.yml *.yaml))
 
 test:  # Run tests
-	$(call exec,uv run pytest -v tests/ --numprocesses=auto)
+	$(call exec,uv run pytest -v tests/ $(PYTEST_ARGS))
 
 coverage:  # Run tests with coverage
-	$(call exec,uv run pytest -v tests/ --cov=git_hunk --cov-report=term-missing)
+	$(MAKE) test PYTEST_ARGS="--cov=git_hunk --cov-report=term-missing"
