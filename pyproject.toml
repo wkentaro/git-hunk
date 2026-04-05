@@ -39,20 +39,23 @@ path = "git_hunk/__init__.py"
 
 [dependency-groups]
 dev = [
-    "pytest>=7",
-    "pytest-cov>=4",
-    "pytest-xdist>=3.8.0",
-    "ruff>=0.15.9",
-    "ty>=0.0.28",
+  "pytest>=7",
+  "pytest-cov>=4",
+  "pytest-xdist>=3.8.0",
+  "ruff>=0.15.9",
+  "ty>=0.0.28",
+  "mdformat>=0.7",
+  "yamlfix>=1.17",
+  "taplo>=0.9",
 ]
 
 [tool.ruff.lint]
 select = [
-  "E",  # pycodestyle
-  "F",  # pyflakes
-  "I",  # isort
+  "E",   # pycodestyle
+  "F",   # pyflakes
+  "I",   # isort
   "UP",  # pyupgrade
-  "ANN",  # flake8-annotations
+  "ANN", # flake8-annotations
 ]
 
 [tool.ruff.lint.isort]

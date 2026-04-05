@@ -28,11 +28,17 @@ setup:  # Setup the development environment
 format:  # Format code
 	$(call exec,uv run ruff format)
 	$(call exec,uv run ruff check --fix)
+	$(call exec,uv run taplo fmt)
+	$(call exec,uv run mdformat *.md)
+	$(call exec,uv run yamlfix .github/)
 
 lint:
 	$(call exec,uv run ruff format --check)
 	$(call exec,uv run ruff check)
 	$(call exec,uv run ty check --no-progress)
+	$(call exec,uv run taplo fmt --check)
+	$(call exec,uv run mdformat --check *.md)
+	$(call exec,uv run yamlfix --check .github/)
 
 test:  # Run tests
 	$(call exec,uv run pytest -v tests/ --numprocesses=auto)
