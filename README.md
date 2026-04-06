@@ -49,6 +49,9 @@ If you use [Claude Code](https://claude.ai/code), [Codex](https://openai.com/cod
 npx skills add wkentaro/git-hunk
 ```
 
+Or copy [`SKILL.md`](skills/git-hunk/SKILL.md) to
+`~/.claude/skills/git-hunk/SKILL.md` (or `~/.agents/...`).
+
 This installs a `/git-hunk` slash command that teaches the agent how to split
 changes into logical commits.
 
