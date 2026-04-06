@@ -1,6 +1,6 @@
 import re
 
-from .hunk import Hunk
+from ._hunk import Hunk
 
 
 def _get_file_header(diff_output: str, filepath: str) -> str:

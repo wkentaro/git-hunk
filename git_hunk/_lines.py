@@ -1,8 +1,8 @@
 import re
 from dataclasses import replace
 
-from .hunk import Hunk
-from .hunk import count_changes
+from ._hunk import Hunk
+from ._hunk import count_changes
 
 
 def parse_line_spec(spec: str) -> tuple[set[int], bool]:

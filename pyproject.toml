@@ -32,7 +32,7 @@ Issues = "https://github.com/wkentaro/git-hunk/issues"
 Repository = "https://github.com/wkentaro/git-hunk"
 
 [project.scripts]
-git-hunk = "git_hunk.cli:cli"
+git-hunk = "git_hunk._cli:cli"
 
 [tool.hatch.version]
 path = "git_hunk/__init__.py"

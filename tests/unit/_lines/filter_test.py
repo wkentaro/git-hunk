@@ -1,7 +1,7 @@
 import pytest
 
-from git_hunk.hunk import Hunk
-from git_hunk.lines import filter_hunk_lines
+from git_hunk._hunk import Hunk
+from git_hunk._lines import filter_hunk_lines
 
 
 def _make_hunk(diff: str) -> Hunk:

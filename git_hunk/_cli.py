@@ -4,35 +4,35 @@ from dataclasses import replace
 import click
 
 from . import __version__
-from .git import apply_patch
-from .git import discard_files
-from .git import get_diff
-from .git import get_untracked_files
-from .git import is_git_repo
-from .git import stage_files
-from .git import unstage_files
-from .hunk import Hunk
-from .hunk import parse_diff
-from .lines import filter_hunk_lines
-from .lines import parse_line_spec
-from .patch import build_patch
-from .ui import HELP
-from .ui import HELP_DISCARD
-from .ui import HELP_LIST
-from .ui import HELP_SHOW
-from .ui import HELP_STAGE
-from .ui import HELP_UNSTAGE
-from .ui import USAGE
-from .ui import USAGE_DISCARD
-from .ui import USAGE_SHOW
-from .ui import USAGE_STAGE
-from .ui import USAGE_UNSTAGE
-from .ui import print_applied
-from .ui import print_error
-from .ui import print_help
-from .ui import print_hunk_diffs
-from .ui import print_hunk_list
-from .ui import print_version
+from ._git import apply_patch
+from ._git import discard_files
+from ._git import get_diff
+from ._git import get_untracked_files
+from ._git import is_git_repo
+from ._git import stage_files
+from ._git import unstage_files
+from ._hunk import Hunk
+from ._hunk import parse_diff
+from ._lines import filter_hunk_lines
+from ._lines import parse_line_spec
+from ._patch import build_patch
+from ._ui import HELP
+from ._ui import HELP_DISCARD
+from ._ui import HELP_LIST
+from ._ui import HELP_SHOW
+from ._ui import HELP_STAGE
+from ._ui import HELP_UNSTAGE
+from ._ui import USAGE
+from ._ui import USAGE_DISCARD
+from ._ui import USAGE_SHOW
+from ._ui import USAGE_STAGE
+from ._ui import USAGE_UNSTAGE
+from ._ui import print_applied
+from ._ui import print_error
+from ._ui import print_help
+from ._ui import print_hunk_diffs
+from ._ui import print_hunk_list
+from ._ui import print_version
 
 
 class CliError(Exception):

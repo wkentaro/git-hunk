@@ -13,7 +13,7 @@ from rich.console import Console
 from rich.rule import Rule
 from rich.text import Text
 
-from .hunk import Hunk
+from ._hunk import Hunk
 
 
 def _out() -> Console:

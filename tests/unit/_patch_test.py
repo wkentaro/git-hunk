@@ -1,8 +1,8 @@
 import pytest
 
-from git_hunk.hunk import Hunk
-from git_hunk.patch import _get_file_header
-from git_hunk.patch import build_patch
+from git_hunk._hunk import Hunk
+from git_hunk._patch import _get_file_header
+from git_hunk._patch import build_patch
 
 DIFF_SINGLE = (
     "diff --git a/f.py b/f.py\n"

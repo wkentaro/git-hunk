@@ -5,7 +5,7 @@ import subprocess
 import pytest
 from click.testing import CliRunner
 
-from git_hunk.cli import cli as git_hunk_cli
+from git_hunk._cli import cli as git_hunk_cli
 from tests.conftest import GitRepo
 
 
