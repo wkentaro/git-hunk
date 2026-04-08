@@ -20,7 +20,7 @@ Requires: `uv tool install git-hunk` (or `pip install git-hunk`)
 
 1. `git-hunk list` — see all hunks (file, id, +/- stats). No diffs.
 1. `git-hunk show <id> [<id>...]` or `git-hunk show --all` when headers aren't clear enough.
-1. Group hunks into logical commits. Ask the user if grouping is ambiguous.
+1. Plan commits before staging. For each planned commit, list the hunk IDs (and `-l` line ranges for partial hunks). A single hunk may need to be split across commits. Ask the user if grouping is ambiguous.
 1. Stage and commit each group:
    ```bash
    git-hunk stage <id1> <id2> ...
