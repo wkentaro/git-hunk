@@ -24,7 +24,6 @@ from ._ui import HELP_STAGE
 from ._ui import HELP_UNSTAGE
 from ._ui import USAGE
 from ._ui import USAGE_DISCARD
-from ._ui import USAGE_SHOW
 from ._ui import USAGE_STAGE
 from ._ui import USAGE_UNSTAGE
 from ._ui import print_applied
@@ -230,13 +229,11 @@ def cmd_list(
 
 
 @cli.command("show", add_help_option=False)
-@click.option("--all", "show_all", is_flag=True)
 @click.option("--staged", is_flag=True)
 @click.option("--unstaged", is_flag=True)
 @click.option("-h", "--help", "show_help", is_flag=True)
 @click.argument("ids", nargs=-1)
 def cmd_show(
-    show_all: bool,
     staged: bool,
     unstaged: bool,
     show_help: bool,
@@ -249,12 +246,6 @@ def cmd_show(
     if staged and unstaged:
         raise CliError("cannot use --staged and --unstaged together")
 
-    if show_all and ids:
-        raise CliError("--all cannot be combined with specific hunk ids")
-
-    if not show_all and not ids:
-        raise CliError("show requires at least one hunk id", usage=USAGE_SHOW)
-
     if staged:
         hunks, _ = _get_hunks(staged=True)
     elif unstaged:
@@ -264,10 +255,10 @@ def cmd_show(
         hunks_unstaged, _ = _get_hunks(staged=False)
         hunks = hunks_staged + hunks_unstaged
 
-    if show_all:
-        matched = hunks
-    else:
+    if ids:
         matched = _find_hunks_by_ids(hunks, list(ids))
+    else:
+        matched = hunks
 
     print_hunk_diffs(matched)
 

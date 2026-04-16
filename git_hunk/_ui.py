@@ -171,7 +171,7 @@ _LINE_OPTS = """\
              Examples: -l 3,5-7  (include)   -l ^3,^5-7  (exclude)"""  # noqa: E501
 
 USAGE = "[bold green]Usage:[/bold green] [bold cyan]git-hunk[/bold cyan] [cyan]<COMMAND>[/cyan]"  # noqa: E501
-USAGE_SHOW = "[bold green]Usage:[/bold green] [bold cyan]git-hunk show[/bold cyan] [cyan]<id>[/cyan] [cyan][<id>...][/cyan] [cyan][OPTIONS][/cyan]"  # noqa: E501
+USAGE_SHOW = "[bold green]Usage:[/bold green] [bold cyan]git-hunk show[/bold cyan] [cyan][<id>...][/cyan] [cyan][OPTIONS][/cyan]"  # noqa: E501
 USAGE_STAGE = "[bold green]Usage:[/bold green] [bold cyan]git-hunk stage[/bold cyan] [cyan]<id>[/cyan] [cyan][<id>...][/cyan] [cyan][OPTIONS][/cyan]"  # noqa: E501
 USAGE_UNSTAGE = "[bold green]Usage:[/bold green] [bold cyan]git-hunk unstage[/bold cyan] [cyan]<id>[/cyan] [cyan][<id>...][/cyan] [cyan][OPTIONS][/cyan]"  # noqa: E501
 USAGE_DISCARD = "[bold green]Usage:[/bold green] [bold cyan]git-hunk discard[/bold cyan] [cyan]<id>[/cyan] [cyan][<id>...][/cyan] [cyan][OPTIONS][/cyan]"  # noqa: E501
@@ -203,12 +203,12 @@ List hunks (unstaged, staged, and untracked by default).
   [bold cyan]--json[/bold cyan]        Output as JSON"""  # noqa: E501
 
 HELP_SHOW = f"""\
-Show the diff for one or more hunks. IDs support prefix matching.
+Show the diff for one or more hunks. Shows all hunks when no IDs given.
+IDs support prefix matching.
 
 {USAGE_SHOW}
 
 [bold green]Options:[/bold green]
-  [bold cyan]--all[/bold cyan]        Show all hunks
   [bold cyan]--staged[/bold cyan]     Show only staged hunks
   [bold cyan]--unstaged[/bold cyan]   Show only unstaged hunks"""
 

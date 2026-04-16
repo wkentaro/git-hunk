@@ -88,11 +88,11 @@ git-hunk list --json                   # JSON output for scripting
 ### Show hunks
 
 ```bash
+git-hunk show                          # show all hunks (staged + unstaged)
 git-hunk show d161935                  # show a single hunk
 git-hunk show d161935 a3f82c1          # show multiple hunks
-git-hunk show --all                    # show all hunks (staged + unstaged)
-git-hunk show --all --staged           # show all staged hunks
-git-hunk show --all --unstaged         # show all unstaged hunks
+git-hunk show --staged                 # show all staged hunks
+git-hunk show --unstaged               # show all unstaged hunks
 ```
 
 ### Stage, unstage, discard
