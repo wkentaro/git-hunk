@@ -1,6 +1,6 @@
 [build-system]
 build-backend = "hatchling.build"
-requires = ["hatchling"]
+requires = ["hatch-vcs", "hatchling"]
 
 [project]
 authors = [{ name = "Kentaro Wada" }]
@@ -35,7 +35,7 @@ Repository = "https://github.com/wkentaro/git-hunk"
 git-hunk = "git_hunk._cli:cli"
 
 [tool.hatch.version]
-path = "git_hunk/__init__.py"
+source = "vcs"
 
 [dependency-groups]
 dev = [
