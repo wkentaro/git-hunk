@@ -43,10 +43,16 @@ git-hunk --version
 
 ### Agent skill (optional)
 
-If you use [Claude Code](https://claude.ai/code), [Codex](https://openai.com/codex), or similar AI agents:
+If you use [Claude Code](https://claude.ai/code), [Codex](https://openai.com/codex), or similar AI agents, install the skill from this repo:
 
 ```bash
 npx skills add wkentaro/git-hunk
+```
+
+Or via the [GitHub CLI](https://cli.github.com):
+
+```bash
+gh skill install wkentaro/git-hunk
 ```
 
 Or copy [`SKILL.md`](skills/git-hunk/SKILL.md) to
