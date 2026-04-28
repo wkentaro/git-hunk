@@ -10,7 +10,7 @@ Non-interactive, programmatic alternative to `git add -p`.
 Every hunk gets a stable, content-based ID so you can inspect, filter, and
 stage changes without interactive prompts.
 
-<img src="https://github.com/wkentaro/git-hunk/blob/main/assets/teaser.png?raw=true" alt="git-hunk teaser" width="800">
+<img src="assets/teaser.png" alt="git-hunk teaser" width="800">
 
 ## Why?
 
