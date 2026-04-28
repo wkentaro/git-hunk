@@ -1,6 +1,6 @@
 [build-system]
 build-backend = "hatchling.build"
-requires = ["hatch-vcs", "hatchling"]
+requires = ["hatch-fancy-pypi-readme", "hatch-vcs", "hatchling"]
 
 [project]
 authors = [{ name = "Kentaro Wada" }]
@@ -19,11 +19,10 @@ classifiers = [
 ]
 dependencies = ["click>=8", "rich>=13"]
 description = "Non-interactive, programmatic git hunk staging with stable IDs."
-dynamic = ["version"]
+dynamic = ["readme", "version"]
 keywords = ["automation", "diff", "git", "hunk", "staging", "version-control"]
 license = "MIT"
 name = "git-hunk"
-readme = "README.md"
 requires-python = ">=3.10"
 
 [project.urls]
@@ -33,6 +32,18 @@ Repository = "https://github.com/wkentaro/git-hunk"
 
 [project.scripts]
 git-hunk = "git_hunk._cli:cli"
+
+[tool.hatch.metadata.hooks.fancy-pypi-readme]
+content-type = "text/markdown"
+fragments = [{ path = "README.md" }]
+
+[[tool.hatch.metadata.hooks.fancy-pypi-readme.substitutions]]
+pattern = 'src="(?!https?://)([^"]+)"'
+replacement = 'src="https://raw.githubusercontent.com/wkentaro/git-hunk/main/\1"'
+
+[[tool.hatch.metadata.hooks.fancy-pypi-readme.substitutions]]
+pattern = '!\[([^\]]*)\]\((?!https?://)([^)]+)\)'
+replacement = '![\1](https://raw.githubusercontent.com/wkentaro/git-hunk/main/\2)'
 
 [tool.hatch.version]
 source = "vcs"
