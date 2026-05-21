@@ -6,7 +6,7 @@ description: |
   "commit by hunk", or "separate changes into commits".
 license: MIT
 metadata:
-  author: wkentaro
+  author: wkentaro, Botify team
   version: 0.1.0
 allowed-tools:
   - Bash
@@ -14,7 +14,7 @@ allowed-tools:
 
 # /git-hunk - split changes into focused commits
 
-Requires: `uv tool install git-hunk` (or `pip install git-hunk`)
+Requires: `uv tool install git+https://github.com/botify-labs/git-hunk.git` (or `pip install git-hunk`)
 
 ## Workflow
 

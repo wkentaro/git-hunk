@@ -29,9 +29,9 @@ readme = "README.md"
 requires-python = ">=3.10"
 
 [project.urls]
-Homepage = "https://github.com/wkentaro/git-hunk"
-Issues = "https://github.com/wkentaro/git-hunk/issues"
-Repository = "https://github.com/wkentaro/git-hunk"
+Homepage = "https://github.com/botify-labs/git-hunk"
+Issues = "https://github.com/botify-labs/git-hunk/issues"
+Repository = "https://github.com/botify-labs/git-hunk"
 
 [project.scripts]
 git-hunk = "git_hunk._cli:cli"
