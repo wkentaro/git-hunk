@@ -35,10 +35,9 @@ class GitRepo:
 
 
 @pytest.fixture
-def git_repo() -> Generator[GitRepo]:
-    with tempfile.TemporaryDirectory() as tmpdir:
-        repo = GitRepo(tmpdir)
-        repo.git("init")
-        repo.git("config", "user.email", "test@test.com")
-        repo.git("config", "user.name", "Test")
-        yield repo
+def git_repo(tmp_path) -> Generator[GitRepo]:
+    repo = GitRepo(tmp_path)
+    repo.git("init")
+    repo.git("config", "user.email", "test@test.com")
+    repo.git("config", "user.name", "Test")
+    yield repo
