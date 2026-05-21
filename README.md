@@ -1,16 +1,13 @@
 # git-hunk
 
-[![PyPI](https://img.shields.io/pypi/v/git_hunk.svg)](https://pypi.org/project/git-hunk/)
-[![Python](https://img.shields.io/pypi/pyversions/git_hunk.svg)](https://pypi.org/project/git-hunk/)
-[![Build](https://github.com/wkentaro/git-hunk/actions/workflows/test.yml/badge.svg)](https://github.com/wkentaro/git-hunk/actions/workflows/test.yml)
-[![License](https://img.shields.io/pypi/l/git_hunk.svg)](https://pypi.org/project/git-hunk/)
+[![Build](https://github.com/botify-labs/git-hunk/actions/workflows/test.yml/badge.svg)](https://github.com/botify-labs/git-hunk/actions/workflows/test.yml)
+
+Fork of https://github.com/botify-labs/git-hunk for Botify.
 
 Non-interactive, programmatic alternative to `git add -p`.
 
 Every hunk gets a stable, content-based ID so you can inspect, filter, and
 stage changes without interactive prompts.
-
-<img src="assets/teaser.png" alt="git-hunk teaser" width="800">
 
 ## Why?
 
@@ -26,13 +23,7 @@ stage/unstage/discard commands.
 ## Install
 
 ```bash
-pip install git-hunk
-```
-
-Or with [uv](https://docs.astral.sh/uv/):
-
-```bash
-uv tool install git-hunk
+uv tool install git+https://github.com/botify-labs/git-hunk.git
 ```
 
 Verify it works:
@@ -46,13 +37,13 @@ git-hunk --version
 If you use [Claude Code](https://claude.ai/code), [Codex](https://openai.com/codex), or similar AI agents, install the skill from this repo:
 
 ```bash
-npx skills add wkentaro/git-hunk
+npx skills add botify-labs/git-hunk
 ```
 
 Or via the [GitHub CLI](https://cli.github.com):
 
 ```bash
-gh skill install wkentaro/git-hunk
+gh skill install botify-labs/git-hunk
 ```
 
 Or copy [`SKILL.md`](skills/git-hunk/SKILL.md) to
@@ -154,10 +145,10 @@ not the `@@` line numbers that shift as you stage hunks.
 ## Contributing
 
 Bug reports, feature requests, and pull requests are welcome on
-[GitHub](https://github.com/wkentaro/git-hunk).
+[GitHub](https://github.com/botify-labs/git-hunk).
 
 ```bash
-git clone https://github.com/wkentaro/git-hunk.git
+git clone https://github.com/botify-labs/git-hunk.git
 cd git-hunk
 make setup   # install dependencies
 make test    # run tests
@@ -166,4 +157,4 @@ make lint    # run linters
 
 ## License
 
-MIT ([LICENSE](https://github.com/wkentaro/git-hunk/blob/main/LICENSE))
+MIT ([LICENSE](https://github.com/botify-labs/git-hunk/blob/main/LICENSE))
