@@ -1,6 +1,6 @@
 [build-system]
 build-backend = "hatchling.build"
-requires = ["hatch-fancy-pypi-readme", "hatch-vcs", "hatchling"]
+requires = ["hatch-fancy-pypi-readme", "hatchling", "uv-dynamic-versioning"]
 
 [project]
 authors = [{ name = "Kentaro Wada" }]
@@ -47,7 +47,7 @@ pattern = '!\[([^\]]*)\]\((?!https?://)([^)]+)\)'
 replacement = '![\1](https://raw.githubusercontent.com/wkentaro/git-hunk/main/\2)'
 
 [tool.hatch.version]
-source = "vcs"
+source = "uv-dynamic-versioning"
 
 [tool.uv]
 exclude-newer = "7 days"
