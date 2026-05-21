@@ -49,6 +49,9 @@ replacement = '![\1](https://raw.githubusercontent.com/wkentaro/git-hunk/main/\2
 [tool.hatch.version]
 source = "vcs"
 
+[tool.uv]
+exclude-newer = "7 days"
+
 [dependency-groups]
 dev = [
   "mdformat-frontmatter>=2.0.10",
