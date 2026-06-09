@@ -8,6 +8,7 @@ CliRunner's stream replacement works during testing.
 """
 
 from collections import defaultdict
+from typing import Final
 
 from rich.console import Console
 from rich.rule import Rule
@@ -168,13 +169,57 @@ def print_version(version: str) -> None:
 _LINE_OPTS = """\
 [bold green]Options:[/bold green]
   [bold cyan]-l[/bold cyan] [cyan]<lines>[/cyan]  Select specific lines within a hunk (requires single id)
-             Examples: -l 3,5-7  (include)   -l ^3,^5-7  (exclude)"""  # noqa: E501
+             e.g.: -l 3,5-7  (include)   -l ^3,^5-7  (exclude)"""  # noqa: E501
 
 USAGE = "[bold green]Usage:[/bold green] [bold cyan]git-hunk[/bold cyan] [cyan]<COMMAND>[/cyan]"  # noqa: E501
 USAGE_SHOW = "[bold green]Usage:[/bold green] [bold cyan]git-hunk show[/bold cyan] [cyan][<id>...][/cyan] [cyan][OPTIONS][/cyan]"  # noqa: E501
 USAGE_STAGE = "[bold green]Usage:[/bold green] [bold cyan]git-hunk stage[/bold cyan] [cyan]<id>[/cyan] [cyan][<id>...][/cyan] [cyan][OPTIONS][/cyan]"  # noqa: E501
 USAGE_UNSTAGE = "[bold green]Usage:[/bold green] [bold cyan]git-hunk unstage[/bold cyan] [cyan]<id>[/cyan] [cyan][<id>...][/cyan] [cyan][OPTIONS][/cyan]"  # noqa: E501
 USAGE_DISCARD = "[bold green]Usage:[/bold green] [bold cyan]git-hunk discard[/bold cyan] [cyan]<id>[/cyan] [cyan][<id>...][/cyan] [cyan][OPTIONS][/cyan]"  # noqa: E501
+
+
+def _format_examples(rows: list[tuple[str, str]]) -> str:
+    width = max(len(command) for command, _ in rows)
+    lines = ["[bold green]Examples:[/bold green]"]
+    for command, comment in rows:
+        pad = " " * (width - len(command) + 2)
+        lines.append(f"  [cyan]{command}[/cyan]{pad}[dim]# {comment}[/dim]")
+    return "\n".join(lines)
+
+
+_EXAMPLES_LIST: Final = [
+    ("git-hunk list", "Unstaged, staged, and untracked"),
+    ("git-hunk list --unstaged", "Unstaged hunks only"),
+    ("git-hunk list --staged", "Staged hunks only"),
+    ("git-hunk list src/foo.py", "Specific files only"),
+    ("git-hunk list --json", "JSON output for scripting"),
+]
+_EXAMPLES_SHOW: Final = [
+    ("git-hunk show", "Show all hunks"),
+    ("git-hunk show d161935", "Show a single hunk"),
+    ("git-hunk show d161935 a3f82c1", "Show multiple hunks"),
+    ("git-hunk show --staged", "Show all staged hunks"),
+]
+_EXAMPLES_STAGE: Final = [
+    ("git-hunk stage d161935", "Stage a hunk"),
+    ("git-hunk stage d161935 a3f82c1", "Stage multiple hunks"),
+    ("git-hunk stage d161935 -l 3,5-7", "Stage specific lines only"),
+]
+_EXAMPLES_UNSTAGE: Final = [
+    ("git-hunk unstage d161935", "Move a hunk back to working tree"),
+    ("git-hunk unstage d161935 -l 3,5-7", "Unstage specific lines only"),
+]
+_EXAMPLES_DISCARD: Final = [
+    ("git-hunk discard d161935", "Restore a hunk from HEAD"),
+    ("git-hunk discard d161935 -l ^3,^5-7", "Discard excluding specific lines"),
+]
+_EXAMPLES_ALL: Final = (
+    _EXAMPLES_LIST
+    + _EXAMPLES_SHOW
+    + _EXAMPLES_STAGE
+    + _EXAMPLES_UNSTAGE
+    + _EXAMPLES_DISCARD
+)
 
 HELP = f"""\
 Non-interactive git hunk staging for AI agents.
@@ -190,9 +235,11 @@ Non-interactive git hunk staging for AI agents.
 
 [bold green]Options:[/bold green]
   [bold cyan]-h[/bold cyan], [bold cyan]--help[/bold cyan]     Print help
-  [bold cyan]-V[/bold cyan], [bold cyan]--version[/bold cyan]  Print version"""
+  [bold cyan]-V[/bold cyan], [bold cyan]--version[/bold cyan]  Print version
 
-HELP_LIST = """\
+{_format_examples(_EXAMPLES_ALL)}"""
+
+HELP_LIST = f"""\
 List hunks (unstaged, staged, and untracked by default).
 
 [bold green]Usage:[/bold green] [bold cyan]git-hunk list[/bold cyan] [cyan][OPTIONS][/cyan] [cyan][<file>...][/cyan]
@@ -200,7 +247,9 @@ List hunks (unstaged, staged, and untracked by default).
 [bold green]Options:[/bold green]
   [bold cyan]--staged[/bold cyan]      Show only staged hunks
   [bold cyan]--unstaged[/bold cyan]    Show only unstaged hunks
-  [bold cyan]--json[/bold cyan]        Output as JSON"""  # noqa: E501
+  [bold cyan]--json[/bold cyan]        Output as JSON
+
+{_format_examples(_EXAMPLES_LIST)}"""  # noqa: E501
 
 HELP_SHOW = f"""\
 Show the diff for one or more hunks. Shows all hunks when no IDs given.
@@ -210,14 +259,18 @@ IDs support prefix matching.
 
 [bold green]Options:[/bold green]
   [bold cyan]--staged[/bold cyan]     Show only staged hunks
-  [bold cyan]--unstaged[/bold cyan]   Show only unstaged hunks"""
+  [bold cyan]--unstaged[/bold cyan]   Show only unstaged hunks
+
+{_format_examples(_EXAMPLES_SHOW)}"""
 
 HELP_STAGE = f"""\
 Stage one or more specific hunks. IDs support prefix matching.
 
 {USAGE_STAGE}
 
-{_LINE_OPTS}"""
+{_LINE_OPTS}
+
+{_format_examples(_EXAMPLES_STAGE)}"""
 
 HELP_DISCARD = f"""\
 Discard unstaged changes for one or more specific hunks (restore from HEAD).
@@ -225,7 +278,9 @@ IDs support prefix matching.
 
 {USAGE_DISCARD}
 
-{_LINE_OPTS}"""
+{_LINE_OPTS}
+
+{_format_examples(_EXAMPLES_DISCARD)}"""
 
 HELP_UNSTAGE = f"""\
 Unstage one or more specific hunks (move from index back to working tree).
@@ -233,7 +288,9 @@ IDs support prefix matching.
 
 {USAGE_UNSTAGE}
 
-{_LINE_OPTS}"""
+{_LINE_OPTS}
+
+{_format_examples(_EXAMPLES_UNSTAGE)}"""
 
 
 def print_help(text: str) -> None:
