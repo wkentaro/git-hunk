@@ -31,6 +31,8 @@ def test_version(cli: GitHunkCLI) -> None:
 def test_help(cli: GitHunkCLI) -> None:
     r = cli.run("--help")
     assert r.returncode == 0
+    assert "Examples:" in r.stderr
+    assert "git-hunk stage d161935" in r.stderr
 
 
 def test_unknown_command(cli: GitHunkCLI) -> None:
