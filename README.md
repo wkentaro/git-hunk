@@ -41,25 +41,17 @@ Verify it works:
 git-hunk --version
 ```
 
-### Agent skill (optional)
+### For AI agents
 
-If you use [Claude Code](https://claude.ai/code), [Codex](https://openai.com/codex), or similar AI agents, install the skill from this repo:
-
-```bash
-npx skills add wkentaro/git-hunk
-```
-
-Or via the [GitHub CLI](https://cli.github.com):
+A usage guide ships inside the CLI, so agents (Claude Code, Codex, etc.) can
+load it on demand. It always matches the installed version, so it never goes
+stale:
 
 ```bash
-gh skill install wkentaro/git-hunk
+git-hunk skills get core
 ```
 
-Or copy [`SKILL.md`](skills/git-hunk/SKILL.md) to
-`~/.claude/skills/git-hunk/SKILL.md` (or `~/.agents/...`).
-
-This installs a `/git-hunk` slash command that teaches the agent how to split
-changes into logical commits.
+`git-hunk --help` points here first.
 
 ## Quick start
 

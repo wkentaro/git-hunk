@@ -15,6 +15,7 @@ from rich.rule import Rule
 from rich.text import Text
 
 from ._hunk import Hunk
+from ._skills import Skill
 
 
 def _out() -> Console:
@@ -123,6 +124,19 @@ def _print_hunk_diff(out: Console, hunk: Hunk) -> None:
             out.print(Text.assemble(prefix, Text(line, style=style)))
 
 
+def print_skill_list(skills: list[Skill]) -> None:
+    if not skills:
+        _err().print("[dim]No skills.[/dim]")
+        return
+    out = _out()
+    width = max(len(skill.name) for skill in skills)
+    for skill in skills:
+        summary = skill.description.split("\n", 1)[0]
+        pad = " " * (width - len(skill.name) + 2)
+        line = Text.assemble(Text(skill.name, style="cyan"), Text(pad + summary, "dim"))
+        out.print(line, no_wrap=True, overflow="ellipsis")
+
+
 def print_hunk_diffs(hunks: list[Hunk]) -> None:
     out = _out()
     for i, hunk in enumerate(hunks):
@@ -176,6 +190,7 @@ USAGE_SHOW = "[bold green]Usage:[/bold green] [bold cyan]git-hunk show[/bold cya
 USAGE_STAGE = "[bold green]Usage:[/bold green] [bold cyan]git-hunk stage[/bold cyan] [cyan]<id>[/cyan] [cyan][<id>...][/cyan] [cyan][OPTIONS][/cyan]"  # noqa: E501
 USAGE_UNSTAGE = "[bold green]Usage:[/bold green] [bold cyan]git-hunk unstage[/bold cyan] [cyan]<id>[/cyan] [cyan][<id>...][/cyan] [cyan][OPTIONS][/cyan]"  # noqa: E501
 USAGE_DISCARD = "[bold green]Usage:[/bold green] [bold cyan]git-hunk discard[/bold cyan] [cyan]<id>[/cyan] [cyan][<id>...][/cyan] [cyan][OPTIONS][/cyan]"  # noqa: E501
+USAGE_SKILLS = "[bold green]Usage:[/bold green] [bold cyan]git-hunk skills[/bold cyan] [cyan][SUBCOMMAND][/cyan] [cyan][<name>...][/cyan]"  # noqa: E501
 
 
 def _format_examples(rows: list[tuple[str, str]]) -> str:
@@ -213,6 +228,11 @@ _EXAMPLES_DISCARD: Final = [
     ("git-hunk discard d161935", "Restore a hunk from HEAD"),
     ("git-hunk discard d161935 -l ^3,^5-7", "Discard excluding specific lines"),
 ]
+_EXAMPLES_SKILLS: Final = [
+    ("git-hunk skills", "List available skills"),
+    ("git-hunk skills get core", "Load the core usage guide"),
+    ("git-hunk skills path", "Print the skills directory path"),
+]
 _EXAMPLES_ALL: Final = (
     _EXAMPLES_LIST
     + _EXAMPLES_SHOW
@@ -226,12 +246,20 @@ Non-interactive git hunk staging for AI agents.
 
 {USAGE}
 
+[bold green]Start here (for AI agents):[/bold green]
+  [cyan]git-hunk skills get core[/cyan]
+
+  Skills ship with the CLI (always version-matched) and include the full
+  workflow, partial-hunk syntax, and copy-paste examples. Prefer this over
+  guessing commands from flags alone.
+
 [bold green]Commands:[/bold green]
   [bold cyan]list[/bold cyan]     List hunks
   [bold cyan]show[/bold cyan]     Show diff for one or more hunks
   [bold cyan]stage[/bold cyan]    Stage specific hunks
   [bold cyan]unstage[/bold cyan]  Unstage specific hunks
   [bold cyan]discard[/bold cyan]  Discard specific hunks (restore from HEAD)
+  [bold cyan]skills[/bold cyan]   Load bundled skill content for AI agents
 
 [bold green]Options:[/bold green]
   [bold cyan]-h[/bold cyan], [bold cyan]--help[/bold cyan]     Print help
@@ -291,6 +319,22 @@ IDs support prefix matching.
 {_LINE_OPTS}
 
 {_format_examples(_EXAMPLES_UNSTAGE)}"""
+
+HELP_SKILLS = f"""\
+List and retrieve bundled skill content. Skills always match the installed
+git-hunk version, so prefer them over guessing commands from flags alone.
+
+{USAGE_SKILLS}
+
+[bold green]Subcommands:[/bold green]
+  [bold cyan]list[/bold cyan]             List available skills (default)
+  [bold cyan]get[/bold cyan] [cyan]<name>[/cyan]       Output a skill's full content
+  [bold cyan]path[/bold cyan] [cyan][<name>][/cyan]    Print the skill directory path
+
+[bold green]Options:[/bold green]
+  [bold cyan]--json[/bold cyan]        Output as JSON
+
+{_format_examples(_EXAMPLES_SKILLS)}"""
 
 
 def print_help(text: str) -> None:

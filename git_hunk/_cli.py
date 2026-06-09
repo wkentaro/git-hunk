@@ -16,14 +16,19 @@ from ._hunk import parse_diff
 from ._lines import filter_hunk_lines
 from ._lines import parse_line_spec
 from ._patch import build_patch
+from ._skills import Skill
+from ._skills import load_skills
+from ._skills import skills_root
 from ._ui import HELP
 from ._ui import HELP_DISCARD
 from ._ui import HELP_LIST
 from ._ui import HELP_SHOW
+from ._ui import HELP_SKILLS
 from ._ui import HELP_STAGE
 from ._ui import HELP_UNSTAGE
 from ._ui import USAGE
 from ._ui import USAGE_DISCARD
+from ._ui import USAGE_SKILLS
 from ._ui import USAGE_STAGE
 from ._ui import USAGE_UNSTAGE
 from ._ui import print_applied
@@ -31,6 +36,7 @@ from ._ui import print_error
 from ._ui import print_help
 from ._ui import print_hunk_diffs
 from ._ui import print_hunk_list
+from ._ui import print_skill_list
 from ._ui import print_version
 
 
@@ -261,6 +267,67 @@ def cmd_show(
         matched = hunks
 
     print_hunk_diffs(matched)
+
+
+def _find_skill(skills: list[Skill], name: str) -> Skill:
+    for skill in skills:
+        if skill.name == name:
+            return skill
+    available = ", ".join(skill.name for skill in skills)
+    raise CliError(
+        f"skill '{name}' not found",
+        tip=f"available skills: {available}" if available else None,
+    )
+
+
+@cli.command("skills", add_help_option=False)
+@click.option("--json", "force_json", is_flag=True)
+@click.option("-h", "--help", "show_help", is_flag=True)
+@click.argument("args", nargs=-1)
+def cmd_skills(args: tuple[str, ...], force_json: bool, show_help: bool) -> None:
+    if show_help:
+        print_help(HELP_SKILLS)
+        return
+
+    subcommand = args[0] if args else "list"
+    rest = args[1:]
+
+    if subcommand == "list":
+        if rest:
+            raise CliError("skills list takes no arguments", usage=USAGE_SKILLS)
+        skills = load_skills()
+        if force_json:
+            data = [{"name": s.name, "description": s.description} for s in skills]
+            click.echo(json.dumps(data, indent=2))
+        else:
+            print_skill_list(skills)
+        return
+
+    if subcommand == "get":
+        if not rest:
+            raise CliError("skills get requires a skill name", usage=USAGE_SKILLS)
+        skills = load_skills()
+        selected = [_find_skill(skills, name) for name in rest]
+        if force_json:
+            data = [{"name": s.name, "content": s.content} for s in selected]
+            click.echo(json.dumps(data, indent=2))
+        else:
+            click.echo("\n".join(s.content.rstrip("\n") for s in selected))
+        return
+
+    if subcommand == "path":
+        if len(rest) > 1:
+            raise CliError(
+                "skills path takes at most one skill name", usage=USAGE_SKILLS
+            )
+        path = _find_skill(load_skills(), rest[0]).path if rest else skills_root()
+        if force_json:
+            click.echo(json.dumps({"path": str(path)}, indent=2))
+        else:
+            click.echo(str(path))
+        return
+
+    raise CliError(f"unrecognized skills subcommand '{subcommand}'", usage=USAGE_SKILLS)
 
 
 @cli.command("stage", add_help_option=False)
