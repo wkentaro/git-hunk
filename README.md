@@ -127,18 +127,18 @@ git-hunk list --json
 
 ## Comparison
 
-| | Interactive | Programmatic | Hunk IDs | Line-level control | JSON output |
-|---|---|---|---|---|---|
-| `git add -p` | Yes | No | No | Yes | No |
-| `git add <file>` | No | Yes | No | No | No |
-| **`git-hunk`** | **No** | **Yes** | **Yes** | **Yes** | **Yes** |
+|                  | Interactive | Programmatic | Hunk IDs | Line-level control | JSON output |
+| ---------------- | ----------- | ------------ | -------- | ------------------ | ----------- |
+| `git add -p`     | Yes         | No           | No       | Yes                | No          |
+| `git add <file>` | No          | Yes          | No       | No                 | No          |
+| **`git-hunk`**   | **No**      | **Yes**      | **Yes**  | **Yes**            | **Yes**     |
 
 ## How it works
 
 1. Parses `git diff` output into individual hunks
-1. Assigns each hunk a stable, content-based ID (SHA-256 prefix)
-1. For staging: reconstructs a minimal patch and pipes it through `git apply --cached`
-1. For discarding: reconstructs a reverse patch and applies it to the working tree
+2. Assigns each hunk a stable, content-based ID (SHA-256 prefix)
+3. For staging: reconstructs a minimal patch and pipes it through `git apply --cached`
+4. For discarding: reconstructs a reverse patch and applies it to the working tree
 
 IDs are stable across partial staging -- they are derived from the changed lines,
 not the `@@` line numbers that shift as you stage hunks.
