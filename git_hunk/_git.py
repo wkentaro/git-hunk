@@ -2,17 +2,12 @@ import subprocess
 
 
 def is_git_repo() -> bool:
-    result = subprocess.run(
-        ["git", "rev-parse", "--is-inside-work-tree"],
-        capture_output=True,
-        text=True,
-    )
-    return result.stdout.strip() == "true"
+    return run_git("rev-parse", "--is-inside-work-tree", check=False).strip() == "true"
 
 
 def run_git(*args: str, input: str | None = None, check: bool = True) -> str:
     result = subprocess.run(
-        ["git"] + list(args),
+        ["git", "-c", "core.quotePath=false"] + list(args),
         capture_output=True,
         input=input.encode() if input is not None else None,
     )
@@ -34,8 +29,8 @@ def get_diff(staged: bool = False, files: list[str] | None = None) -> str:
 
 
 def get_untracked_files() -> list[str]:
-    output = run_git("ls-files", "--others", "--exclude-standard")
-    return [f for f in output.strip().split("\n") if f]
+    output = run_git("ls-files", "--others", "--exclude-standard", "-z")
+    return [f for f in output.split("\0") if f]
 
 
 def apply_patch(patch: str, *, cached: bool = False, reverse: bool = False) -> None:

@@ -1,13 +1,13 @@
 import re
 
 from ._hunk import Hunk
+from ._hunk import extract_file_path
 
 
 def _get_file_header(diff_output: str, filepath: str) -> str:
     file_diffs = re.split(r"(?=^diff --git )", diff_output, flags=re.MULTILINE)
     for file_diff in file_diffs:
-        m = re.match(r"diff --git a/(.*?) b/(.*)", file_diff)
-        if m and m.group(2) == filepath:
+        if extract_file_path(file_diff) == filepath:
             # Return everything up to the first @@ line
             parts = re.split(r"(?=^@@)", file_diff, flags=re.MULTILINE)
             return parts[0]
