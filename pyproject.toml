@@ -48,6 +48,11 @@ replacement = '![\1](https://raw.githubusercontent.com/wkentaro/git-hunk/main/\2
 [tool.hatch.version]
 source = "vcs"
 
+[tool.hatch.build.targets.sdist]
+# pyproject.toml and LICENSE are auto-included; README.md is not, because the
+# readme is dynamic (hatch-fancy-pypi-readme) and the wheel build needs it.
+include = ["/README.md", "/git_hunk"]
+
 [dependency-groups]
 dev = [
   "mdformat-frontmatter>=2.0.10",
