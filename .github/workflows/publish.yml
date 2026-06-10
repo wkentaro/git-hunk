@@ -4,13 +4,28 @@ on:
   push:
     tags: [v*]
 jobs:
+  test:
+    uses: ./.github/workflows/test.yml
   publish:
+    needs: test
     runs-on: ubuntu-latest
     permissions:
       contents: read
       id-token: write
     steps:
       - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
       - uses: astral-sh/setup-uv@v6
       - run: uv build
+      - name: Verify built version matches tag
+        run: |
+          version="${GITHUB_REF_NAME#v}"
+          ls -1 dist/
+          test -f "dist/git_hunk-${version}-py3-none-any.whl" || {
+            echo "::error::no wheel for tag ${GITHUB_REF_NAME} (expected version" \
+              "${version}); check fetch-depth and that the tag is a canonical" \
+              "PEP 440 version"
+            exit 1
+          }
       - uses: pypa/gh-action-pypi-publish@release/v1
