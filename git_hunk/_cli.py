@@ -116,6 +116,10 @@ def _apply_line_filter(
         return hunks
     if len(hunks) != 1:
         raise CliError("line selection (-l) requires exactly one hunk id")
+    if _is_whole_file_hunk(hunks[0]):
+        raise CliError(
+            "line selection (-l) is not supported for binary or mode-only changes"
+        )
     try:
         lines, exclude = parse_line_spec(line_spec)
         return [filter_hunk_lines(hunks[0], lines, exclude=exclude, reverse=reverse)]
@@ -123,8 +127,10 @@ def _apply_line_filter(
         raise CliError(str(exc)) from exc
 
 
-def _is_binary_hunk(hunk: Hunk) -> bool:
-    return hunk.header == "Binary file"
+def _is_whole_file_hunk(hunk: Hunk) -> bool:
+    # Binary and mode-only changes carry no text diff and are applied by staging
+    # the whole file rather than by a patch.
+    return not hunk.diff
 
 
 def _run_patch_command(
@@ -148,21 +154,21 @@ def _run_patch_command(
     selected = _find_hunks_by_ids(hunks, ids)
     selected = _apply_line_filter(selected, line_spec, reverse=reverse)
 
-    binary = [h for h in selected if _is_binary_hunk(h)]
-    text = [h for h in selected if not _is_binary_hunk(h)]
+    whole_file = [h for h in selected if _is_whole_file_hunk(h)]
+    text = [h for h in selected if not _is_whole_file_hunk(h)]
 
     try:
         if text:
             patch = build_patch(text, diff_output)
             apply_patch(patch, cached=cached, reverse=reverse)
-        if binary:
-            binary_files = [h.file for h in binary]
+        if whole_file:
+            paths = [h.file for h in whole_file]
             if reverse and not cached:
-                discard_files(binary_files)
+                discard_files(paths)
             elif reverse:
-                unstage_files(binary_files)
+                unstage_files(paths)
             else:
-                stage_files(binary_files)
+                stage_files(paths)
     except RuntimeError as exc:
         raise CliError(str(exc)) from exc
 

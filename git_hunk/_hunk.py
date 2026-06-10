@@ -214,6 +214,35 @@ def _extract_context_before(header: str) -> str:
     return match.group(1).strip() if match and match.group(1).strip() else ""
 
 
+def _whole_file_hunk(filepath: str, header: str) -> Hunk:
+    """A change applied by staging the whole file (binary or mode-only)."""
+    return Hunk(
+        id="",
+        file=filepath,
+        header=header,
+        additions=0,
+        deletions=0,
+        context_before="",
+        diff="",
+    )
+
+
+def _binary_file_header(file_diff: str) -> str:
+    if re.search(r"^deleted file mode ", file_diff, flags=re.MULTILINE):
+        return "Binary file (deleted)"
+    if re.search(r"^new file mode ", file_diff, flags=re.MULTILINE):
+        return "Binary file (added)"
+    return "Binary file (modified)"
+
+
+def _mode_change_header(file_diff: str) -> str | None:
+    old = re.search(r"^old mode (\d+)$", file_diff, flags=re.MULTILINE)
+    new = re.search(r"^new mode (\d+)$", file_diff, flags=re.MULTILINE)
+    if not (old and new):
+        return None
+    return f"Mode {old.group(1)} -> {new.group(1)}"
+
+
 def parse_diff(diff_output: str) -> list[Hunk]:
     if not diff_output.strip():
         return []
@@ -230,20 +259,18 @@ def parse_diff(diff_output: str) -> list[Hunk]:
             continue
 
         if re.search(r"^Binary files .* differ$", file_diff, flags=re.MULTILINE):
-            hunks.append(
-                Hunk(
-                    id="",
-                    file=filepath,
-                    header="Binary file",
-                    additions=0,
-                    deletions=0,
-                    context_before="",
-                    diff="",
-                )
-            )
+            hunks.append(_whole_file_hunk(filepath, _binary_file_header(file_diff)))
             continue
 
         parts = re.split(r"(?=^@@)", file_diff, flags=re.MULTILINE)
+
+        if len(parts) == 1:
+            # No text hunks: surface a pure mode change (chmod) that would
+            # otherwise be dropped silently.
+            mode_header = _mode_change_header(file_diff)
+            if mode_header is not None:
+                hunks.append(_whole_file_hunk(filepath, mode_header))
+            continue
 
         for part in parts[1:]:
             lines = part.split("\n")
