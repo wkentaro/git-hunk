@@ -19,3 +19,9 @@ def test_only_top_level_keys_are_parsed() -> None:
 
 def test_missing_frontmatter_returns_empty() -> None:
     assert _parse_frontmatter("# just markdown\n") == {}
+
+
+def test_missing_closing_delimiter_returns_empty() -> None:
+    # Without a terminating ---, the body must not be absorbed as metadata.
+    text = "---\nname: core\nfoo: from_body\n\n# Heading\n"
+    assert _parse_frontmatter(text) == {}

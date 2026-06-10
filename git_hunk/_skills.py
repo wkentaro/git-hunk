@@ -6,6 +6,7 @@ the content an agent loads always matches the installed git-hunk version.
 
 import os
 import re
+import sys
 from dataclasses import dataclass
 from pathlib import Path
 
@@ -34,7 +35,11 @@ def load_skills() -> list[Skill]:
         skill_md = child / "SKILL.md"
         if not skill_md.is_file():
             continue
-        content = skill_md.read_text(encoding="utf-8")
+        try:
+            content = skill_md.read_text(encoding="utf-8")
+        except (OSError, UnicodeDecodeError) as exc:
+            print(f"warning: could not read skill {skill_md}: {exc}", file=sys.stderr)
+            continue
         meta = _parse_frontmatter(content)
         skills.append(
             Skill(
@@ -52,10 +57,15 @@ def _parse_frontmatter(text: str) -> dict[str, str]:
     if not lines or lines[0].strip() != "---":
         return {}
     meta: dict[str, str] = {}
+    closed = False
     for line in lines[1:]:
         if line.strip() == "---":
+            closed = True
             break
         match = re.match(r"^([A-Za-z0-9_-]+):[ \t]*(.*)$", line)
         if match is not None:
             meta[match.group(1)] = match.group(2).strip()
+    if not closed:
+        # Frontmatter must be terminated; otherwise the body is not metadata.
+        return {}
     return meta
