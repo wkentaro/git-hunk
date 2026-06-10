@@ -56,6 +56,43 @@ def test_stage_nonexistent_hunk(cli: GitHunkCLI) -> None:
     assert "not found" in r.stderr
 
 
+def test_empty_hunk_id_rejected(cli: GitHunkCLI) -> None:
+    cli.repo.write_file("f.py", "old\n")
+    cli.repo.git("add", ".")
+    cli.repo.git("commit", "-m", "init")
+    cli.repo.write_file("f.py", "new\n")
+
+    r = cli.run("discard", "")
+    assert r.returncode != 0
+    assert "must not be empty" in r.stderr
+    # The empty id must never match a hunk: the change is left untouched.
+    assert cli.repo.git("diff").strip() != ""
+
+
+def test_empty_hunk_id_rejected_on_show(cli: GitHunkCLI) -> None:
+    cli.repo.write_file("f.py", "old\n")
+    cli.repo.git("add", ".")
+    cli.repo.git("commit", "-m", "init")
+    cli.repo.write_file("f.py", "new\n")
+
+    r = cli.run("show", "")
+    assert r.returncode != 0
+    assert "must not be empty" in r.stderr
+
+
+def test_malformed_line_spec_rejected(cli: GitHunkCLI) -> None:
+    cli.repo.write_file("f.py", "a\nb\nc\n")
+    cli.repo.git("add", ".")
+    cli.repo.git("commit", "-m", "init")
+    cli.repo.write_file("f.py", "A\nb\nC\n")
+
+    hunk_id = cli.run_json("list", "--unstaged", "--json")[0]["id"]
+    r = cli.run("stage", hunk_id, "-l", "1-2-3")
+    assert r.returncode != 0
+    assert "1-2-3" in r.stderr
+    assert "expected start-end" in r.stderr  # readable message, not raw int() error
+
+
 def test_line_spec_with_multiple_hunks_fails(cli: GitHunkCLI) -> None:
     lines = [f"line{i}" for i in range(1, 21)]
     cli.repo.write_file("f.py", "\n".join(lines) + "\n")

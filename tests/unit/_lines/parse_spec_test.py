@@ -57,3 +57,34 @@ def test_non_positive_errors() -> None:
 def test_reversed_range_errors() -> None:
     with pytest.raises(ValueError, match="start > end"):
         parse_line_spec("5-3")
+
+
+def test_range_with_too_many_parts_errors() -> None:
+    with pytest.raises(ValueError, match="expected start-end"):
+        parse_line_spec("1-2-3")
+
+
+def test_non_numeric_token_errors() -> None:
+    with pytest.raises(ValueError, match="invalid line number"):
+        parse_line_spec("abc")
+
+
+def test_open_ended_range_errors() -> None:
+    with pytest.raises(ValueError, match="expected start-end"):
+        parse_line_spec("1-")
+
+
+def test_bare_caret_errors() -> None:
+    with pytest.raises(ValueError, match="invalid token"):
+        parse_line_spec("^")
+
+
+def test_plus_prefixed_token_errors() -> None:
+    with pytest.raises(ValueError, match="invalid line number"):
+        parse_line_spec("+5")
+
+
+def test_spaces_around_range_hyphen_allowed() -> None:
+    lines, exclude = parse_line_spec("2 - 4")
+    assert lines == {2, 3, 4}
+    assert exclude is False

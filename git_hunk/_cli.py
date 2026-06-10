@@ -92,6 +92,8 @@ def _get_hunks(staged: bool, files: list[str] | None = None) -> tuple[list[Hunk]
 def _find_hunks_by_ids(hunks: list[Hunk], ids: list[str]) -> list[Hunk]:
     found = []
     for hunk_id in ids:
+        if not hunk_id.strip():
+            raise CliError("hunk id must not be empty or whitespace")
         matches = [h for h in hunks if h.id.startswith(hunk_id)]
         if len(matches) == 0:
             available = [h.id for h in hunks]

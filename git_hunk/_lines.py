@@ -5,6 +5,16 @@ from ._hunk import Hunk
 from ._hunk import count_changes
 
 
+def _parse_line_number(token: str) -> int:
+    token = token.strip()
+    if not re.fullmatch(r"[0-9]+", token):
+        raise ValueError(f"invalid line number: '{token}'")
+    n = int(token)
+    if n < 1:
+        raise ValueError(f"line numbers must be positive: '{token}'")
+    return n
+
+
 def parse_line_spec(spec: str) -> tuple[set[int], bool]:
     """Parse "-l" value into (line_numbers, exclude_mode).
 
@@ -25,19 +35,19 @@ def parse_line_spec(spec: str) -> tuple[set[int], bool]:
 
     for part in parts:
         raw = part.lstrip("^")
+        if not raw:
+            raise ValueError(f"invalid token in -l spec: '{part}'")
         if "-" in raw:
-            lo_s, hi_s = raw.split("-", 1)
-            lo, hi = int(lo_s), int(hi_s)
-            if lo < 1 or hi < 1:
-                raise ValueError(f"line numbers must be positive: {part}")
+            bounds = raw.split("-")
+            if len(bounds) != 2 or not all(b.strip() for b in bounds):
+                raise ValueError(f"invalid range: '{part}' (expected start-end)")
+            lo = _parse_line_number(bounds[0])
+            hi = _parse_line_number(bounds[1])
             if lo > hi:
                 raise ValueError(f"invalid range (start > end): {part}")
             lines.update(range(lo, hi + 1))
         else:
-            n = int(raw)
-            if n < 1:
-                raise ValueError(f"line numbers must be positive: {part}")
-            lines.add(n)
+            lines.add(_parse_line_number(raw))
 
     return lines, exclude
 
