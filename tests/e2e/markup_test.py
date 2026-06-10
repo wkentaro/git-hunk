@@ -41,4 +41,4 @@ def test_error_renders_bracketed_value_verbatim(cli: GitHunkCLI) -> None:
 
     r = cli.run("stage", "[bogus]")
     assert r.returncode != 0
-    assert "hunk '[bogus]' not found" in r.stderr
+    assert "no changed file matches '[bogus]'" in r.stderr

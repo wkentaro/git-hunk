@@ -27,6 +27,17 @@ git-hunk list                 # 5. repeat until nothing is left behind
 IDs are content-based hashes. They're stable across partial staging and support
 prefix matching, so a 7-char prefix like `d161935` is enough.
 
+`stage`, `unstage`, and `discard` also accept a file path as shorthand for every
+hunk in that file, so you don't have to enumerate IDs:
+
+```bash
+git-hunk stage src/foo.py     # stage all of src/foo.py's hunks
+```
+
+An argument that exactly matches a changed file's path operates on that whole
+file; otherwise it's treated as a hunk ID. A path takes precedence if an
+argument could be both.
+
 ## Quickstart
 
 A working tree with three unrelated changes, committed as three commits:

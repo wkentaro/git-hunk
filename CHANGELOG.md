@@ -13,6 +13,8 @@ and this project adheres to
 - `skills` subcommand (`git-hunk skills list|get|path`) serving the bundled,
   version-matched core usage guide for AI agents.
 - Examples section in `--help` for every subcommand.
+- Accept a file path as shorthand for all hunks in a file, so
+  `git-hunk stage src/foo.py` stages every hunk in that file (#21).
 
 ### Changed
 
