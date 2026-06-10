@@ -28,6 +28,13 @@ def _err() -> Console:
     return Console(stderr=True, highlight=False)
 
 
+def _safe(text: str) -> str:
+    # git output decoded with surrogateescape (see _git.run_git) may carry lone
+    # surrogates for non-UTF-8 bytes; backslash-escape them so writing to a
+    # strict stdout does not raise UnicodeEncodeError.
+    return text.encode("utf-8", errors="backslashreplace").decode("utf-8")
+
+
 def _append_stats(text: Text, hunk: Hunk) -> None:
     if hunk.additions:
         text.append(f"+{hunk.additions}", style="green")
@@ -42,9 +49,9 @@ def _print_hunk_line(out: Console, hunk: Hunk) -> None:
     line.append("  ")
     line.append(hunk.id, style="cyan")
     line.append("  ")
-    line.append(hunk.header, style="dim")
+    line.append(_safe(hunk.header), style="dim")
     if hunk.context_before:
-        line.append(f"  {hunk.context_before}", style="dim italic")
+        line.append(f"  {_safe(hunk.context_before)}", style="dim italic")
     line.append("  ")
     _append_stats(line, hunk)
     out.print(line)
@@ -53,7 +60,7 @@ def _print_hunk_line(out: Console, hunk: Hunk) -> None:
 def _print_file_group(
     out: Console, filepath: str, file_hunks: list[Hunk], *, color: str
 ) -> None:
-    out.print(f"[{color}]{escape(filepath)}[/{color}]")
+    out.print(f"[{color}]{escape(_safe(filepath))}[/{color}]")
     for hunk in file_hunks:
         _print_hunk_line(out, hunk)
 
@@ -78,7 +85,7 @@ def _print_status_section(
             if i < len(by_file) - 1:
                 out.print()
         else:
-            out.print(f"[{color}]{escape(filepath)}[/{color}]")
+            out.print(f"[{color}]{escape(_safe(filepath))}[/{color}]")
 
 
 def print_hunk_list(hunks: list[Hunk]) -> None:
@@ -109,11 +116,11 @@ def print_hunk_list(hunks: list[Hunk]) -> None:
 
 
 def _print_hunk_diff(out: Console, hunk: Hunk) -> None:
-    out.print(f"[bold]{escape(hunk.file)}[/bold]  [dim]{escape(hunk.id)}[/dim]")
+    out.print(f"[bold]{escape(_safe(hunk.file))}[/bold]  [dim]{escape(hunk.id)}[/dim]")
     line_num = 0
     for line in hunk.diff.split("\n"):
         if line.startswith("@@"):
-            out.print(Text(line, style="cyan"))
+            out.print(Text(_safe(line), style="cyan"))
         elif is_no_newline_marker(line):
             out.print(Text("    " + line, style="dim"))
         else:
@@ -125,7 +132,7 @@ def _print_hunk_diff(out: Console, hunk: Hunk) -> None:
                 style = "red"
             else:
                 style = ""
-            out.print(Text.assemble(prefix, Text(line, style=style)))
+            out.print(Text.assemble(prefix, Text(_safe(line), style=style)))
 
 
 def print_skill_list(skills: list[Skill]) -> None:
@@ -156,10 +163,10 @@ def print_applied(hunks: list[Hunk], *, verb: str) -> None:
         line.append(f"  {verb} ", style="bold green")
         line.append(hunk.id, style="cyan")
         line.append("  ")
-        line.append(hunk.file, style="bold")
-        line.append(f"  {hunk.header}", style="dim")
+        line.append(_safe(hunk.file), style="bold")
+        line.append(f"  {_safe(hunk.header)}", style="dim")
         if hunk.context_before:
-            line.append(f"  {hunk.context_before}", style="dim italic")
+            line.append(f"  {_safe(hunk.context_before)}", style="dim italic")
         line.append("  ")
         _append_stats(line, hunk)
         err.print(line)
@@ -172,9 +179,9 @@ def print_error(
     usage: str | None = None,
 ) -> None:
     err = _err()
-    err.print(f"[bold red]error[/bold red]: {escape(msg)}")
+    err.print(f"[bold red]error[/bold red]: {escape(_safe(msg))}")
     if tip:
-        err.print(f"\n  [green]tip[/green]: {escape(tip)}")
+        err.print(f"\n  [green]tip[/green]: {escape(_safe(tip))}")
     if usage:
         err.print(f"\n{usage}")
         err.print("\nFor more information, try '[bold cyan]--help[/bold cyan]'.")

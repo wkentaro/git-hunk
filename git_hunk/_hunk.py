@@ -48,12 +48,15 @@ def _body_id(filepath: str, diff_content: str) -> str:
     body = "\n".join(
         line for line in diff_content.split("\n") if not line.startswith("@@")
     )
-    return hashlib.sha256(f"{filepath}:{body}".encode()).hexdigest()[:7]
+    # surrogateescape mirrors _git.run_git's decode so non-UTF-8 bytes hash.
+    data = f"{filepath}:{body}".encode(errors="surrogateescape")
+    return hashlib.sha256(data).hexdigest()[:7]
 
 
 def _full_id(filepath: str, diff_content: str) -> str:
     """Fallback for identical changed lines — includes @@ line numbers."""
-    return hashlib.sha256(f"{filepath}:{diff_content}".encode()).hexdigest()[:7]
+    data = f"{filepath}:{diff_content}".encode(errors="surrogateescape")
+    return hashlib.sha256(data).hexdigest()[:7]
 
 
 def _with_stable_ids(hunks: list[Hunk]) -> list[Hunk]:
