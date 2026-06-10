@@ -56,7 +56,15 @@ def parse_line_spec(spec: str) -> tuple[set[int], bool]:
 def _filter_body_lines(
     body: list[str],
     selected: set[int],
+    *,
+    reverse: bool,
 ) -> list[str]:
+    # Unselected changes must survive as context in the form the apply direction
+    # expects. A forward (stage) apply matches OLD content, so unselected '-'
+    # lines become context and unselected '+' lines drop; a reverse (unstage,
+    # discard) apply matches NEW content, so the two sides swap.
+    drop_prefix = "-" if reverse else "+"
+    keep_prefix = "+" if reverse else "-"
     new_body = []
     line_num = 0
     prev_kept = False
@@ -69,9 +77,9 @@ def _filter_body_lines(
         if line_num in selected:
             new_body.append(line)
             prev_kept = True
-        elif line.startswith("+"):
+        elif line.startswith(drop_prefix):
             prev_kept = False
-        elif line.startswith("-"):
+        elif line.startswith(keep_prefix):
             new_body.append(" " + line[1:])
             prev_kept = True
         else:
@@ -80,11 +88,15 @@ def _filter_body_lines(
     return new_body
 
 
-def filter_hunk_lines(hunk: Hunk, lines: set[int], *, exclude: bool) -> Hunk:
+def filter_hunk_lines(
+    hunk: Hunk, lines: set[int], *, exclude: bool, reverse: bool = False
+) -> Hunk:
     """Return a new Hunk with only the selected lines as changes.
 
-    Unselected '+' lines are removed; unselected '-' lines become context.
-    This matches git add -p edit mode semantics.
+    Unselected changes on the side the apply consumes become context; the other
+    side drops. A forward apply keeps unselected '-' lines and drops '+';
+    reverse=True (unstage, discard) swaps those so the patch applies against the
+    NEW content the index or working tree already holds.
     """
     diff_lines = hunk.diff.split("\n")
     header = diff_lines[0]
@@ -105,7 +117,7 @@ def filter_hunk_lines(hunk: Hunk, lines: set[int], *, exclude: bool) -> Hunk:
     else:
         selected = lines
 
-    new_body = _filter_body_lines(body, selected)
+    new_body = _filter_body_lines(body, selected, reverse=reverse)
 
     additions, deletions = count_changes(new_body)
     if additions == 0 and deletions == 0:
