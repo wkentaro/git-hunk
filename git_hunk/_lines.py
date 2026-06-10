@@ -3,6 +3,7 @@ from dataclasses import replace
 
 from ._hunk import Hunk
 from ._hunk import count_changes
+from ._hunk import is_no_newline_marker
 
 
 def parse_line_spec(spec: str) -> tuple[set[int], bool]:
@@ -43,19 +44,29 @@ def parse_line_spec(spec: str) -> tuple[set[int], bool]:
 
 
 def _filter_body_lines(
-    body: list,
+    body: list[str],
     selected: set[int],
-) -> list:
+) -> list[str]:
     new_body = []
-    for i, line in enumerate(body, start=1):
-        if i in selected:
-            new_body.append(line)
-        elif line.startswith("+"):
+    line_num = 0
+    prev_kept = False
+    for line in body:
+        if is_no_newline_marker(line):
+            if prev_kept:
+                new_body.append(line)
             continue
+        line_num += 1
+        if line_num in selected:
+            new_body.append(line)
+            prev_kept = True
+        elif line.startswith("+"):
+            prev_kept = False
         elif line.startswith("-"):
             new_body.append(" " + line[1:])
+            prev_kept = True
         else:
             new_body.append(line)
+            prev_kept = True
     return new_body
 
 
@@ -72,7 +83,7 @@ def filter_hunk_lines(hunk: Hunk, lines: set[int], *, exclude: bool) -> Hunk:
     while body and body[-1] == "":
         body = body[:-1]
 
-    total = len(body)
+    total = sum(1 for line in body if not is_no_newline_marker(line))
 
     out_of_range = {n for n in lines if n < 1 or n > total}
     if out_of_range:
@@ -90,7 +101,8 @@ def filter_hunk_lines(hunk: Hunk, lines: set[int], *, exclude: bool) -> Hunk:
     if additions == 0 and deletions == 0:
         raise ValueError("no changes remain after line filtering")
 
-    context_count = len(new_body) - additions - deletions
+    markers = sum(1 for line in new_body if is_no_newline_marker(line))
+    context_count = len(new_body) - additions - deletions - markers
     old_count = context_count + deletions
     new_count = context_count + additions
 
