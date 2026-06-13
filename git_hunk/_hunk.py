@@ -83,8 +83,8 @@ def extract_file_path(file_diff: str) -> str | None:
 
 
 def _extract_context_before(header: str) -> str:
-    match = re.search(r"@@.*@@\s*(.*)", header)
-    return match.group(1).strip() if match and match.group(1).strip() else ""
+    match = re.search(r"@@.*?@@\s*(.*)", header)
+    return match.group(1).strip() if match else ""
 
 
 def _whole_file_hunk(filepath: str, header: str) -> Hunk:
