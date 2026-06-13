@@ -146,8 +146,9 @@ work you didn't create.
 
 In `list` (see Quickstart), hunks group under `staged`, `unstaged`, and
 `untracked` (new files git isn't tracking yet). Each hunk line is `id`, the `@@`
-header with its enclosing context, then `+N -N`. A binary hunk shows
-`Binary file` as its header; stage it whole (no `-l`).
+header with its enclosing context, then `+N -N`. A binary or mode-only change
+has no `@@` line; it shows a `Binary file (modified|added|deleted)` or
+`Mode <old> -> <new>` header instead and is staged whole (no `-l`).
 
 ## Useful flags
 

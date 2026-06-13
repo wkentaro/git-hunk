@@ -37,7 +37,7 @@ def test_binary_file() -> None:
     hunks = parse_diff(diff)
     assert len(hunks) == 1
     assert hunks[0].file == "foo.qm"
-    assert hunks[0].header == "Binary file"
+    assert hunks[0].header == "Binary file (modified)"
     assert hunks[0].additions == 0
     assert hunks[0].deletions == 0
     assert hunks[0].diff == ""
@@ -61,9 +61,45 @@ def test_binary_file_mixed_with_text() -> None:
     hunks = parse_diff(diff)
     assert len(hunks) == 2
     assert hunks[0].file == "foo.qm"
-    assert hunks[0].header == "Binary file"
+    assert hunks[0].header == "Binary file (modified)"
     assert hunks[1].file == "bar.py"
     assert hunks[1].additions == 1
+
+
+def test_deleted_binary_distinguished() -> None:
+    diff = (
+        "diff --git a/d.bin b/d.bin\n"
+        "deleted file mode 100644\n"
+        "index 885b32b..0000000\n"
+        "Binary files a/d.bin and /dev/null differ\n"
+    )
+    hunks = parse_diff(diff)
+    assert len(hunks) == 1
+    assert hunks[0].header == "Binary file (deleted)"
+    assert hunks[0].diff == ""
+
+
+def test_added_binary_distinguished() -> None:
+    diff = (
+        "diff --git a/n.bin b/n.bin\n"
+        "new file mode 100644\n"
+        "index 0000000..abc1234\n"
+        "Binary files /dev/null and b/n.bin differ\n"
+    )
+    hunks = parse_diff(diff)
+    assert len(hunks) == 1
+    assert hunks[0].header == "Binary file (added)"
+
+
+def test_mode_only_change_surfaced() -> None:
+    diff = "diff --git a/m.sh b/m.sh\nold mode 100644\nnew mode 100755\n"
+    hunks = parse_diff(diff)
+    assert len(hunks) == 1
+    assert hunks[0].file == "m.sh"
+    assert hunks[0].header == "Mode 100644 -> 100755"
+    assert hunks[0].additions == 0
+    assert hunks[0].deletions == 0
+    assert hunks[0].diff == ""
 
 
 def test_no_split_when_close() -> None:

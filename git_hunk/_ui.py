@@ -117,6 +117,9 @@ def print_hunk_list(hunks: list[Hunk]) -> None:
 
 def _print_hunk_diff(out: Console, hunk: Hunk) -> None:
     out.print(f"[bold]{escape(_safe(hunk.file))}[/bold]  [dim]{escape(hunk.id)}[/dim]")
+    if not hunk.diff:
+        out.print(Text(_safe(hunk.header), style="dim"))
+        return
     line_num = 0
     for line in hunk.diff.split("\n"):
         if line.startswith("@@"):
