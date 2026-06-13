@@ -127,13 +127,17 @@ git-hunk list --json
     "id": "d161935",
     "file": "src/main.py",
     "status": "unstaged",
-    "header": "@@ -10,3 +10,5 @@",
+    "header": "@@ -10,3 +10,5 @@ def main():",
+    "context_before": "def main():",
     "additions": 2,
     "deletions": 0,
     "diff": "..."
   }
 ]
 ```
+
+`context_before` is the function/section git names after the `@@` header; it is
+an empty string when git provides no context (e.g. plain text or binary hunks).
 
 ## Comparison
 

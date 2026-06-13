@@ -30,6 +30,7 @@ class Hunk:
             "file": self.file,
             "status": self.status,
             "header": self.header,
+            "context_before": self.context_before,
             "additions": self.additions,
             "deletions": self.deletions,
             "diff": self.diff,
