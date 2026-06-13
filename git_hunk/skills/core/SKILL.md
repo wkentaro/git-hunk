@@ -38,6 +38,12 @@ An argument that exactly matches a changed file's path operates on that whole
 file; otherwise it's treated as a hunk ID. A path takes precedence if an
 argument could be both.
 
+`git-hunk commit <id|file> ... -m "type: msg"` collapses steps 3-4 (stage one
+group, then commit it) into a single call. It aborts if anything is already
+staged, so the commit holds exactly the selected hunks; use the separate `stage`
+
+- `git commit` when you want to inspect the staged diff in between.
+
 ## Quickstart
 
 A working tree with three unrelated changes, committed as three commits:

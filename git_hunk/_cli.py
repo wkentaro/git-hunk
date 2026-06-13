@@ -7,6 +7,7 @@ import click
 
 from . import __version__
 from ._git import apply_patch
+from ._git import commit
 from ._git import discard_files
 from ._git import get_diff
 from ._git import get_untracked_files
@@ -22,6 +23,7 @@ from ._skills import Skill
 from ._skills import load_skills
 from ._skills import skills_root
 from ._ui import HELP
+from ._ui import HELP_COMMIT
 from ._ui import HELP_DISCARD
 from ._ui import HELP_LIST
 from ._ui import HELP_SHOW
@@ -29,11 +31,13 @@ from ._ui import HELP_SKILLS
 from ._ui import HELP_STAGE
 from ._ui import HELP_UNSTAGE
 from ._ui import USAGE
+from ._ui import USAGE_COMMIT
 from ._ui import USAGE_DISCARD
 from ._ui import USAGE_SKILLS
 from ._ui import USAGE_STAGE
 from ._ui import USAGE_UNSTAGE
 from ._ui import print_applied
+from ._ui import print_committed
 from ._ui import print_error
 from ._ui import print_help
 from ._ui import print_hunk_diffs
@@ -161,7 +165,7 @@ def _is_whole_file_hunk(hunk: Hunk) -> bool:
     return not hunk.diff
 
 
-def _run_patch_command(
+def _apply_selection(
     args: list[str],
     line_spec: str | None,
     *,
@@ -170,9 +174,8 @@ def _run_patch_command(
     staged: bool,
     cached: bool,
     reverse: bool,
-    verb: str,
     dry_run: bool,
-) -> None:
+) -> list[Hunk]:
     if not args:
         raise CliError(
             f"{command_name} requires at least one hunk id or file path",
@@ -201,6 +204,31 @@ def _run_patch_command(
     except RuntimeError as exc:
         raise CliError(str(exc)) from exc
 
+    return selected
+
+
+def _run_patch_command(
+    args: list[str],
+    line_spec: str | None,
+    *,
+    usage: str,
+    command_name: str,
+    staged: bool,
+    cached: bool,
+    reverse: bool,
+    verb: str,
+    dry_run: bool,
+) -> None:
+    selected = _apply_selection(
+        args,
+        line_spec,
+        usage=usage,
+        command_name=command_name,
+        staged=staged,
+        cached=cached,
+        reverse=reverse,
+        dry_run=dry_run,
+    )
     print_applied(selected, verb=f"would {command_name}" if dry_run else verb)
 
 
@@ -439,3 +467,45 @@ def cmd_discard(
         verb="discarded",
         dry_run=dry_run,
     )
+
+
+@cli.command("commit", add_help_option=False)
+@click.option("-m", "message", default=None)
+@click.option("-l", "line_spec", default=None)
+@click.option("-h", "--help", "show_help", is_flag=True)
+@click.argument("targets", nargs=-1)
+def cmd_commit(
+    targets: tuple[str, ...],
+    message: str | None,
+    line_spec: str | None,
+    show_help: bool,
+) -> None:
+    if show_help:
+        print_help(HELP_COMMIT)
+        return
+    if message is None or not message.strip():
+        raise CliError("commit requires a message (-m)", usage=USAGE_COMMIT)
+
+    _require_git_repo()
+    if get_diff(staged=True).strip():
+        raise CliError(
+            "cannot commit: changes are already staged",
+            tip="commit them with 'git commit', or unstage with 'git-hunk unstage'",
+        )
+
+    selected = _apply_selection(
+        list(targets),
+        line_spec,
+        usage=USAGE_COMMIT,
+        command_name="commit",
+        staged=False,
+        cached=True,
+        reverse=False,
+        dry_run=False,
+    )
+    try:
+        commit(message)
+    except RuntimeError as exc:
+        raise CliError(str(exc)) from exc
+
+    print_committed(selected, message=message)
