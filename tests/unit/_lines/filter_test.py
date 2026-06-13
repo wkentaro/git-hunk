@@ -84,3 +84,29 @@ def test_mixed_changes() -> None:
     assert "+new1" in result.diff
     assert " old" in result.diff
     assert "new2" not in result.diff
+
+
+_TWO_GROUP = "@@ -1,4 +1,4 @@\n a\n-b\n+B\n c\n-d\n+D"
+
+
+def test_reverse_include_drops_unselected_deletion_keeps_addition() -> None:
+    # Reverse (unstage/discard): unselected '+' becomes context, '-' drops.
+    hunk = _make_hunk(_TWO_GROUP)
+    result = filter_hunk_lines(hunk, {2, 3}, exclude=False, reverse=True)
+    assert result.additions == 1
+    assert result.deletions == 1
+    assert "-b" in result.diff
+    assert "+B" in result.diff
+    assert " D" in result.diff  # unselected +D kept as NEW context
+    assert "-d" not in result.diff  # unselected -d dropped
+
+
+def test_reverse_exclude_first_group() -> None:
+    hunk = _make_hunk(_TWO_GROUP)
+    result = filter_hunk_lines(hunk, {2, 3}, exclude=True, reverse=True)
+    assert result.additions == 1
+    assert result.deletions == 1
+    assert "-d" in result.diff
+    assert "+D" in result.diff
+    assert " B" in result.diff  # excluded +B kept as NEW context
+    assert "-b" not in result.diff  # excluded -b dropped

@@ -109,14 +109,16 @@ def _find_hunks_by_ids(hunks: list[Hunk], ids: list[str]) -> list[Hunk]:
     return found
 
 
-def _apply_line_filter(hunks: list[Hunk], line_spec: str | None) -> list[Hunk]:
+def _apply_line_filter(
+    hunks: list[Hunk], line_spec: str | None, *, reverse: bool
+) -> list[Hunk]:
     if line_spec is None:
         return hunks
     if len(hunks) != 1:
         raise CliError("line selection (-l) requires exactly one hunk id")
     try:
         lines, exclude = parse_line_spec(line_spec)
-        return [filter_hunk_lines(hunks[0], lines, exclude=exclude)]
+        return [filter_hunk_lines(hunks[0], lines, exclude=exclude, reverse=reverse)]
     except ValueError as exc:
         raise CliError(str(exc)) from exc
 
@@ -144,7 +146,7 @@ def _run_patch_command(
 
     hunks, diff_output = _get_hunks(staged=staged)
     selected = _find_hunks_by_ids(hunks, ids)
-    selected = _apply_line_filter(selected, line_spec)
+    selected = _apply_line_filter(selected, line_spec, reverse=reverse)
 
     binary = [h for h in selected if _is_binary_hunk(h)]
     text = [h for h in selected if not _is_binary_hunk(h)]
