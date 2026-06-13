@@ -6,16 +6,18 @@ def is_git_repo() -> bool:
 
 
 def run_git(*args: str, input: str | None = None, check: bool = True) -> str:
+    # Git output and input may contain bytes that are not valid UTF-8 (e.g. a
+    # Latin-1 source file). surrogateescape round-trips those bytes losslessly
+    # so a rebuilt patch hands git back exactly what it emitted.
     result = subprocess.run(
         ["git", "-c", "core.quotePath=false"] + list(args),
         capture_output=True,
-        input=input.encode() if input is not None else None,
+        input=input.encode(errors="surrogateescape") if input is not None else None,
     )
     if check and result.returncode != 0:
-        raise RuntimeError(
-            f"git {' '.join(args)} failed: {result.stderr.decode().strip()}"
-        )
-    return result.stdout.decode()
+        stderr = result.stderr.decode(errors="surrogateescape").strip()
+        raise RuntimeError(f"git {' '.join(args)} failed: {stderr}")
+    return result.stdout.decode(errors="surrogateescape")
 
 
 def get_diff(staged: bool = False, files: list[str] | None = None) -> str:
