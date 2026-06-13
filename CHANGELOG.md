@@ -15,6 +15,8 @@ and this project adheres to
 - Examples section in `--help` for every subcommand.
 - Accept a file path as shorthand for all hunks in a file, so
   `git-hunk stage src/foo.py` stages every hunk in that file (#21).
+- `--dry-run` for `stage`, `unstage`, and `discard`, previewing what would
+  change without touching the index or working tree (#25).
 
 ### Changed
 

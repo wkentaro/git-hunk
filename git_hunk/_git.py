@@ -35,12 +35,20 @@ def get_untracked_files() -> list[str]:
     return [f for f in output.split("\0") if f]
 
 
-def apply_patch(patch: str, *, cached: bool = False, reverse: bool = False) -> None:
+def apply_patch(
+    patch: str,
+    *,
+    cached: bool = False,
+    reverse: bool = False,
+    dry_run: bool = False,
+) -> None:
     args = ["apply", "--whitespace=nowarn"]
     if cached:
         args.append("--cached")
     if reverse:
         args.append("--reverse")
+    if dry_run:
+        args.append("--check")
     run_git(*args, input=patch)
 
 
