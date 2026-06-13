@@ -151,3 +151,19 @@ def test_list_status_field_in_json(cli: GitHunkCLI) -> None:
     hunks = cli.run_json("list", "--json")
     assert all("status" in h for h in hunks)
     assert hunks[0]["status"] == "unstaged"
+
+
+def test_list_context_before_field_in_json_matches_display(cli: GitHunkCLI) -> None:
+    body = ["def foo():"] + [f"    x{i} = {i}" for i in range(8)]
+    cli.repo.write_file("f.py", "\n".join(body) + "\n")
+    cli.repo.git("add", ".")
+    cli.repo.git("commit", "-m", "init")
+
+    body[4] = "    x3 = 99"
+    cli.repo.write_file("f.py", "\n".join(body) + "\n")
+
+    hunks = cli.run_json("list", "--json")
+    assert len(hunks) == 1
+    assert hunks[0]["context_before"] == "def foo():"
+    # Parity: the field equals the function context shown in the human display.
+    assert "def foo():" in cli.run_ok("list")
