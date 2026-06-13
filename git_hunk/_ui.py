@@ -196,14 +196,14 @@ def print_version(version: str) -> None:
 
 _LINE_OPTS = """\
 [bold green]Options:[/bold green]
-  [bold cyan]-l[/bold cyan] [cyan]<lines>[/cyan]  Select specific lines within a hunk (requires single id)
+  [bold cyan]-l[/bold cyan] [cyan]<lines>[/cyan]  Select specific lines within a hunk (requires exactly one hunk)
              e.g.: -l 3,5-7  (include)   -l ^3,^5-7  (exclude)"""  # noqa: E501
 
 USAGE = "[bold green]Usage:[/bold green] [bold cyan]git-hunk[/bold cyan] [cyan]<COMMAND>[/cyan]"  # noqa: E501
 USAGE_SHOW = "[bold green]Usage:[/bold green] [bold cyan]git-hunk show[/bold cyan] [cyan][<id>...][/cyan] [cyan][OPTIONS][/cyan]"  # noqa: E501
-USAGE_STAGE = "[bold green]Usage:[/bold green] [bold cyan]git-hunk stage[/bold cyan] [cyan]<id>[/cyan] [cyan][<id>...][/cyan] [cyan][OPTIONS][/cyan]"  # noqa: E501
-USAGE_UNSTAGE = "[bold green]Usage:[/bold green] [bold cyan]git-hunk unstage[/bold cyan] [cyan]<id>[/cyan] [cyan][<id>...][/cyan] [cyan][OPTIONS][/cyan]"  # noqa: E501
-USAGE_DISCARD = "[bold green]Usage:[/bold green] [bold cyan]git-hunk discard[/bold cyan] [cyan]<id>[/cyan] [cyan][<id>...][/cyan] [cyan][OPTIONS][/cyan]"  # noqa: E501
+USAGE_STAGE = "[bold green]Usage:[/bold green] [bold cyan]git-hunk stage[/bold cyan] [cyan]<id|file>[/cyan] [cyan][<id|file>...][/cyan] [cyan][OPTIONS][/cyan]"  # noqa: E501
+USAGE_UNSTAGE = "[bold green]Usage:[/bold green] [bold cyan]git-hunk unstage[/bold cyan] [cyan]<id|file>[/cyan] [cyan][<id|file>...][/cyan] [cyan][OPTIONS][/cyan]"  # noqa: E501
+USAGE_DISCARD = "[bold green]Usage:[/bold green] [bold cyan]git-hunk discard[/bold cyan] [cyan]<id|file>[/cyan] [cyan][<id|file>...][/cyan] [cyan][OPTIONS][/cyan]"  # noqa: E501
 USAGE_SKILLS = "[bold green]Usage:[/bold green] [bold cyan]git-hunk skills[/bold cyan] [cyan][SUBCOMMAND][/cyan] [cyan][<name>...][/cyan]"  # noqa: E501
 
 
@@ -232,14 +232,17 @@ _EXAMPLES_SHOW: Final = [
 _EXAMPLES_STAGE: Final = [
     ("git-hunk stage d161935", "Stage a hunk"),
     ("git-hunk stage d161935 a3f82c1", "Stage multiple hunks"),
+    ("git-hunk stage src/foo.py", "Stage every hunk in a file"),
     ("git-hunk stage d161935 -l 3,5-7", "Stage specific lines only"),
 ]
 _EXAMPLES_UNSTAGE: Final = [
     ("git-hunk unstage d161935", "Move a hunk back to working tree"),
+    ("git-hunk unstage src/foo.py", "Unstage every hunk in a file"),
     ("git-hunk unstage d161935 -l 3,5-7", "Unstage specific lines only"),
 ]
 _EXAMPLES_DISCARD: Final = [
     ("git-hunk discard d161935", "Restore a hunk from HEAD"),
+    ("git-hunk discard src/foo.py", "Discard every hunk in a file"),
     ("git-hunk discard d161935 -l ^3,^5-7", "Discard excluding specific lines"),
 ]
 _EXAMPLES_SKILLS: Final = [

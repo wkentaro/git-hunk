@@ -51,7 +51,7 @@ def test_stage_nonexistent_hunk(cli: GitHunkCLI) -> None:
     cli.repo.git("commit", "-m", "init")
     cli.repo.write_file("f.py", "new\n")
 
-    r = cli.run("stage", "nonexistent")
+    r = cli.run("stage", "deadbee")
     assert r.returncode != 0
     assert "not found" in r.stderr
 

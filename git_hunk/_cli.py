@@ -1,4 +1,6 @@
 import json
+import os
+import re
 from dataclasses import replace
 
 import click
@@ -109,13 +111,39 @@ def _find_hunks_by_ids(hunks: list[Hunk], ids: list[str]) -> list[Hunk]:
     return found
 
 
+def _select_hunks(hunks: list[Hunk], args: list[str]) -> list[Hunk]:
+    files = {h.file for h in hunks}
+    selected: list[Hunk] = []
+    seen: set[str] = set()
+    for arg in args:
+        if not arg.strip():
+            raise CliError("hunk id or file path must not be empty or whitespace")
+        # A path that matches a changed file wins; otherwise hunk ids are hex,
+        # so a non-hex argument can only have been meant as a (missing) path.
+        path = os.path.normpath(arg)
+        if path in files:
+            matches = [h for h in hunks if h.file == path]
+        elif re.fullmatch(r"[0-9a-f]+", arg):
+            matches = _find_hunks_by_ids(hunks, [arg])
+        else:
+            raise CliError(
+                f"no changed file matches '{arg}'",
+                tip="run 'git-hunk list' to see changed files and hunk ids",
+            )
+        for hunk in matches:
+            if hunk.id not in seen:
+                seen.add(hunk.id)
+                selected.append(hunk)
+    return selected
+
+
 def _apply_line_filter(
     hunks: list[Hunk], line_spec: str | None, *, reverse: bool
 ) -> list[Hunk]:
     if line_spec is None:
         return hunks
     if len(hunks) != 1:
-        raise CliError("line selection (-l) requires exactly one hunk id")
+        raise CliError("line selection (-l) requires exactly one hunk")
     if _is_whole_file_hunk(hunks[0]):
         raise CliError(
             "line selection (-l) is not supported for binary or mode-only changes"
@@ -134,7 +162,7 @@ def _is_whole_file_hunk(hunk: Hunk) -> bool:
 
 
 def _run_patch_command(
-    ids: list[str],
+    args: list[str],
     line_spec: str | None,
     *,
     usage: str,
@@ -144,14 +172,14 @@ def _run_patch_command(
     reverse: bool,
     verb: str,
 ) -> None:
-    if not ids:
+    if not args:
         raise CliError(
-            f"{command_name} requires at least one hunk id",
+            f"{command_name} requires at least one hunk id or file path",
             usage=usage,
         )
 
     hunks, diff_output = _get_hunks(staged=staged)
-    selected = _find_hunks_by_ids(hunks, ids)
+    selected = _select_hunks(hunks, args)
     selected = _apply_line_filter(selected, line_spec, reverse=reverse)
 
     whole_file = [h for h in selected if _is_whole_file_hunk(h)]
@@ -343,13 +371,13 @@ def cmd_skills(args: tuple[str, ...], force_json: bool, show_help: bool) -> None
 @cli.command("stage", add_help_option=False)
 @click.option("-l", "line_spec", default=None)
 @click.option("-h", "--help", "show_help", is_flag=True)
-@click.argument("ids", nargs=-1)
-def cmd_stage(ids: tuple[str, ...], line_spec: str | None, show_help: bool) -> None:
+@click.argument("targets", nargs=-1)
+def cmd_stage(targets: tuple[str, ...], line_spec: str | None, show_help: bool) -> None:
     if show_help:
         print_help(HELP_STAGE)
         return
     _run_patch_command(
-        list(ids),
+        list(targets),
         line_spec,
         usage=USAGE_STAGE,
         command_name="stage",
@@ -363,13 +391,15 @@ def cmd_stage(ids: tuple[str, ...], line_spec: str | None, show_help: bool) -> N
 @cli.command("unstage", add_help_option=False)
 @click.option("-l", "line_spec", default=None)
 @click.option("-h", "--help", "show_help", is_flag=True)
-@click.argument("ids", nargs=-1)
-def cmd_unstage(ids: tuple[str, ...], line_spec: str | None, show_help: bool) -> None:
+@click.argument("targets", nargs=-1)
+def cmd_unstage(
+    targets: tuple[str, ...], line_spec: str | None, show_help: bool
+) -> None:
     if show_help:
         print_help(HELP_UNSTAGE)
         return
     _run_patch_command(
-        list(ids),
+        list(targets),
         line_spec,
         usage=USAGE_UNSTAGE,
         command_name="unstage",
@@ -383,13 +413,15 @@ def cmd_unstage(ids: tuple[str, ...], line_spec: str | None, show_help: bool) ->
 @cli.command("discard", add_help_option=False)
 @click.option("-l", "line_spec", default=None)
 @click.option("-h", "--help", "show_help", is_flag=True)
-@click.argument("ids", nargs=-1)
-def cmd_discard(ids: tuple[str, ...], line_spec: str | None, show_help: bool) -> None:
+@click.argument("targets", nargs=-1)
+def cmd_discard(
+    targets: tuple[str, ...], line_spec: str | None, show_help: bool
+) -> None:
     if show_help:
         print_help(HELP_DISCARD)
         return
     _run_patch_command(
-        list(ids),
+        list(targets),
         line_spec,
         usage=USAGE_DISCARD,
         command_name="discard",
