@@ -17,6 +17,8 @@ and this project adheres to
   `git-hunk stage src/foo.py` stages every hunk in that file (#21).
 - `--dry-run` for `stage`, `unstage`, and `discard`, previewing what would
   change without touching the index or working tree (#25).
+- `context_before` field in `list --json`, exposing the function/section heading
+  git names after the `@@` header (#27).
 
 ### Changed
 
