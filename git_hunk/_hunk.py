@@ -4,7 +4,14 @@ from collections import Counter
 from dataclasses import dataclass
 from dataclasses import replace
 from typing import Any
+from typing import Final
 from typing import TypedDict
+
+NO_NEWLINE_MARKER: Final = "\\ No newline at end of file"
+
+
+def is_no_newline_marker(line: str) -> bool:
+    return line == NO_NEWLINE_MARKER
 
 
 @dataclass(frozen=True)
@@ -101,6 +108,8 @@ def _advance_offsets(
 ) -> tuple[int, int]:
     for j in range(start, end):
         line = body_lines[j]
+        if is_no_newline_marker(line):
+            continue
         if line.startswith("+"):
             new += 1
         elif line.startswith("-"):
@@ -149,7 +158,11 @@ def _build_sub_hunks(
 
         sub_body = body_lines[body_start:body_end]
         additions, deletions = count_changes(sub_body)
-        ctx = sum(1 for line in sub_body if not _is_change(line))
+        ctx = sum(
+            1
+            for line in sub_body
+            if not _is_change(line) and not is_no_newline_marker(line)
+        )
         old_count = ctx + deletions
         new_count = ctx + additions
 
@@ -222,9 +235,7 @@ def parse_diff(diff_output: str) -> list[Hunk]:
         for part in parts[1:]:
             lines = part.split("\n")
             header_line = lines[0]
-            body_lines = [
-                line for line in lines[1:] if line != "\\ No newline at end of file"
-            ]
+            body_lines = lines[1:]
 
             while body_lines and body_lines[-1] == "":
                 body_lines = body_lines[:-1]

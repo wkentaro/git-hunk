@@ -15,6 +15,7 @@ from rich.rule import Rule
 from rich.text import Text
 
 from ._hunk import Hunk
+from ._hunk import is_no_newline_marker
 from ._skills import Skill
 
 
@@ -112,6 +113,8 @@ def _print_hunk_diff(out: Console, hunk: Hunk) -> None:
     for line in hunk.diff.split("\n"):
         if line.startswith("@@"):
             out.print(Text(line, style="cyan"))
+        elif is_no_newline_marker(line):
+            out.print(Text("    " + line, style="dim"))
         else:
             line_num += 1
             prefix = Text(f"{line_num:3d} ", style="dim")
