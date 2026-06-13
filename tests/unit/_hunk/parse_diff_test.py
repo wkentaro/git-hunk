@@ -1,7 +1,10 @@
 from git_hunk._hunk import parse_diff
 
 
-def test_splits_large_hunk() -> None:
+def test_one_section_maps_to_one_hunk() -> None:
+    # Each @@ section becomes exactly one hunk. git's own -U3 hunking is what
+    # separates distant changes into different sections; git-hunk never splits
+    # within a section.
     diff = (
         "diff --git a/f.py b/f.py\n"
         "index abc..def 100644\n"
@@ -21,11 +24,11 @@ def test_splits_large_hunk() -> None:
         " line9\n"
     )
     hunks = parse_diff(diff)
-    assert len(hunks) == 2
-    assert hunks[0].additions == 1
-    assert hunks[1].additions == 1
+    assert len(hunks) == 1
+    assert hunks[0].additions == 2
+    assert hunks[0].header == "@@ -1,14 +1,16 @@ def foo():"
     assert "+added_top" in hunks[0].diff
-    assert "+added_bottom" in hunks[1].diff
+    assert "+added_bottom" in hunks[0].diff
 
 
 def test_binary_file() -> None:
@@ -100,21 +103,3 @@ def test_mode_only_change_surfaced() -> None:
     assert hunks[0].additions == 0
     assert hunks[0].deletions == 0
     assert hunks[0].diff == ""
-
-
-def test_no_split_when_close() -> None:
-    diff = (
-        "diff --git a/f.py b/f.py\n"
-        "index abc..def 100644\n"
-        "--- a/f.py\n"
-        "+++ b/f.py\n"
-        "@@ -1,7 +1,9 @@ def foo():\n"
-        " line1\n"
-        "+added_top\n"
-        " line2\n"
-        " line3\n"
-        "+added_bottom\n"
-        " line4\n"
-    )
-    hunks = parse_diff(diff)
-    assert len(hunks) == 1
