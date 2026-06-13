@@ -195,6 +195,17 @@ def _split_hunk(
     return _build_sub_hunks(header_line, body_lines, regions, split_points)
 
 
+def extract_file_path(file_diff: str) -> str | None:
+    first_line = file_diff.split("\n", 1)[0]
+    # For non-renames git emits `diff --git a/<path> b/<path>` with both halves
+    # identical; the backreference resolves paths that contain " b/".
+    m = re.match(r"diff --git a/(.+) b/\1$", first_line)
+    if m:
+        return m.group(1)
+    m = re.match(r"diff --git a/(.*?) b/(.*)", first_line)
+    return m.group(2) if m else None
+
+
 def _extract_context_before(header: str) -> str:
     match = re.search(r"@@.*@@\s*(.*)", header)
     return match.group(1).strip() if match and match.group(1).strip() else ""
@@ -211,10 +222,9 @@ def parse_diff(diff_output: str) -> list[Hunk]:
         if not file_diff.strip():
             continue
 
-        m = re.match(r"diff --git a/(.*?) b/(.*)", file_diff)
-        if not m:
+        filepath = extract_file_path(file_diff)
+        if filepath is None:
             continue
-        filepath = m.group(2)
 
         if re.search(r"^Binary files .* differ$", file_diff, flags=re.MULTILINE):
             hunks.append(
