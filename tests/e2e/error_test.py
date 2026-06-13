@@ -86,7 +86,7 @@ def test_malformed_line_spec_rejected(cli: GitHunkCLI) -> None:
     cli.repo.git("commit", "-m", "init")
     cli.repo.write_file("f.py", "A\nb\nC\n")
 
-    hunk_id = cli.run_json("list", "--unstaged", "--json")[0]["id"]
+    hunk_id = cli.run_list_json("list", "--unstaged", "--json")[0]["id"]
     r = cli.run("stage", hunk_id, "-l", "1-2-3")
     assert r.returncode != 0
     assert "1-2-3" in r.stderr
@@ -103,7 +103,7 @@ def test_line_spec_with_multiple_hunks_fails(cli: GitHunkCLI) -> None:
     lines[17] = "CHANGED18"
     cli.repo.write_file("f.py", "\n".join(lines) + "\n")
 
-    hunks = cli.run_json("list", "--json")
+    hunks = cli.run_list_json("list", "--json")
     assert len(hunks) == 2
 
     r = cli.run("stage", hunks[0]["id"], hunks[1]["id"], "-l", "1")

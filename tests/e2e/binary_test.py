@@ -8,7 +8,7 @@ from .conftest import GitHunkCLI
 
 
 def _id_for(cli: GitHunkCLI, path: str, *flags: str) -> str:
-    hunks = cli.run_json("list", *flags, "--json")
+    hunks = cli.run_list_json("list", *flags, "--json")
     return next(h["id"] for h in hunks if h["file"] == path)
 
 
@@ -32,7 +32,8 @@ def test_list_distinguishes_modified_and_deleted_binary(cli: GitHunkCLI) -> None
     (root / "d.bin").unlink()
 
     headers = {
-        h["file"]: h["header"] for h in cli.run_json("list", "--unstaged", "--json")
+        h["file"]: h["header"]
+        for h in cli.run_list_json("list", "--unstaged", "--json")
     }
     assert headers["a.bin"] == "Binary file (modified)"
     assert headers["d.bin"] == "Binary file (deleted)"
@@ -88,7 +89,7 @@ def test_stage_added_binary(cli: GitHunkCLI) -> None:
 
     cli.repo.git("add", "n.bin")
     staged = {
-        h["file"]: h["header"] for h in cli.run_json("list", "--staged", "--json")
+        h["file"]: h["header"] for h in cli.run_list_json("list", "--staged", "--json")
     }
     assert staged["n.bin"] == "Binary file (added)"
 
@@ -108,7 +109,8 @@ def test_stage_and_discard_mode_only_change(cli: GitHunkCLI) -> None:
     os.chmod(path, 0o755)
 
     headers = {
-        h["file"]: h["header"] for h in cli.run_json("list", "--unstaged", "--json")
+        h["file"]: h["header"]
+        for h in cli.run_list_json("list", "--unstaged", "--json")
     }
     assert headers["m.sh"].startswith("Mode ")
 

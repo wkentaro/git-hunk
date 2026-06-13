@@ -121,23 +121,43 @@ the selected hunks.
 git-hunk list --json
 ```
 
+`list --json` emits a versioned envelope so consumers can depend on a stable
+shape:
+
 ```json
-[
-  {
-    "id": "d161935",
-    "file": "src/main.py",
-    "status": "unstaged",
-    "header": "@@ -10,3 +10,5 @@ def main():",
-    "context_before": "def main():",
-    "additions": 2,
-    "deletions": 0,
-    "diff": "..."
-  }
-]
+{
+  "schema_version": 1,
+  "hunks": [
+    {
+      "id": "d161935",
+      "file": "src/main.py",
+      "status": "unstaged",
+      "header": "@@ -10,3 +10,5 @@ def main():",
+      "context_before": "def main():",
+      "additions": 2,
+      "deletions": 0,
+      "diff": "..."
+    }
+  ]
+}
 ```
 
-`context_before` is the function/section git names after the `@@` header; it is
-an empty string when git provides no context (e.g. plain text or binary hunks).
+| Field            | Type   | Description                                                                                        |
+| ---------------- | ------ | -------------------------------------------------------------------------------------------------- |
+| `schema_version` | int    | Envelope version; bumped on any incompatible change to the shape below.                            |
+| `hunks`          | array  | The hunks (empty array when there are no changes).                                                 |
+| `id`             | string | Stable, content-based hunk id (7-char SHA-256 prefix); accepts prefixes.                           |
+| `file`           | string | Path of the changed file.                                                                          |
+| `status`         | string | One of `staged`, `unstaged`, `untracked`.                                                          |
+| `header`         | string | The hunk's `@@ ... @@` header, or a `Binary file (...)` / `Mode ...` label for whole-file changes. |
+| `context_before` | string | The function/section git names after the `@@` header; empty when git provides no context.          |
+| `additions`      | int    | Number of added lines.                                                                             |
+| `deletions`      | int    | Number of removed lines.                                                                           |
+| `diff`           | string | The unified diff for the hunk (empty for whole-file changes).                                      |
+
+Adding a new field is backward-compatible and does not change `schema_version`;
+renaming, removing, or changing the type of an existing field bumps it. (Before
+`schema_version` existed, `list --json` returned a bare array.)
 
 ## Comparison
 

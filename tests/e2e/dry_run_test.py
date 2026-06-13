@@ -8,7 +8,7 @@ def _setup_modified(cli: GitHunkCLI) -> str:
     cli.repo.git("add", "f.txt")
     cli.repo.git("commit", "-m", "init")
     cli.repo.write_file("f.txt", "aX\nb\ncX\n")
-    hunks = cli.run_json("list", "--unstaged", "--json")
+    hunks = cli.run_list_json("list", "--unstaged", "--json")
     assert len(hunks) == 1
     return hunks[0]["id"]
 
@@ -21,7 +21,7 @@ def test_stage_dry_run_changes_nothing(cli: GitHunkCLI) -> None:
     assert "would stage" in r.stderr
 
     assert cli.repo.git("diff", "--cached").strip() == ""
-    assert cli.run_json("list", "--unstaged", "--json")[0]["id"] == hunk_id
+    assert cli.run_list_json("list", "--unstaged", "--json")[0]["id"] == hunk_id
 
 
 def test_discard_dry_run_keeps_working_tree(cli: GitHunkCLI) -> None:
@@ -32,13 +32,13 @@ def test_discard_dry_run_keeps_working_tree(cli: GitHunkCLI) -> None:
     assert "would discard" in r.stderr
 
     assert cli.repo.git("diff").strip() != ""
-    assert cli.run_json("list", "--unstaged", "--json")[0]["id"] == hunk_id
+    assert cli.run_list_json("list", "--unstaged", "--json")[0]["id"] == hunk_id
 
 
 def test_unstage_dry_run_keeps_index(cli: GitHunkCLI) -> None:
     hunk_id = _setup_modified(cli)
     cli.run_ok("stage", hunk_id)
-    staged_id = cli.run_json("list", "--staged", "--json")[0]["id"]
+    staged_id = cli.run_list_json("list", "--staged", "--json")[0]["id"]
 
     r = cli.run("unstage", staged_id, "--dry-run")
     assert r.returncode == 0
@@ -64,7 +64,7 @@ def test_stage_dry_run_leaves_binary_unstaged(cli: GitHunkCLI) -> None:
     cli.repo.git("commit", "-m", "init")
     path.write_bytes(b"\x00\x02BIN\xfe")
 
-    hunk_id = cli.run_json("list", "--unstaged", "--json")[0]["id"]
+    hunk_id = cli.run_list_json("list", "--unstaged", "--json")[0]["id"]
     r = cli.run("stage", hunk_id, "--dry-run")
     assert r.returncode == 0
     assert "would stage" in r.stderr

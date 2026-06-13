@@ -19,7 +19,7 @@ def two_group(cli: GitHunkCLI) -> GitHunkCLI:
 
 
 def _only_id(cli: GitHunkCLI, *flags: str) -> str:
-    hunks = cli.run_json("list", *flags, "--json")
+    hunks = cli.run_list_json("list", *flags, "--json")
     assert len(hunks) == 1
     return hunks[0]["id"]
 

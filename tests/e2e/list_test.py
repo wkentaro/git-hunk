@@ -1,4 +1,44 @@
+from typing import cast
+
+from git_hunk._cli import JSON_SCHEMA_VERSION
+
 from .conftest import GitHunkCLI
+
+_REQUIRED_HUNK_KEYS = {
+    "id",
+    "file",
+    "status",
+    "header",
+    "additions",
+    "deletions",
+    "diff",
+}
+_STATUSES = {"staged", "unstaged", "untracked"}
+
+
+def test_json_envelope_contract(cli: GitHunkCLI) -> None:
+    cli.repo.write_file("f.py", "old\n")
+    cli.repo.git("add", ".")
+    cli.repo.git("commit", "-m", "init")
+    cli.repo.write_file("f.py", "new\n")
+
+    envelope = cli.run_list_envelope("list", "--json")
+    assert envelope["schema_version"] == JSON_SCHEMA_VERSION
+    hunks = cast("list[dict[str, str]]", envelope["hunks"])
+    assert hunks
+    for hunk in hunks:
+        assert _REQUIRED_HUNK_KEYS <= hunk.keys()
+        assert hunk["status"] in _STATUSES
+
+
+def test_json_envelope_present_when_empty(cli: GitHunkCLI) -> None:
+    cli.repo.write_file("f.py", "x\n")
+    cli.repo.git("add", ".")
+    cli.repo.git("commit", "-m", "init")
+
+    envelope = cli.run_list_envelope("list", "--json")
+    assert envelope["schema_version"] == JSON_SCHEMA_VERSION
+    assert envelope["hunks"] == []
 
 
 def test_no_changes_returns_empty_list(cli: GitHunkCLI) -> None:
@@ -6,7 +46,7 @@ def test_no_changes_returns_empty_list(cli: GitHunkCLI) -> None:
     cli.repo.git("add", ".")
     cli.repo.git("commit", "-m", "init")
 
-    hunks = cli.run_json("list", "--json")
+    hunks = cli.run_list_json("list", "--json")
     assert hunks == []
 
 
@@ -16,7 +56,7 @@ def test_single_file_single_hunk(cli: GitHunkCLI) -> None:
     cli.repo.git("commit", "-m", "init")
     cli.repo.write_file("f.py", "LINE1\nline2\nline3\n")
 
-    hunks = cli.run_json("list", "--json")
+    hunks = cli.run_list_json("list", "--json")
     assert len(hunks) == 1
     assert hunks[0]["file"] == "f.py"
     assert hunks[0]["additions"] == 1
@@ -34,7 +74,7 @@ def test_single_file_multiple_hunks(cli: GitHunkCLI) -> None:
     lines[17] = "CHANGED18"
     cli.repo.write_file("f.py", "\n".join(lines) + "\n")
 
-    hunks = cli.run_json("list", "--json")
+    hunks = cli.run_list_json("list", "--json")
     assert len(hunks) == 2
     assert all(h["file"] == "f.py" for h in hunks)
 
@@ -48,7 +88,7 @@ def test_multi_file_changes(cli: GitHunkCLI) -> None:
     cli.repo.write_file("a.py", "AAA\n")
     cli.repo.write_file("b.py", "BBB\n")
 
-    hunks = cli.run_json("list", "--json")
+    hunks = cli.run_list_json("list", "--json")
     assert len(hunks) == 2
     files = {h["file"] for h in hunks}
     assert files == {"a.py", "b.py"}
@@ -61,7 +101,7 @@ def test_list_staged(cli: GitHunkCLI) -> None:
     cli.repo.write_file("f.py", "new\n")
     cli.repo.git("add", "f.py")
 
-    hunks = cli.run_json("list", "--staged", "--json")
+    hunks = cli.run_list_json("list", "--staged", "--json")
     assert len(hunks) == 1
     assert hunks[0]["file"] == "f.py"
 
@@ -75,7 +115,7 @@ def test_list_file_filter(cli: GitHunkCLI) -> None:
     cli.repo.write_file("a.py", "AAA\n")
     cli.repo.write_file("b.py", "BBB\n")
 
-    hunks = cli.run_json("list", "--json", "a.py")
+    hunks = cli.run_list_json("list", "--json", "a.py")
     assert len(hunks) == 1
     assert hunks[0]["file"] == "a.py"
 
@@ -88,7 +128,7 @@ def test_list_new_file(cli: GitHunkCLI) -> None:
     cli.repo.write_file("new.py", "brand new\n")
     cli.repo.git("add", "new.py")
 
-    hunks = cli.run_json("list", "--staged", "--json")
+    hunks = cli.run_list_json("list", "--staged", "--json")
     assert len(hunks) == 1
     assert hunks[0]["file"] == "new.py"
     assert int(hunks[0]["additions"]) >= 1
@@ -104,7 +144,7 @@ def test_list_default_shows_staged_and_unstaged(cli: GitHunkCLI) -> None:
     cli.repo.git("add", "f.py")
     cli.repo.write_file("f.py", "unstaged\n")
 
-    hunks = cli.run_json("list", "--json")
+    hunks = cli.run_list_json("list", "--json")
     statuses = {h["status"] for h in hunks}
     assert statuses == {"staged", "unstaged"}
 
@@ -116,7 +156,7 @@ def test_list_default_shows_untracked(cli: GitHunkCLI) -> None:
 
     cli.repo.write_file("untracked.py", "new\n")
 
-    hunks = cli.run_json("list", "--json")
+    hunks = cli.run_list_json("list", "--json")
     untracked = [h for h in hunks if h["status"] == "untracked"]
     assert len(untracked) == 1
     assert untracked[0]["file"] == "untracked.py"
@@ -131,7 +171,7 @@ def test_list_unstaged_filter(cli: GitHunkCLI) -> None:
     cli.repo.git("add", "f.py")
     cli.repo.write_file("f.py", "unstaged\n")
 
-    hunks = cli.run_json("list", "--unstaged", "--json")
+    hunks = cli.run_list_json("list", "--unstaged", "--json")
     assert all(h["status"] == "unstaged" for h in hunks)
     assert len(hunks) == 1
 
@@ -148,7 +188,7 @@ def test_list_status_field_in_json(cli: GitHunkCLI) -> None:
 
     cli.repo.write_file("f.py", "new\n")
 
-    hunks = cli.run_json("list", "--json")
+    hunks = cli.run_list_json("list", "--json")
     assert all("status" in h for h in hunks)
     assert hunks[0]["status"] == "unstaged"
 
@@ -162,7 +202,7 @@ def test_list_context_before_field_in_json_matches_display(cli: GitHunkCLI) -> N
     body[4] = "    x3 = 99"
     cli.repo.write_file("f.py", "\n".join(body) + "\n")
 
-    hunks = cli.run_json("list", "--json")
+    hunks = cli.run_list_json("list", "--json")
     assert len(hunks) == 1
     assert hunks[0]["context_before"] == "def foo():"
     # Parity: the field equals the function context shown in the human display.

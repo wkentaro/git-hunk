@@ -2,6 +2,7 @@ import json
 import os
 import re
 from dataclasses import replace
+from typing import Final
 
 import click
 
@@ -44,6 +45,9 @@ from ._ui import print_hunk_diffs
 from ._ui import print_hunk_list
 from ._ui import print_skill_list
 from ._ui import print_version
+
+# Bump when the `list --json` shape changes incompatibly (see README JSON output).
+JSON_SCHEMA_VERSION: Final = 1
 
 
 class CliError(Exception):
@@ -296,7 +300,11 @@ def cmd_list(
         hunks = hunks_staged + hunks_unstaged + _get_untracked_entries(files=file_list)
 
     if force_json:
-        click.echo(json.dumps([h.to_dict() for h in hunks], indent=2))
+        envelope = {
+            "schema_version": JSON_SCHEMA_VERSION,
+            "hunks": [h.to_dict() for h in hunks],
+        }
+        click.echo(json.dumps(envelope, indent=2))
     else:
         print_hunk_list(hunks)
 
