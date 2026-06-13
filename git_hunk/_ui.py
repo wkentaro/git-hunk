@@ -11,6 +11,7 @@ from collections import defaultdict
 from typing import Final
 
 from rich.console import Console
+from rich.markup import escape
 from rich.rule import Rule
 from rich.text import Text
 
@@ -52,7 +53,7 @@ def _print_hunk_line(out: Console, hunk: Hunk) -> None:
 def _print_file_group(
     out: Console, filepath: str, file_hunks: list[Hunk], *, color: str
 ) -> None:
-    out.print(f"[{color}]{filepath}[/{color}]")
+    out.print(f"[{color}]{escape(filepath)}[/{color}]")
     for hunk in file_hunks:
         _print_hunk_line(out, hunk)
 
@@ -77,7 +78,7 @@ def _print_status_section(
             if i < len(by_file) - 1:
                 out.print()
         else:
-            out.print(f"[{color}]{filepath}[/{color}]")
+            out.print(f"[{color}]{escape(filepath)}[/{color}]")
 
 
 def print_hunk_list(hunks: list[Hunk]) -> None:
@@ -108,7 +109,7 @@ def print_hunk_list(hunks: list[Hunk]) -> None:
 
 
 def _print_hunk_diff(out: Console, hunk: Hunk) -> None:
-    out.print(f"[bold]{hunk.file}[/bold]  [dim]{hunk.id}[/dim]")
+    out.print(f"[bold]{escape(hunk.file)}[/bold]  [dim]{escape(hunk.id)}[/dim]")
     line_num = 0
     for line in hunk.diff.split("\n"):
         if line.startswith("@@"):
@@ -171,9 +172,9 @@ def print_error(
     usage: str | None = None,
 ) -> None:
     err = _err()
-    err.print(f"[bold red]error[/bold red]: {msg}")
+    err.print(f"[bold red]error[/bold red]: {escape(msg)}")
     if tip:
-        err.print(f"\n  [green]tip[/green]: {tip}")
+        err.print(f"\n  [green]tip[/green]: {escape(tip)}")
     if usage:
         err.print(f"\n{usage}")
         err.print("\nFor more information, try '[bold cyan]--help[/bold cyan]'.")
