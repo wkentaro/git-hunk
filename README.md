@@ -105,6 +105,16 @@ git-hunk discard d161935               # restore from HEAD
 git-hunk discard d161935 -l ^3,^5-7    # discard excluding specific lines
 ```
 
+### Commit
+
+```bash
+git-hunk commit d161935 -m "fix: ..."      # stage a hunk and commit it in one step
+git-hunk commit d161935 -l 3,5-7 -m "..."  # stage specific lines and commit
+```
+
+`commit` aborts if anything is already staged, so the commit contains exactly
+the selected hunks.
+
 ### JSON output
 
 ```bash

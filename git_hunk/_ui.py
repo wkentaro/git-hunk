@@ -175,6 +175,16 @@ def print_applied(hunks: list[Hunk], *, verb: str) -> None:
         err.print(line)
 
 
+def print_committed(hunks: list[Hunk], *, message: str) -> None:
+    summary = message.strip().splitlines()[0]
+    count = len(hunks)
+    line = Text()
+    line.append("  committed ", style="bold green")
+    line.append(f"{count} hunk{'s' if count != 1 else ''}", style="bold")
+    line.append(f"  {_safe(summary)}", style="dim")
+    _err().print(line)
+
+
 def print_error(
     msg: str,
     *,
@@ -194,10 +204,13 @@ def print_version(version: str) -> None:
     _err().print(f"git-hunk [dim]{version}[/dim]")
 
 
-_LINE_OPTS = """\
-[bold green]Options:[/bold green]
+_LINE_OPT_ROW = """\
   [bold cyan]-l[/bold cyan] [cyan]<lines>[/cyan]  Select specific lines within a hunk (requires exactly one hunk)
-             e.g.: -l 3,5-7  (include)   -l ^3,^5-7  (exclude)
+             e.g.: -l 3,5-7  (include)   -l ^3,^5-7  (exclude)"""  # noqa: E501
+
+_LINE_OPTS = f"""\
+[bold green]Options:[/bold green]
+{_LINE_OPT_ROW}
   [bold cyan]--dry-run[/bold cyan]   Report what would change without touching the index or working tree"""  # noqa: E501
 
 USAGE = "[bold green]Usage:[/bold green] [bold cyan]git-hunk[/bold cyan] [cyan]<COMMAND>[/cyan]"  # noqa: E501
@@ -205,6 +218,7 @@ USAGE_SHOW = "[bold green]Usage:[/bold green] [bold cyan]git-hunk show[/bold cya
 USAGE_STAGE = "[bold green]Usage:[/bold green] [bold cyan]git-hunk stage[/bold cyan] [cyan]<id|file>[/cyan] [cyan][<id|file>...][/cyan] [cyan][OPTIONS][/cyan]"  # noqa: E501
 USAGE_UNSTAGE = "[bold green]Usage:[/bold green] [bold cyan]git-hunk unstage[/bold cyan] [cyan]<id|file>[/cyan] [cyan][<id|file>...][/cyan] [cyan][OPTIONS][/cyan]"  # noqa: E501
 USAGE_DISCARD = "[bold green]Usage:[/bold green] [bold cyan]git-hunk discard[/bold cyan] [cyan]<id|file>[/cyan] [cyan][<id|file>...][/cyan] [cyan][OPTIONS][/cyan]"  # noqa: E501
+USAGE_COMMIT = "[bold green]Usage:[/bold green] [bold cyan]git-hunk commit[/bold cyan] [cyan]<id|file>[/cyan] [cyan][<id|file>...][/cyan] [bold cyan]-m[/bold cyan] [cyan]<msg>[/cyan] [cyan][OPTIONS][/cyan]"  # noqa: E501
 USAGE_SKILLS = "[bold green]Usage:[/bold green] [bold cyan]git-hunk skills[/bold cyan] [cyan][SUBCOMMAND][/cyan] [cyan][<name>...][/cyan]"  # noqa: E501
 
 
@@ -249,6 +263,10 @@ _EXAMPLES_DISCARD: Final = [
     ("git-hunk discard d161935 -l ^3,^5-7", "Discard excluding specific lines"),
     ("git-hunk discard d161935 --dry-run", "Preview without changing anything"),
 ]
+_EXAMPLES_COMMIT: Final = [
+    ('git-hunk commit d161935 -m "fix: ..."', "Stage a hunk and commit it"),
+    ('git-hunk commit src/foo.py -m "..."', "Stage a whole file and commit"),
+]
 _EXAMPLES_SKILLS: Final = [
     ("git-hunk skills", "List available skills"),
     ("git-hunk skills get core", "Load the core usage guide"),
@@ -260,6 +278,7 @@ _EXAMPLES_ALL: Final = (
     + _EXAMPLES_STAGE
     + _EXAMPLES_UNSTAGE
     + _EXAMPLES_DISCARD
+    + _EXAMPLES_COMMIT
 )
 
 HELP = f"""\
@@ -280,6 +299,7 @@ Non-interactive git hunk staging for AI agents.
   [bold cyan]stage[/bold cyan]    Stage specific hunks
   [bold cyan]unstage[/bold cyan]  Unstage specific hunks
   [bold cyan]discard[/bold cyan]  Discard specific hunks (restore from HEAD)
+  [bold cyan]commit[/bold cyan]   Stage specific hunks and commit them in one step
   [bold cyan]skills[/bold cyan]   Load bundled skill content for AI agents
 
 [bold green]Options:[/bold green]
@@ -340,6 +360,20 @@ IDs support prefix matching.
 {_LINE_OPTS}
 
 {_format_examples(_EXAMPLES_UNSTAGE)}"""
+
+HELP_COMMIT = f"""\
+Stage one or more specific hunks and commit them in one step. IDs support
+prefix matching. Aborts if anything is already staged, so the commit contains
+exactly the selected hunks. If the commit is rejected (e.g. by a pre-commit
+hook) the hunks are left staged so you can retry with [bold cyan]git commit[/bold cyan].
+
+{USAGE_COMMIT}
+
+[bold green]Options:[/bold green]
+  [bold cyan]-m[/bold cyan] [cyan]<msg>[/cyan]    Commit message (required)
+{_LINE_OPT_ROW}
+
+{_format_examples(_EXAMPLES_COMMIT)}"""  # noqa: E501
 
 HELP_SKILLS = f"""\
 List and retrieve bundled skill content. Skills always match the installed

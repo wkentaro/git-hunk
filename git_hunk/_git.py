@@ -62,3 +62,7 @@ def unstage_files(files: list[str]) -> None:
 
 def discard_files(files: list[str]) -> None:
     run_git("restore", "--", *files)
+
+
+def commit(message: str) -> None:
+    run_git("commit", "-m", message)
