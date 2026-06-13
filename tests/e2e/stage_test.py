@@ -11,7 +11,7 @@ def test_stage_single_hunk(cli: GitHunkCLI) -> None:
     lines[17] = "CHANGED18"
     cli.repo.write_file("f.py", "\n".join(lines) + "\n")
 
-    hunks = cli.run_json("list", "--json")
+    hunks = cli.run_list_json("list", "--json")
     assert len(hunks) == 2
 
     cli.run_ok("stage", hunks[0]["id"])
@@ -34,7 +34,7 @@ def test_stage_multiple_hunks(cli: GitHunkCLI) -> None:
     lines[17] = "CHANGED18"
     cli.repo.write_file("f.py", "\n".join(lines) + "\n")
 
-    hunks = cli.run_json("list", "--json")
+    hunks = cli.run_list_json("list", "--json")
     cli.run_ok("stage", hunks[0]["id"], hunks[1]["id"])
 
     staged = cli.repo.git("diff", "--cached")
@@ -54,7 +54,7 @@ def test_stage_from_different_files(cli: GitHunkCLI) -> None:
     cli.repo.write_file("a.py", "AAA\n")
     cli.repo.write_file("b.py", "BBB\n")
 
-    hunks = cli.run_json("list", "--json")
+    hunks = cli.run_list_json("list", "--json")
     a_hunk = next(h for h in hunks if h["file"] == "a.py")
 
     cli.run_ok("stage", a_hunk["id"])
@@ -70,7 +70,7 @@ def test_stage_with_line_include(cli: GitHunkCLI) -> None:
     cli.repo.git("commit", "-m", "init")
     cli.repo.write_file("f.py", "LINE1\nLINE2\nLINE3\n")
 
-    hunks = cli.run_json("list", "--json")
+    hunks = cli.run_list_json("list", "--json")
     assert len(hunks) == 1
 
     # Diff body: 1=-line1, 2=-line2, 3=-line3, 4=+LINE1, 5=+LINE2, 6=+LINE3
@@ -92,7 +92,7 @@ def test_stage_with_line_exclude(cli: GitHunkCLI) -> None:
     cli.repo.git("commit", "-m", "init")
     cli.repo.write_file("f.py", "LINE1\nLINE2\nLINE3\n")
 
-    hunks = cli.run_json("list", "--json")
+    hunks = cli.run_list_json("list", "--json")
     assert len(hunks) == 1
 
     # Diff body: 1=-line1, 2=-line2, 3=-line3, 4=+LINE1, 5=+LINE2, 6=+LINE3

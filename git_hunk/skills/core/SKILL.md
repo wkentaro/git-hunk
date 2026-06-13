@@ -181,7 +181,9 @@ git-hunk show             # show every hunk's diff (no args)
 git-hunk list --json      # machine-readable; plain output is usually enough
 ```
 
-`list` and `show` search both staged and unstaged by default.
+`list` and `show` search both staged and unstaged by default. `list --json`
+returns a versioned envelope, `{"schema_version": 1, "hunks": [...]}`; read the
+hunks from the `hunks` array.
 
 ## Working safely
 

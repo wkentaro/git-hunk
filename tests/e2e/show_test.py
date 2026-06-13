@@ -7,7 +7,7 @@ def test_show_hunk_by_full_id(cli: GitHunkCLI) -> None:
     cli.repo.git("commit", "-m", "init")
     cli.repo.write_file("f.py", "new\n")
 
-    hunks = cli.run_json("list", "--json")
+    hunks = cli.run_list_json("list", "--json")
     hunk_id = hunks[0]["id"]
 
     r = cli.run("show", hunk_id)
@@ -22,7 +22,7 @@ def test_show_hunk_by_prefix(cli: GitHunkCLI) -> None:
     cli.repo.git("commit", "-m", "init")
     cli.repo.write_file("f.py", "new\n")
 
-    hunks = cli.run_json("list", "--json")
+    hunks = cli.run_list_json("list", "--json")
     prefix = hunks[0]["id"][:4]
 
     r = cli.run("show", prefix)
@@ -37,7 +37,7 @@ def test_show_staged_hunk(cli: GitHunkCLI) -> None:
     cli.repo.write_file("f.py", "new\n")
     cli.repo.git("add", "f.py")
 
-    hunks = cli.run_json("list", "--staged", "--json")
+    hunks = cli.run_list_json("list", "--staged", "--json")
     hunk_id = hunks[0]["id"]
 
     r = cli.run("show", hunk_id, "--staged")
@@ -52,7 +52,7 @@ def test_show_finds_staged_hunk_without_flag(cli: GitHunkCLI) -> None:
     cli.repo.write_file("f.py", "new\n")
     cli.repo.git("add", "f.py")
 
-    hunks = cli.run_json("list", "--staged", "--json")
+    hunks = cli.run_list_json("list", "--staged", "--json")
     hunk_id = hunks[0]["id"]
 
     r = cli.run("show", hunk_id)

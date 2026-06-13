@@ -12,7 +12,7 @@ def _commit(cli: GitHunkCLI, content: str) -> None:
 
 
 def _only_hunk_id(cli: GitHunkCLI) -> str:
-    hunks = cli.run_json("list", "--unstaged", "--json")
+    hunks = cli.run_list_json("list", "--unstaged", "--json")
     assert len(hunks) == 1
     return hunks[0]["id"]
 
@@ -49,7 +49,7 @@ def test_unstage_round_trips_no_newline(cli: GitHunkCLI) -> None:
     cli.repo.write_file("f.txt", "a\nb\ncX")
 
     cli.run_ok("stage", _only_hunk_id(cli))
-    staged = cli.run_json("list", "--staged", "--json")
+    staged = cli.run_list_json("list", "--staged", "--json")
     cli.run_ok("unstage", staged[0]["id"])
 
     assert cli.repo.git("diff", "--cached").strip() == ""
@@ -76,7 +76,7 @@ def test_stage_line_selection_on_no_newline_hunk(cli: GitHunkCLI) -> None:
     assert cli.repo.git("show", ":f.txt") == "aX\nb\nc"
 
     # The dropped change still carries its no-newline marker in the remainder.
-    remaining = cli.run_json("list", "--unstaged", "--json")
+    remaining = cli.run_list_json("list", "--unstaged", "--json")
     assert NO_NEWLINE_MARKER in remaining[0]["diff"]
 
 
@@ -84,6 +84,6 @@ def test_list_counts_ignore_no_newline_marker(cli: GitHunkCLI) -> None:
     _commit(cli, "a\nb\nc")
     cli.repo.write_file("f.txt", "a\nb\ncX")
 
-    hunks = cli.run_json("list", "--unstaged", "--json")
+    hunks = cli.run_list_json("list", "--unstaged", "--json")
     assert hunks[0]["additions"] == 1
     assert hunks[0]["deletions"] == 1

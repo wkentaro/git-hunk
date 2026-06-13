@@ -15,7 +15,7 @@ def _commit_count(cli: GitHunkCLI) -> int:
 
 
 def _unstaged_ids(cli: GitHunkCLI) -> list[str]:
-    return [h["id"] for h in cli.run_json("list", "--unstaged", "--json")]
+    return [h["id"] for h in cli.run_list_json("list", "--unstaged", "--json")]
 
 
 def test_commit_single_hunk(cli: GitHunkCLI) -> None:
@@ -118,7 +118,7 @@ def test_commit_aborts_when_index_already_has_staged_changes(cli: GitHunkCLI) ->
     cli.repo.git("add", "a.txt")  # pre-stage an unrelated change
 
     before = _commit_count(cli)
-    b_id = next(h["id"] for h in cli.run_json("list", "--unstaged", "--json"))
+    b_id = next(h["id"] for h in cli.run_list_json("list", "--unstaged", "--json"))
     r = cli.run("commit", b_id, "-m", "feat: only b")
     assert r.returncode != 0
     assert "already staged" in r.stderr

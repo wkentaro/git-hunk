@@ -7,12 +7,12 @@ def test_discard_hunk(cli: GitHunkCLI) -> None:
     cli.repo.git("commit", "-m", "init")
     cli.repo.write_file("f.py", "new\n")
 
-    hunks = cli.run_json("list", "--json")
+    hunks = cli.run_list_json("list", "--json")
     assert len(hunks) == 1
 
     cli.run_ok("discard", hunks[0]["id"])
 
-    after = cli.run_json("list", "--json")
+    after = cli.run_list_json("list", "--json")
     assert len(after) == 0
 
     content = cli.repo.run("cat", "f.py").stdout
@@ -29,12 +29,12 @@ def test_discard_one_of_multiple(cli: GitHunkCLI) -> None:
     lines[17] = "CHANGED18"
     cli.repo.write_file("f.py", "\n".join(lines) + "\n")
 
-    hunks = cli.run_json("list", "--json")
+    hunks = cli.run_list_json("list", "--json")
     assert len(hunks) == 2
 
     cli.run_ok("discard", hunks[0]["id"])
 
-    after = cli.run_json("list", "--json")
+    after = cli.run_list_json("list", "--json")
     assert len(after) == 1
 
     content = cli.repo.run("cat", "f.py").stdout

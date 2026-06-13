@@ -21,7 +21,7 @@ def latin1_repo(cli: GitHunkCLI) -> GitHunkCLI:
 
 
 def test_list_does_not_crash_on_non_utf8_content(latin1_repo: GitHunkCLI) -> None:
-    hunks = latin1_repo.run_json("list", "--unstaged", "--json")
+    hunks = latin1_repo.run_list_json("list", "--unstaged", "--json")
     assert [h["file"] for h in hunks] == ["latin1.txt"]
 
     latin1_repo.run_ok("list", "--unstaged")
@@ -32,7 +32,7 @@ def test_show_does_not_crash_on_non_utf8_content(latin1_repo: GitHunkCLI) -> Non
 
 
 def test_stage_preserves_non_utf8_bytes(latin1_repo: GitHunkCLI) -> None:
-    hunk_id = latin1_repo.run_json("list", "--unstaged", "--json")[0]["id"]
+    hunk_id = latin1_repo.run_list_json("list", "--unstaged", "--json")[0]["id"]
     latin1_repo.run_ok("stage", hunk_id)
 
     staged = subprocess.run(

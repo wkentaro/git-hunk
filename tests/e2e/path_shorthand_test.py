@@ -19,7 +19,7 @@ def multi_hunk_repo(cli: GitHunkCLI) -> GitHunkCLI:
 
 def test_stage_whole_file_by_path(multi_hunk_repo: GitHunkCLI) -> None:
     cli = multi_hunk_repo
-    hunks = cli.run_json("list", "--unstaged", "--json")
+    hunks = cli.run_list_json("list", "--unstaged", "--json")
     assert len([h for h in hunks if h["file"] == "big.py"]) == 2
 
     cli.run_ok("stage", "big.py")
@@ -50,7 +50,7 @@ def test_dot_slash_prefixed_path(multi_hunk_repo: GitHunkCLI) -> None:
 
 def test_mixing_path_and_id(multi_hunk_repo: GitHunkCLI) -> None:
     cli = multi_hunk_repo
-    hunks = cli.run_json("list", "--unstaged", "--json")
+    hunks = cli.run_list_json("list", "--unstaged", "--json")
     b_id = next(h["id"] for h in hunks if h["file"] == "b.py")
 
     cli.run_ok("stage", "big.py", b_id)
@@ -64,7 +64,7 @@ def test_path_and_id_of_same_hunk_dedup(cli: GitHunkCLI) -> None:
     cli.repo.git("commit", "-m", "init")
     cli.repo.write_file("f.py", "X\n")
 
-    hunk_id = cli.run_json("list", "--unstaged", "--json")[0]["id"]
+    hunk_id = cli.run_list_json("list", "--unstaged", "--json")[0]["id"]
     # Same hunk named twice (by path and by id) must apply once, not error.
     cli.run_ok("stage", "f.py", hunk_id)
     assert cli.repo.git("diff", "--cached", "--name-only").split() == ["f.py"]

@@ -20,6 +20,9 @@ and this project adheres to
 
 ### Changed
 
+- **Breaking:** `list --json` now wraps its output in a versioned envelope,
+  `{"schema_version": 1, "hunks": [...]}`, instead of a bare array, so consumers
+  can depend on a documented, versioned shape (#23).
 - README image paths are rewritten to absolute URLs so they render on PyPI.
 
 ### Fixed
