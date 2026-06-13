@@ -1,0 +1,39 @@
+# Changelog
+
+All notable changes to this project will be documented in this file.
+
+The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
+and this project adheres to
+[Semantic Versioning](https://semver.org/spec/v2.0.0.html).
+
+## [Unreleased]
+
+### Added
+
+- `skills` subcommand (`git-hunk skills list|get|path`) serving the bundled,
+  version-matched core usage guide for AI agents.
+- Examples section in `--help` for every subcommand.
+
+### Changed
+
+- README image paths are rewritten to absolute URLs so they render on PyPI.
+
+### Fixed
+
+- Preserve `\ No newline at end of file` markers so staging the last line of a
+  file without a trailing newline no longer fails or silently stages nothing
+  (#9).
+- Parse git's quoted and octal-escaped paths, so files with non-ASCII names or
+  names containing ` b/` appear and stage correctly (#10).
+- Decode git output with `surrogateescape`, so a diff containing non-UTF-8 bytes
+  no longer crashes with `UnicodeDecodeError` (#11).
+- Apply partial line selection (`-l`) correctly for `unstage` and `discard` on
+  hunks with more than one change group (#12).
+- Escape user-controlled text in Rich output, so a path like `src/[id].tsx`
+  renders verbatim instead of being swallowed as markup (#14).
+- Reject empty or whitespace-only hunk ids, and report malformed `-l` ranges
+  with a readable error (#15).
+- Constrain the source distribution to the package, tests, and metadata so it
+  no longer ships unrelated `tmp/` files (#16).
+
+[unreleased]: https://github.com/wkentaro/git-hunk/compare/v0.2.0...HEAD
