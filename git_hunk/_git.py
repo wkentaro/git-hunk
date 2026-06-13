@@ -21,7 +21,10 @@ def run_git(*args: str, input: str | None = None, check: bool = True) -> str:
 
 
 def get_diff(staged: bool = False, files: list[str] | None = None) -> str:
-    args = ["diff"]
+    # Pin -U3 (git's default) explicitly: parse_diff treats each @@ section as
+    # one hunk, which only holds at 3 lines of context, so don't leave the
+    # boundaries to git's default in case it is ever overridden.
+    args = ["diff", "-U3"]
     if staged:
         args.append("--cached")
     args.append("--")
