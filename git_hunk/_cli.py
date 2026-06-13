@@ -171,6 +171,7 @@ def _run_patch_command(
     cached: bool,
     reverse: bool,
     verb: str,
+    dry_run: bool,
 ) -> None:
     if not args:
         raise CliError(
@@ -188,8 +189,8 @@ def _run_patch_command(
     try:
         if text:
             patch = build_patch(text, diff_output)
-            apply_patch(patch, cached=cached, reverse=reverse)
-        if whole_file:
+            apply_patch(patch, cached=cached, reverse=reverse, dry_run=dry_run)
+        if whole_file and not dry_run:
             paths = [h.file for h in whole_file]
             if reverse and not cached:
                 discard_files(paths)
@@ -200,7 +201,7 @@ def _run_patch_command(
     except RuntimeError as exc:
         raise CliError(str(exc)) from exc
 
-    print_applied(selected, verb=verb)
+    print_applied(selected, verb=f"would {command_name}" if dry_run else verb)
 
 
 @click.group(cls=CliGroup, invoke_without_command=True, add_help_option=False)
@@ -370,9 +371,12 @@ def cmd_skills(args: tuple[str, ...], force_json: bool, show_help: bool) -> None
 
 @cli.command("stage", add_help_option=False)
 @click.option("-l", "line_spec", default=None)
+@click.option("--dry-run", "dry_run", is_flag=True)
 @click.option("-h", "--help", "show_help", is_flag=True)
 @click.argument("targets", nargs=-1)
-def cmd_stage(targets: tuple[str, ...], line_spec: str | None, show_help: bool) -> None:
+def cmd_stage(
+    targets: tuple[str, ...], line_spec: str | None, dry_run: bool, show_help: bool
+) -> None:
     if show_help:
         print_help(HELP_STAGE)
         return
@@ -385,15 +389,17 @@ def cmd_stage(targets: tuple[str, ...], line_spec: str | None, show_help: bool) 
         cached=True,
         reverse=False,
         verb="staged",
+        dry_run=dry_run,
     )
 
 
 @cli.command("unstage", add_help_option=False)
 @click.option("-l", "line_spec", default=None)
+@click.option("--dry-run", "dry_run", is_flag=True)
 @click.option("-h", "--help", "show_help", is_flag=True)
 @click.argument("targets", nargs=-1)
 def cmd_unstage(
-    targets: tuple[str, ...], line_spec: str | None, show_help: bool
+    targets: tuple[str, ...], line_spec: str | None, dry_run: bool, show_help: bool
 ) -> None:
     if show_help:
         print_help(HELP_UNSTAGE)
@@ -407,15 +413,17 @@ def cmd_unstage(
         cached=True,
         reverse=True,
         verb="unstaged",
+        dry_run=dry_run,
     )
 
 
 @cli.command("discard", add_help_option=False)
 @click.option("-l", "line_spec", default=None)
+@click.option("--dry-run", "dry_run", is_flag=True)
 @click.option("-h", "--help", "show_help", is_flag=True)
 @click.argument("targets", nargs=-1)
 def cmd_discard(
-    targets: tuple[str, ...], line_spec: str | None, show_help: bool
+    targets: tuple[str, ...], line_spec: str | None, dry_run: bool, show_help: bool
 ) -> None:
     if show_help:
         print_help(HELP_DISCARD)
@@ -429,4 +437,5 @@ def cmd_discard(
         cached=False,
         reverse=True,
         verb="discarded",
+        dry_run=dry_run,
     )

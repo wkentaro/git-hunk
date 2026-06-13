@@ -197,7 +197,8 @@ def print_version(version: str) -> None:
 _LINE_OPTS = """\
 [bold green]Options:[/bold green]
   [bold cyan]-l[/bold cyan] [cyan]<lines>[/cyan]  Select specific lines within a hunk (requires exactly one hunk)
-             e.g.: -l 3,5-7  (include)   -l ^3,^5-7  (exclude)"""  # noqa: E501
+             e.g.: -l 3,5-7  (include)   -l ^3,^5-7  (exclude)
+  [bold cyan]--dry-run[/bold cyan]   Report what would change without touching the index or working tree"""  # noqa: E501
 
 USAGE = "[bold green]Usage:[/bold green] [bold cyan]git-hunk[/bold cyan] [cyan]<COMMAND>[/cyan]"  # noqa: E501
 USAGE_SHOW = "[bold green]Usage:[/bold green] [bold cyan]git-hunk show[/bold cyan] [cyan][<id>...][/cyan] [cyan][OPTIONS][/cyan]"  # noqa: E501
@@ -234,16 +235,19 @@ _EXAMPLES_STAGE: Final = [
     ("git-hunk stage d161935 a3f82c1", "Stage multiple hunks"),
     ("git-hunk stage src/foo.py", "Stage every hunk in a file"),
     ("git-hunk stage d161935 -l 3,5-7", "Stage specific lines only"),
+    ("git-hunk stage d161935 --dry-run", "Preview without changing anything"),
 ]
 _EXAMPLES_UNSTAGE: Final = [
     ("git-hunk unstage d161935", "Move a hunk back to working tree"),
     ("git-hunk unstage src/foo.py", "Unstage every hunk in a file"),
     ("git-hunk unstage d161935 -l 3,5-7", "Unstage specific lines only"),
+    ("git-hunk unstage d161935 --dry-run", "Preview without changing anything"),
 ]
 _EXAMPLES_DISCARD: Final = [
     ("git-hunk discard d161935", "Restore a hunk from HEAD"),
     ("git-hunk discard src/foo.py", "Discard every hunk in a file"),
     ("git-hunk discard d161935 -l ^3,^5-7", "Discard excluding specific lines"),
+    ("git-hunk discard d161935 --dry-run", "Preview without changing anything"),
 ]
 _EXAMPLES_SKILLS: Final = [
     ("git-hunk skills", "List available skills"),

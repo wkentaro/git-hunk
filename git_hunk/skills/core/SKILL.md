@@ -151,7 +151,12 @@ git-hunk discard <id> <id> ...   # permanently restore unstaged hunks from HEAD
 
 Both take `-l <lines>` for partial ranges, like `stage`. `discard` is
 destructive: it throws away changes. Confirm with the user before discarding
-work you didn't create.
+work you didn't create. `stage`, `unstage`, and `discard` all take `--dry-run`
+to report what they would change without touching the index or working tree:
+
+```bash
+git-hunk discard d161935 --dry-run   # preview the restore, change nothing
+```
 
 ## Reading the output
 
