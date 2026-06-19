@@ -59,7 +59,6 @@ class _BodyLine(NamedTuple):
     prefix: str  # rendered side: ' ' context, '-' old, '+' new
     text: str
     no_newline: bool  # the line it represents has no trailing newline
-    origin: str  # original prefix, before an unselected change became context
 
 
 def _select_body_lines(
@@ -68,11 +67,7 @@ def _select_body_lines(
     *,
     keep_prefix: str,
 ) -> list[_BodyLine]:
-    """Apply the line selection, folding each no-newline marker onto its line.
-
-    ``origin`` records the original prefix so a converted change kept as context
-    can be split back apart later when its no-newline marker has to move.
-    """
+    """Apply the line selection, folding each no-newline marker onto its line."""
     kept: list[_BodyLine] = []
     line_num = 0
     dropped_last = False
@@ -84,9 +79,9 @@ def _select_body_lines(
         line_num += 1
         prefix, text = line[:1], line[1:]
         if prefix == " " or line_num in selected:
-            kept.append(_BodyLine(prefix, text, False, prefix))
-        elif prefix == keep_prefix:
-            kept.append(_BodyLine(" ", text, False, prefix))  # survive as context
+            kept.append(_BodyLine(prefix=prefix, text=text, no_newline=False))
+        elif prefix == keep_prefix:  # unselected change survives as context
+            kept.append(_BodyLine(prefix=" ", text=text, no_newline=False))
         else:
             dropped_last = True
             continue
@@ -97,10 +92,13 @@ def _select_body_lines(
 def _render_body_lines(kept: list[_BodyLine]) -> list[str]:
     # A no-newline marker is valid only on the final line of the side it
     # describes. A kept change line always sits at its side's EOF, and a context
-    # marker on the very last body line ends both sides. But a change kept as
-    # context (origin '-' or '+') that now has lines after it lost its newline on
-    # only one side: split it back into a '-'/'+' pair so the marker stays on the
-    # side that truly has no trailing newline (the other side gains a newline).
+    # marker on the very last body line ends both sides. The remaining case is an
+    # old-side line kept as context that now has lines after it: it was the old
+    # EOF (no trailing newline) but the new side continues past it, so split it
+    # back into a '-'/'+' pair, keeping the marker on the old side while the new
+    # side gains a newline. The mirror (a new-side no-newline line kept as context
+    # under reverse) cannot reach here: a new-side EOF line never has kept lines
+    # after it, so it is always the last body line and takes the branch above.
     last_index = len(kept) - 1
     rendered = []
     for index, line in enumerate(kept):
@@ -109,14 +107,10 @@ def _render_body_lines(kept: list[_BodyLine]) -> list[str]:
         elif line.prefix != " " or index == last_index:
             rendered.append(line.prefix + line.text)
             rendered.append(NO_NEWLINE_MARKER)
-        elif line.origin == "-":
-            rendered.append("-" + line.text)
-            rendered.append(NO_NEWLINE_MARKER)
-            rendered.append("+" + line.text)
         else:
             rendered.append("-" + line.text)
-            rendered.append("+" + line.text)
             rendered.append(NO_NEWLINE_MARKER)
+            rendered.append("+" + line.text)
     return rendered
 
 
