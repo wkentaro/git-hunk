@@ -4,25 +4,30 @@ from ._hunk import Hunk
 from ._hunk import extract_file_path
 
 
-def _get_file_header(diff_output: str, filepath: str) -> str:
-    file_diffs = re.split(r"(?=^diff --git )", diff_output, flags=re.MULTILINE)
-    for file_diff in file_diffs:
-        if extract_file_path(file_diff) == filepath:
-            # Return everything up to the first @@ line
-            parts = re.split(r"(?=^@@)", file_diff, flags=re.MULTILINE)
-            return parts[0]
-    raise ValueError(f"File header not found for {filepath}")
+def _extract_file_headers(diff_output: str) -> dict[str, str]:
+    headers: dict[str, str] = {}
+    for file_diff in re.split(r"(?=^diff --git )", diff_output, flags=re.MULTILINE):
+        filepath = extract_file_path(file_diff)
+        if filepath is None:
+            continue
+        headers[filepath] = re.split(
+            r"(?=^@@)", file_diff, maxsplit=1, flags=re.MULTILINE
+        )[0]
+    return headers
 
 
 def build_patch(hunks: list[Hunk], diff_output: str) -> str:
-    files = {}
+    files: dict[str, list[Hunk]] = {}
     for hunk in hunks:
         files.setdefault(hunk.file, []).append(hunk)
 
+    headers = _extract_file_headers(diff_output)
+
     patches = []
     for filepath, file_hunks in files.items():
-        header = _get_file_header(diff_output, filepath)
+        if filepath not in headers:
+            raise ValueError(f"File header not found for {filepath}")
         hunk_diffs = "\n".join(h.diff for h in file_hunks)
-        patches.append(header + hunk_diffs + "\n")
+        patches.append(headers[filepath] + hunk_diffs + "\n")
 
     return "".join(patches)
