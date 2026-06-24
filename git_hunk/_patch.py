@@ -2,11 +2,12 @@ import re
 
 from ._hunk import Hunk
 from ._hunk import extract_file_path
+from ._hunk import split_file_diffs
 
 
 def _extract_file_headers(diff_output: str) -> dict[str, str]:
     headers: dict[str, str] = {}
-    for file_diff in re.split(r"(?=^diff --git )", diff_output, flags=re.MULTILINE):
+    for file_diff in split_file_diffs(diff_output):
         filepath = extract_file_path(file_diff)
         if filepath is None:
             continue
