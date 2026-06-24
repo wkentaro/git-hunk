@@ -1,7 +1,7 @@
 import pytest
 
 from git_hunk._hunk import Hunk
-from git_hunk._patch import _get_file_header
+from git_hunk._patch import _extract_file_headers
 from git_hunk._patch import build_patch
 
 DIFF_SINGLE = (
@@ -48,16 +48,22 @@ def _make_hunk(*, file: str, diff: str) -> Hunk:
     )
 
 
-def test_get_file_header_extracts_up_to_hunk() -> None:
-    header = _get_file_header(DIFF_SINGLE, "f.py")
+def test_extract_file_headers_stops_before_hunk() -> None:
+    header = _extract_file_headers(DIFF_SINGLE)["f.py"]
     assert header.startswith("diff --git a/f.py b/f.py\n")
     assert "+++ b/f.py\n" in header
     assert "@@" not in header
 
 
-def test_get_file_header_missing_file_raises() -> None:
+def test_extract_file_headers_keys_every_file() -> None:
+    headers = _extract_file_headers(DIFF_TWO_FILES)
+    assert set(headers) == {"a.py", "b.py"}
+
+
+def test_build_patch_missing_file_raises() -> None:
+    hunk = _make_hunk(file="nonexistent.py", diff="")
     with pytest.raises(ValueError, match="not found"):
-        _get_file_header(DIFF_SINGLE, "nonexistent.py")
+        build_patch([hunk], DIFF_SINGLE)
 
 
 def test_build_patch_single_hunk() -> None:
