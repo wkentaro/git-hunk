@@ -81,8 +81,43 @@ def split_file_diffs(diff_output: str) -> list[str]:
     return re.split(r"(?=^diff --git )", diff_output, flags=re.MULTILINE)
 
 
+def _unquote_c_path(path: str) -> str:
+    C_ESCAPES: Final = {
+        "a": "\a",
+        "b": "\b",
+        "f": "\f",
+        "n": "\n",
+        "r": "\r",
+        "t": "\t",
+        "v": "\v",
+        "\\": "\\",
+        '"': '"',
+    }
+    chars = []
+    i = 0
+    while i < len(path):
+        if path[i] != "\\":
+            chars.append(path[i])
+            i += 1
+            continue
+        escape = path[i + 1]
+        if escape in C_ESCAPES:
+            chars.append(C_ESCAPES[escape])
+            i += 2
+        else:
+            chars.append(chr(int(path[i + 1 : i + 4], 8)))
+            i += 4
+    return "".join(chars)
+
+
 def extract_file_path(file_diff: str) -> str | None:
     first_line = file_diff.split("\n", 1)[0]
+    # git double-quotes and C-escapes the header when a path contains a tab,
+    # newline, backslash, or double-quote (regardless of core.quotePath). Both
+    # halves are identical for non-renames; decode the logical path.
+    m = re.match(r'diff --git "a/(.+)" "b/\1"$', first_line)
+    if m:
+        return _unquote_c_path(m.group(1))
     # For non-renames git emits `diff --git a/<path> b/<path>` with both halves
     # identical; the backreference resolves paths that contain " b/".
     m = re.match(r"diff --git a/(.+) b/\1$", first_line)

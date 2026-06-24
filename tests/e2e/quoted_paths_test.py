@@ -1,3 +1,7 @@
+import sys
+
+import pytest
+
 from .conftest import GitHunkCLI
 
 
@@ -51,4 +55,33 @@ def test_filename_with_b_slash_substring_stages(cli: GitHunkCLI) -> None:
     assert cli.repo.git("diff", "--cached").strip() == ""
 
     cli.run_ok("discard", _hunk_id_for(cli, "a b/c.txt"))
+    assert cli.repo.git("diff").strip() == ""
+
+
+@pytest.mark.skipif(
+    sys.platform == "win32",
+    reason="tab, newline, backslash, and double-quote are illegal in Windows filenames",
+)
+@pytest.mark.parametrize(
+    "path",
+    ["od\ttab.txt", "od\nnl.txt", "od\\back.txt", 'od"q.txt'],
+    ids=["tab", "newline", "backslash", "quote"],
+)
+def test_quoted_path_modified_file_round_trips(cli: GitHunkCLI, path: str) -> None:
+    cli.repo.write_file(path, "a\nb\n")
+    cli.repo.git("add", ".")
+    cli.repo.git("commit", "-m", "init")
+    cli.repo.write_file(path, "a\nB\n")
+
+    hunks = cli.run_list_json("list", "--unstaged", "--json")
+    assert [h["file"] for h in hunks] == [path]
+
+    cli.run_ok("stage", _hunk_id_for(cli, path))
+    assert cli.repo.git("show", f":{path}") == "a\nB\n"
+
+    staged = cli.run_list_json("list", "--staged", "--json")
+    cli.run_ok("unstage", staged[0]["id"])
+    assert cli.repo.git("diff", "--cached").strip() == ""
+
+    cli.run_ok("discard", _hunk_id_for(cli, path))
     assert cli.repo.git("diff").strip() == ""
