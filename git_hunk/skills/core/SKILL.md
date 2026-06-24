@@ -181,9 +181,10 @@ git-hunk discard d161935 --dry-run   # preview the restore, change nothing
 
 In `list` (see Quickstart), hunks group under `staged`, `unstaged`, and
 `untracked` (new files git isn't tracking yet). Each hunk line is `id`, the `@@`
-header with its enclosing context, then `+N -N`. A binary or mode-only change
-has no `@@` line; it shows a `Binary file (modified|added|deleted)` or
-`Mode <old> -> <new>` header instead and is staged whole (no `-l`).
+header with its enclosing context, then `+N -N`. A binary, mode-only, or type
+change has no `@@` line; it shows a `Binary file (modified|added|deleted)`,
+`Mode <old> -> <new>`, or `Type change (<old> -> <new>)` label instead and is
+staged whole (no `-l`).
 
 ## Useful flags
 
@@ -191,12 +192,18 @@ has no `@@` line; it shows a `Binary file (modified|added|deleted)` or
 git-hunk list <file>...   # filter hunks to specific files
 git-hunk list --staged    # only staged hunks (also --unstaged; both work on show)
 git-hunk show             # show every hunk's diff (no args)
-git-hunk list --json      # machine-readable; plain output is usually enough
+git-hunk list --json      # machine-readable inventory; plain output is usually enough
+git-hunk show <id> --json # machine-readable diff with a structured per-line body
 ```
 
-`list` and `show` search both staged and unstaged by default. `list --json`
-returns a versioned envelope, `{"schema_version": 1, "hunks": [...]}`; read the
-hunks from the `hunks` array.
+`list` and `show` search both staged and unstaged by default. Both `--json`
+outputs are a versioned envelope, `{"schema_version": 2, "hunks": [...]}`; read
+the hunks from the `hunks` array. `list --json` is a lean inventory (no body);
+`show --json` adds a `lines: [{n, op, content, no_newline?}]` body where `n` is
+the same 1-based index that `-l` selects. Each hunk carries typed
+`change_kind`/`a_mode`/`b_mode`/`binary` fields, a bare `@@` `header` (`null` for
+whole-file changes), and byte-safe `{text|bytes}` unions for `file`,
+`context_before`, and `lines[].content`.
 
 ## Working safely
 
