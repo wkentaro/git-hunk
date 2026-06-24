@@ -16,3 +16,6 @@
 
 # Tools
 /.claude/
+
+# Worktrees
+/.wt/
