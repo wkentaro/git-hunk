@@ -9,7 +9,7 @@ from .conftest import GitHunkCLI
 
 def _id_for(cli: GitHunkCLI, path: str, *flags: str) -> str:
     hunks = cli.run_list_json("list", *flags, "--json")
-    return next(h["id"] for h in hunks if h["file"] == path)
+    return next(h["id"] for h in hunks if h["file"]["text"] == path)
 
 
 @pytest.fixture
@@ -31,12 +31,14 @@ def test_list_distinguishes_modified_and_deleted_binary(cli: GitHunkCLI) -> None
     (root / "a.bin").write_bytes(b"\x00\x02A\xfe")
     (root / "d.bin").unlink()
 
-    headers = {
-        h["file"]: h["header"]
-        for h in cli.run_list_json("list", "--unstaged", "--json")
+    by_file = {
+        h["file"]["text"]: h for h in cli.run_list_json("list", "--unstaged", "--json")
     }
-    assert headers["a.bin"] == "Binary file (modified)"
-    assert headers["d.bin"] == "Binary file (deleted)"
+    assert by_file["a.bin"]["binary"] is True
+    assert by_file["a.bin"]["change_kind"] == "M"
+    assert by_file["a.bin"]["header"] is None
+    assert by_file["d.bin"]["binary"] is True
+    assert by_file["d.bin"]["change_kind"] == "D"
 
 
 def test_show_binary_has_no_blank_numbered_line(modified_binary: GitHunkCLI) -> None:
@@ -63,7 +65,7 @@ def test_line_selection_rejected_on_binary(modified_binary: GitHunkCLI) -> None:
     cli = modified_binary
     r = cli.run("stage", _id_for(cli, "a.bin", "--unstaged"), "-l", "1")
     assert r.returncode != 0
-    assert "not supported for binary or mode-only" in r.stderr
+    assert "not supported for binary, mode, or type changes" in r.stderr
 
 
 def test_stage_deleted_binary(cli: GitHunkCLI) -> None:
@@ -89,12 +91,46 @@ def test_stage_added_binary(cli: GitHunkCLI) -> None:
 
     cli.repo.git("add", "n.bin")
     staged = {
-        h["file"]: h["header"] for h in cli.run_list_json("list", "--staged", "--json")
+        h["file"]["text"]: h for h in cli.run_list_json("list", "--staged", "--json")
     }
-    assert staged["n.bin"] == "Binary file (added)"
+    assert staged["n.bin"]["binary"] is True
+    assert staged["n.bin"]["change_kind"] == "A"
 
     cli.run_ok("unstage", _id_for(cli, "n.bin", "--staged"))
     assert cli.repo.git("diff", "--cached").strip() == ""
+
+
+@pytest.mark.skipif(
+    sys.platform == "win32", reason="git does not track symlinks on Windows"
+)
+def test_typechange_stage_unstage_discard(cli: GitHunkCLI) -> None:
+    # git emits a file -> symlink type change as a delete + add pair; git-hunk
+    # surfaces it as a single "T" whole-file hunk staged whole.
+    path = Path(cli.repo.path) / "tc.txt"
+    path.write_text("hello\n")
+    cli.repo.git("add", ".")
+    cli.repo.git("commit", "-m", "init")
+    path.unlink()
+    path.symlink_to("target")
+
+    by_file = {
+        h["file"]["text"]: h for h in cli.run_list_json("list", "--unstaged", "--json")
+    }
+    assert by_file["tc.txt"]["change_kind"] == "T"
+    assert by_file["tc.txt"]["a_mode"] == "100644"
+    assert by_file["tc.txt"]["b_mode"] == "120000"
+    assert by_file["tc.txt"]["header"] is None
+    # The human label is derived from the typed fields at display time.
+    assert "Type change (100644 -> 120000)" in cli.run_ok("list", "--unstaged")
+
+    cli.run_ok("stage", _id_for(cli, "tc.txt", "--unstaged"))
+    assert "T\ttc.txt" in cli.repo.git("diff", "--cached", "--name-status")
+
+    cli.run_ok("unstage", _id_for(cli, "tc.txt", "--staged"))
+    assert cli.repo.git("diff", "--cached").strip() == ""
+
+    cli.run_ok("discard", _id_for(cli, "tc.txt", "--unstaged"))
+    assert cli.repo.git("diff").strip() == ""
 
 
 @pytest.mark.skipif(
@@ -108,11 +144,15 @@ def test_stage_and_discard_mode_only_change(cli: GitHunkCLI) -> None:
     cli.repo.git("commit", "-m", "init")
     os.chmod(path, 0o755)
 
-    headers = {
-        h["file"]: h["header"]
-        for h in cli.run_list_json("list", "--unstaged", "--json")
+    by_file = {
+        h["file"]["text"]: h for h in cli.run_list_json("list", "--unstaged", "--json")
     }
-    assert headers["m.sh"].startswith("Mode ")
+    assert by_file["m.sh"]["change_kind"] == "M"
+    assert by_file["m.sh"]["binary"] is False
+    assert by_file["m.sh"]["header"] is None
+    assert by_file["m.sh"]["a_mode"] != by_file["m.sh"]["b_mode"]
+    # The human label is derived from the typed fields at display time.
+    assert "Mode 100644 -> 100755" in cli.run_ok("list", "--unstaged")
 
     cli.run_ok("stage", _id_for(cli, "m.sh", "--unstaged"))
     assert "m.sh" in cli.repo.git("diff", "--cached", "--name-only")

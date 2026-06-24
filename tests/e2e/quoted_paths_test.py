@@ -7,7 +7,7 @@ from .conftest import GitHunkCLI
 
 def _hunk_id_for(cli: GitHunkCLI, path: str) -> str:
     hunks = cli.run_list_json("list", "--unstaged", "--json")
-    return next(h["id"] for h in hunks if h["file"] == path)
+    return next(h["id"] for h in hunks if h["file"]["text"] == path)
 
 
 def test_non_ascii_modified_file_round_trips(cli: GitHunkCLI) -> None:
@@ -35,7 +35,7 @@ def test_non_ascii_untracked_shows_real_path(cli: GitHunkCLI) -> None:
 
     hunks = cli.run_list_json("list", "--json")
     untracked = [h for h in hunks if h["status"] == "untracked"]
-    assert [h["file"] for h in untracked] == ["untrack𝟙.txt"]
+    assert [h["file"]["text"] for h in untracked] == ["untrack𝟙.txt"]
 
 
 def test_filename_with_b_slash_substring_stages(cli: GitHunkCLI) -> None:
@@ -45,7 +45,7 @@ def test_filename_with_b_slash_substring_stages(cli: GitHunkCLI) -> None:
     cli.repo.write_file("a b/c.txt", "x\nY\n")
 
     hunks = cli.run_list_json("list", "--unstaged", "--json")
-    assert [h["file"] for h in hunks] == ["a b/c.txt"]
+    assert [h["file"]["text"] for h in hunks] == ["a b/c.txt"]
 
     cli.run_ok("stage", _hunk_id_for(cli, "a b/c.txt"))
     assert cli.repo.git("show", ":a b/c.txt") == "x\nY\n"
@@ -74,7 +74,7 @@ def test_quoted_path_modified_file_round_trips(cli: GitHunkCLI, path: str) -> No
     cli.repo.write_file(path, "a\nB\n")
 
     hunks = cli.run_list_json("list", "--unstaged", "--json")
-    assert [h["file"] for h in hunks] == [path]
+    assert [h["file"]["text"] for h in hunks] == [path]
 
     cli.run_ok("stage", _hunk_id_for(cli, path))
     assert cli.repo.git("show", f":{path}") == "a\nB\n"

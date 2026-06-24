@@ -125,42 +125,70 @@ the selected hunks.
 ### JSON output
 
 ```bash
-git-hunk list --json
+git-hunk list --json     # inventory: every hunk, no body
+git-hunk show <id> --json # the same hunks plus a structured per-line body
 ```
 
-`list --json` emits a versioned envelope so consumers can depend on a stable
-shape:
+Both emit a versioned envelope (`schema_version` is currently `2`) so consumers
+can depend on a stable shape. `list --json` is a lean inventory and carries no
+body; `show --json` adds a structured `lines` array. A `show --json` hunk
+(`list --json` is identical but without the `lines` field):
 
 ```json
 {
-  "schema_version": 1,
+  "schema_version": 2,
   "hunks": [
     {
       "id": "d161935",
-      "file": "src/main.py",
+      "file": { "text": "src/main.py" },
       "status": "unstaged",
-      "header": "@@ -10,3 +10,5 @@ def main():",
-      "context_before": "def main():",
+      "change_kind": "M",
+      "a_mode": "100644",
+      "b_mode": "100644",
+      "binary": false,
+      "header": "@@ -10,3 +10,5 @@",
+      "context_before": { "text": "def main():" },
       "additions": 2,
       "deletions": 0,
-      "diff": "..."
+      "lines": [
+        { "n": 1, "op": " ", "content": { "text": "    x = 1" } },
+        { "n": 2, "op": "+", "content": { "text": "    y = 2" } }
+      ]
     }
   ]
 }
 ```
 
-| Field            | Type   | Description                                                                                        |
-| ---------------- | ------ | -------------------------------------------------------------------------------------------------- |
-| `schema_version` | int    | Envelope version; bumped on any incompatible change to the shape below.                            |
-| `hunks`          | array  | The hunks (empty array when there are no changes).                                                 |
-| `id`             | string | Stable, content-based hunk id (7-char SHA-256 prefix); accepts prefixes.                           |
-| `file`           | string | Path of the changed file.                                                                          |
-| `status`         | string | One of `staged`, `unstaged`, `untracked`.                                                          |
-| `header`         | string | The hunk's `@@ ... @@` header, or a `Binary file (...)` / `Mode ...` label for whole-file changes. |
-| `context_before` | string | The function/section git names after the `@@` header; empty when git provides no context.          |
-| `additions`      | int    | Number of added lines.                                                                             |
-| `deletions`      | int    | Number of removed lines.                                                                           |
-| `diff`           | string | The unified diff for the hunk (empty for whole-file changes).                                      |
+| Field            | Type           | Description                                                                                                  |
+| ---------------- | -------------- | ------------------------------------------------------------------------------------------------------------ |
+| `schema_version` | int            | Envelope version; bumped on any incompatible change to the shape below.                                      |
+| `hunks`          | array          | The hunks (empty array when there are no changes).                                                           |
+| `id`             | string         | Stable, content-based hunk id (7-char SHA-256 prefix); accepts prefixes.                                     |
+| `file`           | union          | Path of the changed file, as a byte-safe `{text\|bytes}` union (see below).                                  |
+| `status`         | string         | One of `staged`, `unstaged`, `untracked`.                                                                    |
+| `change_kind`    | string         | Git status letter: `A` added, `D` deleted, `M` modified, `T` typechange (`R`/`C` reserved). Always present.  |
+| `a_mode`         | string \| null | 6-digit octal git mode on the pre-image side; `null` when that side does not exist.                          |
+| `b_mode`         | string \| null | 6-digit octal git mode on the post-image side; `null` when that side does not exist.                         |
+| `binary`         | bool           | Whether the change is binary. Always present.                                                                |
+| `header`         | string \| null | The hunk's bare `@@ -a,b +c,d @@` range; `null` for a whole-file (binary, mode-only, or type) change.        |
+| `context_before` | union \| null  | The function/section git names after the `@@` header, as a `{text\|bytes}` union; `null` when there is none. |
+| `additions`      | int            | Number of added lines.                                                                                       |
+| `deletions`      | int            | Number of removed lines.                                                                                     |
+| `lines`          | array          | `show --json` only. The structured body; `[]` for a whole-file hunk. See below.                              |
+
+A `lines` entry is `{ "n", "op", "content", "no_newline"? }`:
+
+| Field        | Type   | Description                                                                                         |
+| ------------ | ------ | --------------------------------------------------------------------------------------------------- |
+| `n`          | int    | 1-based position within the hunk body — the index `-l` line selection uses. Counts every body line. |
+| `op`         | string | `" "` context, `"+"` addition, `"-"` deletion.                                                      |
+| `content`    | union  | The line text **without** its leading op character, as a `{text\|bytes}` union.                     |
+| `no_newline` | bool   | Present and `true` only when the line has no trailing newline; consumes no `n`.                     |
+
+Any field carrying arbitrary git/source bytes (`file`, `context_before`,
+`lines[].content`) is a byte-safe `{text | bytes}` union: `{"text": "..."}` for
+valid UTF-8, else `{"bytes": "<base64>"}`. It is always an object, so consumers
+have one code path and strict JSON parsers never see a lone surrogate.
 
 Adding a new field is backward-compatible and does not change `schema_version`;
 renaming, removing, or changing the type of an existing field bumps it. (Before
