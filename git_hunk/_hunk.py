@@ -77,6 +77,10 @@ def _with_stable_ids(hunks: list[Hunk]) -> list[Hunk]:
     ]
 
 
+def split_file_diffs(diff_output: str) -> list[str]:
+    return re.split(r"(?=^diff --git )", diff_output, flags=re.MULTILINE)
+
+
 def extract_file_path(file_diff: str) -> str | None:
     first_line = file_diff.split("\n", 1)[0]
     # For non-renames git emits `diff --git a/<path> b/<path>` with both halves
@@ -127,7 +131,7 @@ def parse_diff(diff_output: str) -> list[Hunk]:
         return []
 
     hunks = []
-    file_diffs = re.split(r"(?=^diff --git )", diff_output, flags=re.MULTILINE)
+    file_diffs = split_file_diffs(diff_output)
 
     for file_diff in file_diffs:
         if not file_diff.strip():
