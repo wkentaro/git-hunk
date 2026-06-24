@@ -47,7 +47,7 @@ from ._ui import print_skill_list
 from ._ui import print_version
 
 # Bump when the `list --json` shape changes incompatibly (see README JSON output).
-JSON_SCHEMA_VERSION: Final = 1
+JSON_SCHEMA_VERSION: Final = 2
 
 
 class CliError(Exception):

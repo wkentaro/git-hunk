@@ -1,3 +1,4 @@
+import base64
 import hashlib
 import re
 from collections import Counter
@@ -11,6 +12,22 @@ NO_NEWLINE_MARKER: Final = "\\ No newline at end of file"
 
 def is_no_newline_marker(line: str) -> bool:
     return line == NO_NEWLINE_MARKER
+
+
+def _encode_arbitrary(s: str) -> dict[str, str]:
+    """Byte-safe JSON encoding for git-derived text that may not be UTF-8.
+
+    run_git decodes with surrogateescape, so a non-UTF-8 byte lands as a lone
+    surrogate that ensure_ascii serializes as a `\\udcXX` escape strict parsers
+    reject. Emit a ripgrep-style discriminated union instead: always an object,
+    never a bare string, so consumers have one code path.
+    """
+    try:
+        s.encode("utf-8")  # probe: raises on the lone surrogates surrogateescape left
+    except UnicodeEncodeError:
+        raw = s.encode(errors="surrogateescape")
+        return {"bytes": base64.b64encode(raw).decode("ascii")}
+    return {"text": s}
 
 
 @dataclass(frozen=True)
@@ -27,13 +44,13 @@ class Hunk:
     def to_dict(self) -> dict[str, Any]:
         return {
             "id": self.id,
-            "file": self.file,
+            "file": _encode_arbitrary(self.file),
             "status": self.status,
-            "header": self.header,
-            "context_before": self.context_before,
+            "header": _encode_arbitrary(self.header),
+            "context_before": _encode_arbitrary(self.context_before),
             "additions": self.additions,
             "deletions": self.deletions,
-            "diff": self.diff,
+            "diff": _encode_arbitrary(self.diff),
         }
 
 

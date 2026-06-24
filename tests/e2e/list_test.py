@@ -1,3 +1,4 @@
+from typing import Any
 from typing import cast
 
 from git_hunk._cli import JSON_SCHEMA_VERSION
@@ -14,6 +15,7 @@ _REQUIRED_HUNK_KEYS = {
     "diff",
 }
 _STATUSES = {"staged", "unstaged", "untracked"}
+_BYTE_SAFE_FIELDS = {"file", "header", "context_before", "diff"}
 
 
 def test_json_envelope_contract(cli: GitHunkCLI) -> None:
@@ -24,11 +26,15 @@ def test_json_envelope_contract(cli: GitHunkCLI) -> None:
 
     envelope = cli.run_list_envelope("list", "--json")
     assert envelope["schema_version"] == JSON_SCHEMA_VERSION
-    hunks = cast("list[dict[str, str]]", envelope["hunks"])
+    hunks = cast("list[dict[str, Any]]", envelope["hunks"])
     assert hunks
     for hunk in hunks:
         assert _REQUIRED_HUNK_KEYS <= hunk.keys()
         assert hunk["status"] in _STATUSES
+        # The byte-safe fields are objects with exactly one of text/bytes, never
+        # bare strings; this locks the schema v2 shape against a regression.
+        for field in _BYTE_SAFE_FIELDS:
+            assert set(hunk[field]) in ({"text"}, {"bytes"})
 
 
 def test_json_envelope_present_when_empty(cli: GitHunkCLI) -> None:
@@ -58,7 +64,7 @@ def test_single_file_single_hunk(cli: GitHunkCLI) -> None:
 
     hunks = cli.run_list_json("list", "--json")
     assert len(hunks) == 1
-    assert hunks[0]["file"] == "f.py"
+    assert hunks[0]["file"]["text"] == "f.py"
     assert hunks[0]["additions"] == 1
     assert hunks[0]["deletions"] == 1
     assert "id" in hunks[0]
@@ -76,7 +82,7 @@ def test_single_file_multiple_hunks(cli: GitHunkCLI) -> None:
 
     hunks = cli.run_list_json("list", "--json")
     assert len(hunks) == 2
-    assert all(h["file"] == "f.py" for h in hunks)
+    assert all(h["file"]["text"] == "f.py" for h in hunks)
 
 
 def test_multi_file_changes(cli: GitHunkCLI) -> None:
@@ -90,7 +96,7 @@ def test_multi_file_changes(cli: GitHunkCLI) -> None:
 
     hunks = cli.run_list_json("list", "--json")
     assert len(hunks) == 2
-    files = {h["file"] for h in hunks}
+    files = {h["file"]["text"] for h in hunks}
     assert files == {"a.py", "b.py"}
 
 
@@ -103,7 +109,7 @@ def test_list_staged(cli: GitHunkCLI) -> None:
 
     hunks = cli.run_list_json("list", "--staged", "--json")
     assert len(hunks) == 1
-    assert hunks[0]["file"] == "f.py"
+    assert hunks[0]["file"]["text"] == "f.py"
 
 
 def test_list_file_filter(cli: GitHunkCLI) -> None:
@@ -117,7 +123,7 @@ def test_list_file_filter(cli: GitHunkCLI) -> None:
 
     hunks = cli.run_list_json("list", "--json", "a.py")
     assert len(hunks) == 1
-    assert hunks[0]["file"] == "a.py"
+    assert hunks[0]["file"]["text"] == "a.py"
 
 
 def test_list_new_file(cli: GitHunkCLI) -> None:
@@ -130,7 +136,7 @@ def test_list_new_file(cli: GitHunkCLI) -> None:
 
     hunks = cli.run_list_json("list", "--staged", "--json")
     assert len(hunks) == 1
-    assert hunks[0]["file"] == "new.py"
+    assert hunks[0]["file"]["text"] == "new.py"
     assert int(hunks[0]["additions"]) >= 1
     assert hunks[0]["deletions"] == 0
 
@@ -159,7 +165,7 @@ def test_list_default_shows_untracked(cli: GitHunkCLI) -> None:
     hunks = cli.run_list_json("list", "--json")
     untracked = [h for h in hunks if h["status"] == "untracked"]
     assert len(untracked) == 1
-    assert untracked[0]["file"] == "untracked.py"
+    assert untracked[0]["file"]["text"] == "untracked.py"
 
 
 def test_list_unstaged_filter(cli: GitHunkCLI) -> None:
@@ -204,6 +210,6 @@ def test_list_context_before_field_in_json_matches_display(cli: GitHunkCLI) -> N
 
     hunks = cli.run_list_json("list", "--json")
     assert len(hunks) == 1
-    assert hunks[0]["context_before"] == "def foo():"
+    assert hunks[0]["context_before"]["text"] == "def foo():"
     # Parity: the field equals the function context shown in the human display.
     assert "def foo():" in cli.run_ok("list")

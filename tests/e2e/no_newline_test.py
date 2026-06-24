@@ -77,7 +77,7 @@ def test_stage_line_selection_on_no_newline_hunk(cli: GitHunkCLI) -> None:
 
     # The dropped change still carries its no-newline marker in the remainder.
     remaining = cli.run_list_json("list", "--unstaged", "--json")
-    assert NO_NEWLINE_MARKER in remaining[0]["diff"]
+    assert NO_NEWLINE_MARKER in remaining[0]["diff"]["text"]
 
 
 def test_list_counts_ignore_no_newline_marker(cli: GitHunkCLI) -> None:

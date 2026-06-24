@@ -182,8 +182,12 @@ git-hunk list --json      # machine-readable; plain output is usually enough
 ```
 
 `list` and `show` search both staged and unstaged by default. `list --json`
-returns a versioned envelope, `{"schema_version": 1, "hunks": [...]}`; read the
-hunks from the `hunks` array.
+returns a versioned envelope, `{"schema_version": 2, "hunks": [...]}`; read the
+hunks from the `hunks` array. In each hunk the git-derived text fields (`file`,
+`header`, `context_before`, `diff`) are byte-safe objects with exactly one key:
+`{"text": "<string>"}` for UTF-8, or `{"bytes": "<base64>"}` when the bytes
+aren't valid UTF-8. `id` and `status` stay plain strings; `additions` and
+`deletions` stay ints.
 
 ## Working safely
 

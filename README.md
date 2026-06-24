@@ -126,34 +126,42 @@ shape:
 
 ```json
 {
-  "schema_version": 1,
+  "schema_version": 2,
   "hunks": [
     {
       "id": "d161935",
-      "file": "src/main.py",
+      "file": { "text": "src/main.py" },
       "status": "unstaged",
-      "header": "@@ -10,3 +10,5 @@ def main():",
-      "context_before": "def main():",
+      "header": { "text": "@@ -10,3 +10,5 @@ def main():" },
+      "context_before": { "text": "def main():" },
       "additions": 2,
       "deletions": 0,
-      "diff": "..."
+      "diff": { "text": "..." }
     }
   ]
 }
 ```
 
-| Field            | Type   | Description                                                                                        |
-| ---------------- | ------ | -------------------------------------------------------------------------------------------------- |
-| `schema_version` | int    | Envelope version; bumped on any incompatible change to the shape below.                            |
-| `hunks`          | array  | The hunks (empty array when there are no changes).                                                 |
-| `id`             | string | Stable, content-based hunk id (7-char SHA-256 prefix); accepts prefixes.                           |
-| `file`           | string | Path of the changed file.                                                                          |
-| `status`         | string | One of `staged`, `unstaged`, `untracked`.                                                          |
-| `header`         | string | The hunk's `@@ ... @@` header, or a `Binary file (...)` / `Mode ...` label for whole-file changes. |
-| `context_before` | string | The function/section git names after the `@@` header; empty when git provides no context.          |
-| `additions`      | int    | Number of added lines.                                                                             |
-| `deletions`      | int    | Number of removed lines.                                                                           |
-| `diff`           | string | The unified diff for the hunk (empty for whole-file changes).                                      |
+| Field            | Type   | Description                                                                                       |
+| ---------------- | ------ | ------------------------------------------------------------------------------------------------- |
+| `schema_version` | int    | Envelope version; bumped on any incompatible change to the shape below.                           |
+| `hunks`          | array  | The hunks (empty array when there are no changes).                                                |
+| `id`             | string | Stable, content-based hunk id (7-char SHA-256 prefix); accepts prefixes.                          |
+| `file`           | object | Path of the changed file, as a byte-safe value (see below).                                       |
+| `status`         | string | One of `staged`, `unstaged`, `untracked`.                                                         |
+| `header`         | object | The hunk's `@@ ... @@` header, or a `Binary file (...)` / `Mode ...` label, as a byte-safe value. |
+| `context_before` | object | The function/section git names after the `@@` header, as a byte-safe value; empty when none.      |
+| `additions`      | int    | Number of added lines.                                                                            |
+| `deletions`      | int    | Number of removed lines.                                                                          |
+| `diff`           | object | The unified diff for the hunk, as a byte-safe value (empty for whole-file changes).               |
+
+Fields carrying git-derived text (`file`, `header`, `context_before`, `diff`)
+are byte-safe values: always an object with exactly one key, never a bare
+string. UTF-8 content is `{"text": "<string>"}`; non-UTF-8 content (a path or
+diff line with bytes that aren't valid UTF-8) is `{"bytes": "<base64>"}`, the
+standard base64 of the raw bytes, so the original is recoverable losslessly and
+the document stays valid for strict JSON parsers. (Plain string output would
+emit lone surrogates that `jq` corrupts and Go/Rust parsers reject.)
 
 Adding a new field is backward-compatible and does not change `schema_version`;
 renaming, removing, or changing the type of an existing field bumps it. (Before

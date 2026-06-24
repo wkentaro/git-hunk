@@ -1,6 +1,7 @@
 import json
 import os
 import subprocess
+from typing import Any
 from typing import cast
 
 import pytest
@@ -46,10 +47,11 @@ class GitHunkCLI:
     def run_list_envelope(self, *args: str) -> dict[str, object]:
         return cast("dict[str, object]", json.loads(self.run_ok(*args)))
 
-    def run_list_json(self, *args: str) -> list[dict[str, str]]:
+    def run_list_json(self, *args: str) -> list[dict[str, Any]]:
         # `list --json` wraps the hunks in a versioned envelope; tests that only
-        # need the hunks call this to unwrap it.
-        return cast("list[dict[str, str]]", self.run_list_envelope(*args)["hunks"])
+        # need the hunks call this to unwrap it. Hunk values are heterogeneous
+        # (str/int scalars and `{"text"|"bytes": ...}` byte-safe objects).
+        return cast("list[dict[str, Any]]", self.run_list_envelope(*args)["hunks"])
 
 
 @pytest.fixture

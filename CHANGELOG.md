@@ -25,6 +25,11 @@ and this project adheres to
 - **Breaking:** `list --json` now wraps its output in a versioned envelope,
   `{"schema_version": 1, "hunks": [...]}`, instead of a bare array, so consumers
   can depend on a documented, versioned shape (#23).
+- **Breaking:** `list --json` emits the git-derived string fields (`file`,
+  `header`, `context_before`, `diff`) as byte-safe objects (`{"text": "..."}`
+  for UTF-8, `{"bytes": "<base64>"}` otherwise) instead of bare strings, and
+  bumps `schema_version` to 2. This keeps the output valid for strict JSON
+  parsers (Go, Rust) when a path or diff line carries non-UTF-8 bytes (#44).
 - README image paths are rewritten to absolute URLs so they render on PyPI.
 
 ### Fixed
