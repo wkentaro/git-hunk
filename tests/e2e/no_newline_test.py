@@ -1,7 +1,5 @@
 from pathlib import Path
 
-from git_hunk._hunk import NO_NEWLINE_MARKER
-
 from .conftest import GitHunkCLI
 
 
@@ -77,7 +75,8 @@ def test_stage_line_selection_on_no_newline_hunk(cli: GitHunkCLI) -> None:
 
     # The dropped change still carries its no-newline marker in the remainder.
     remaining = cli.run_list_json("list", "--unstaged", "--json")
-    assert NO_NEWLINE_MARKER in remaining[0]["diff"]
+    body = cli.run_list_json("show", remaining[0]["id"], "--unstaged", "--json")[0]
+    assert any(line.get("no_newline") for line in body["lines"])
 
 
 def test_list_counts_ignore_no_newline_marker(cli: GitHunkCLI) -> None:

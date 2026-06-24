@@ -32,10 +32,14 @@ def _make_hunk(*, file: str, diff: str) -> Hunk:
     return Hunk(
         id="",
         file=file,
-        header="",
+        change_kind="M",
+        a_mode="100644",
+        b_mode="100644",
+        binary=False,
+        header=None,
+        context_before=None,
         additions=0,
         deletions=0,
-        context_before="",
         diff=diff,
     )
 

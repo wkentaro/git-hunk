@@ -35,6 +35,21 @@ def _safe(text: str) -> str:
     return text.encode("utf-8", errors="backslashreplace").decode("utf-8")
 
 
+def _whole_file_label(hunk: Hunk) -> str:
+    # Human label for a hunk with no @@ range, derived from its typed fields
+    # (the data layer no longer stores the label string).
+    if hunk.change_kind == "T":
+        return f"Type change ({hunk.a_mode} -> {hunk.b_mode})"
+    if hunk.binary:
+        labels = {"A": "Binary file (added)", "D": "Binary file (deleted)"}
+        return labels.get(hunk.change_kind, "Binary file (modified)")
+    return f"Mode {hunk.a_mode} -> {hunk.b_mode}"
+
+
+def _header_text(hunk: Hunk) -> str:
+    return hunk.header if hunk.header is not None else _whole_file_label(hunk)
+
+
 def _append_stats(text: Text, hunk: Hunk) -> None:
     if hunk.additions:
         text.append(f"+{hunk.additions}", style="green")
@@ -49,7 +64,7 @@ def _print_hunk_line(out: Console, hunk: Hunk) -> None:
     line.append("  ")
     line.append(hunk.id, style="cyan")
     line.append("  ")
-    line.append(_safe(hunk.header), style="dim")
+    line.append(_safe(_header_text(hunk)), style="dim")
     if hunk.context_before:
         line.append(f"  {_safe(hunk.context_before)}", style="dim italic")
     line.append("  ")
@@ -118,7 +133,7 @@ def print_hunk_list(hunks: list[Hunk]) -> None:
 def _print_hunk_diff(out: Console, hunk: Hunk) -> None:
     out.print(f"[bold]{escape(_safe(hunk.file))}[/bold]  [dim]{escape(hunk.id)}[/dim]")
     if not hunk.diff:
-        out.print(Text(_safe(hunk.header), style="dim"))
+        out.print(Text(_safe(_header_text(hunk)), style="dim"))
         return
     line_num = 0
     for line in hunk.diff.split("\n"):
@@ -167,7 +182,7 @@ def print_applied(hunks: list[Hunk], *, verb: str) -> None:
         line.append(hunk.id, style="cyan")
         line.append("  ")
         line.append(_safe(hunk.file), style="bold")
-        line.append(f"  {_safe(hunk.header)}", style="dim")
+        line.append(f"  {_safe(_header_text(hunk))}", style="dim")
         if hunk.context_before:
             line.append(f"  {_safe(hunk.context_before)}", style="dim italic")
         line.append("  ")
@@ -334,6 +349,7 @@ IDs support prefix matching.
 [bold green]Options:[/bold green]
   [bold cyan]--staged[/bold cyan]     Show only staged hunks
   [bold cyan]--unstaged[/bold cyan]   Show only unstaged hunks
+  [bold cyan]--json[/bold cyan]       Output as JSON (with a structured per-line body)
 
 {_format_examples(_EXAMPLES_SHOW)}"""
 

@@ -55,7 +55,7 @@ def test_stage_from_different_files(cli: GitHunkCLI) -> None:
     cli.repo.write_file("b.py", "BBB\n")
 
     hunks = cli.run_list_json("list", "--json")
-    a_hunk = next(h for h in hunks if h["file"] == "a.py")
+    a_hunk = next(h for h in hunks if h["file"]["text"] == "a.py")
 
     cli.run_ok("stage", a_hunk["id"])
 

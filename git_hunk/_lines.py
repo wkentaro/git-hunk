@@ -213,15 +213,15 @@ def filter_hunk_lines(
     if not m:
         raise ValueError(f"cannot parse hunk header: {header}")
 
-    new_header = (
-        f"@@ -{m.group(1)},{old_count} +{m.group(2)},{new_count} @@{m.group(3)}"
-    )
-    new_diff = new_header + "\n" + "\n".join(new_body)
+    range_header = f"@@ -{m.group(1)},{old_count} +{m.group(2)},{new_count} @@"
+    # diff keeps git's verbatim @@ line (heading included) for git apply / show;
+    # the JSON header field is the bare range (heading lives in context_before).
+    new_diff = range_header + m.group(3) + "\n" + "\n".join(new_body)
 
     return replace(
         hunk,
         diff=new_diff,
-        header=new_header,
+        header=range_header,
         additions=additions,
         deletions=deletions,
     )

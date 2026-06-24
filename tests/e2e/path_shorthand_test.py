@@ -20,7 +20,7 @@ def multi_hunk_repo(cli: GitHunkCLI) -> GitHunkCLI:
 def test_stage_whole_file_by_path(multi_hunk_repo: GitHunkCLI) -> None:
     cli = multi_hunk_repo
     hunks = cli.run_list_json("list", "--unstaged", "--json")
-    assert len([h for h in hunks if h["file"] == "big.py"]) == 2
+    assert len([h for h in hunks if h["file"]["text"] == "big.py"]) == 2
 
     cli.run_ok("stage", "big.py")
     assert cli.repo.git("diff", "--cached", "--name-only").split() == ["big.py"]
@@ -51,7 +51,7 @@ def test_dot_slash_prefixed_path(multi_hunk_repo: GitHunkCLI) -> None:
 def test_mixing_path_and_id(multi_hunk_repo: GitHunkCLI) -> None:
     cli = multi_hunk_repo
     hunks = cli.run_list_json("list", "--unstaged", "--json")
-    b_id = next(h["id"] for h in hunks if h["file"] == "b.py")
+    b_id = next(h["id"] for h in hunks if h["file"]["text"] == "b.py")
 
     cli.run_ok("stage", "big.py", b_id)
     staged = sorted(cli.repo.git("diff", "--cached", "--name-only").split())

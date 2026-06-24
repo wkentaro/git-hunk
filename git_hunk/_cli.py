@@ -1,6 +1,7 @@
 import json
 import os
 import re
+import stat
 from dataclasses import dataclass
 from dataclasses import replace
 from typing import Final
@@ -48,8 +49,8 @@ from ._ui import print_hunk_list
 from ._ui import print_skill_list
 from ._ui import print_version
 
-# Bump when the `list --json` shape changes incompatibly (see README JSON output).
-JSON_SCHEMA_VERSION: Final = 1
+# Bump when the `--json` shape changes incompatibly (see README JSON output).
+JSON_SCHEMA_VERSION: Final = 2
 
 
 class CliError(Exception):
@@ -209,7 +210,7 @@ def _apply_line_filter(
         raise CliError("line selection requires exactly one hunk")
     if _is_whole_file_hunk(hunks[0]):
         raise CliError(
-            "line selection is not supported for binary or mode-only changes"
+            "line selection is not supported for binary, mode, or type changes"
         )
     try:
         lines, exclude = selection.resolve(hunks[0])
@@ -303,6 +304,13 @@ def cli(ctx: click.Context, show_help: bool, show_version: bool) -> None:
         print_help(HELP)
 
 
+def _working_tree_mode(path: str) -> str:
+    mode = os.lstat(path).st_mode
+    if stat.S_ISLNK(mode):
+        return "120000"
+    return "100755" if mode & 0o100 else "100644"
+
+
 def _get_untracked_entries(files: list[str] | None = None) -> list[Hunk]:
     _require_git_repo()
     paths = get_untracked_files()
@@ -312,10 +320,14 @@ def _get_untracked_entries(files: list[str] | None = None) -> list[Hunk]:
         Hunk(
             id="",
             file=p,
-            header="",
+            change_kind="A",
+            a_mode=None,
+            b_mode=_working_tree_mode(p),
+            binary=False,
+            header=None,
+            context_before=None,
             additions=0,
             deletions=0,
-            context_before="",
             diff="",
             status="untracked",
         )
@@ -367,11 +379,13 @@ def cmd_list(
 @cli.command("show", add_help_option=False)
 @click.option("--staged", is_flag=True)
 @click.option("--unstaged", is_flag=True)
+@click.option("--json", "force_json", is_flag=True)
 @click.option("-h", "--help", "show_help", is_flag=True)
 @click.argument("ids", nargs=-1)
 def cmd_show(
     staged: bool,
     unstaged: bool,
+    force_json: bool,
     show_help: bool,
     ids: tuple[str, ...],
 ) -> None:
@@ -396,7 +410,14 @@ def cmd_show(
     else:
         matched = hunks
 
-    print_hunk_diffs(matched)
+    if force_json:
+        envelope = {
+            "schema_version": JSON_SCHEMA_VERSION,
+            "hunks": [h.to_dict(include_lines=True) for h in matched],
+        }
+        click.echo(json.dumps(envelope, indent=2))
+    else:
+        print_hunk_diffs(matched)
 
 
 def _find_skill(skills: list[Skill], name: str) -> Skill:

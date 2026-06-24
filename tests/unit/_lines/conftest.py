@@ -14,10 +14,14 @@ def make_hunk() -> Callable[[str], Hunk]:
         return Hunk(
             id="abc1234",
             file="test.py",
+            change_kind="M",
+            a_mode="100644",
+            b_mode="100644",
+            binary=False,
             header=diff.split("\n")[0],
+            context_before=None,
             additions=additions,
             deletions=deletions,
-            context_before="",
             diff=diff,
         )
 

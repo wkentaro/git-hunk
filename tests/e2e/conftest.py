@@ -1,6 +1,7 @@
 import json
 import os
 import subprocess
+from typing import Any
 from typing import cast
 
 import pytest
@@ -38,18 +39,18 @@ class GitHunkCLI:
         assert r.returncode == 0, f"git-hunk {' '.join(args)} failed: {r.stderr}"
         return r.stdout
 
-    def run_json(self, *args: str) -> list[dict[str, str]]:
+    def run_json(self, *args: str) -> list[dict[str, Any]]:
         # For commands whose --json output is a bare array (e.g. `skills`).
         # `list --json` returns an envelope; use run_list_json for that.
-        return cast("list[dict[str, str]]", json.loads(self.run_ok(*args)))
+        return cast("list[dict[str, Any]]", json.loads(self.run_ok(*args)))
 
-    def run_list_envelope(self, *args: str) -> dict[str, object]:
-        return cast("dict[str, object]", json.loads(self.run_ok(*args)))
+    def run_list_envelope(self, *args: str) -> dict[str, Any]:
+        return cast("dict[str, Any]", json.loads(self.run_ok(*args)))
 
-    def run_list_json(self, *args: str) -> list[dict[str, str]]:
-        # `list --json` wraps the hunks in a versioned envelope; tests that only
-        # need the hunks call this to unwrap it.
-        return cast("list[dict[str, str]]", self.run_list_envelope(*args)["hunks"])
+    def run_list_json(self, *args: str) -> list[dict[str, Any]]:
+        # `list --json` (and `show --json`) wrap the hunks in a versioned
+        # envelope; tests that only need the hunks call this to unwrap it.
+        return cast("list[dict[str, Any]]", self.run_list_envelope(*args)["hunks"])
 
 
 @pytest.fixture

@@ -57,8 +57,7 @@ def test_header_recalculated(make_hunk: Callable[[str], Hunk]) -> None:
     result = filter_hunk_lines(hunk, {3}, exclude=False)
     assert result.additions == 1
     assert result.deletions == 0
-    assert "-1,3" in result.header
-    assert "+1,4" in result.header
+    assert result.header == "@@ -1,3 +1,4 @@"
 
 
 def test_mixed_changes(make_hunk: Callable[[str], Hunk]) -> None:
