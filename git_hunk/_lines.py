@@ -1,4 +1,5 @@
 import re
+from collections.abc import Sequence
 from dataclasses import replace
 from typing import NamedTuple
 
@@ -115,6 +116,48 @@ def _render_body_lines(kept: list[_BodyLine]) -> list[str]:
     return rendered
 
 
+def _body_lines(hunk: Hunk) -> list[str]:
+    return strip_trailing_empty_lines(hunk.diff.split("\n")[1:])
+
+
+def resolve_matching_lines(
+    hunk: Hunk, patterns: Sequence[str], *, regex: bool
+) -> set[int]:
+    """Return 1-based body line numbers of changed lines matching any pattern.
+
+    Patterns are OR'd. Only changed ('+'/'-') lines are considered, matched
+    against their content (the text after the prefix). Raises if nothing matches,
+    so a typo'd pattern never silently selects nothing or everything.
+    """
+    compiled: list[re.Pattern[str]] | None = None
+    if regex:
+        try:
+            compiled = [re.compile(p) for p in patterns]
+        except re.error as exc:
+            raise ValueError(f"invalid regex: {exc}") from exc
+
+    selected: set[int] = set()
+    line_num = 0
+    for line in _body_lines(hunk):
+        if is_no_newline_marker(line):
+            continue
+        line_num += 1
+        if not line.startswith(("+", "-")):
+            continue
+        content = line[1:]
+        if compiled is not None:
+            matched = any(pattern.search(content) for pattern in compiled)
+        else:
+            matched = any(pattern in content for pattern in patterns)
+        if matched:
+            selected.add(line_num)
+
+    if not selected:
+        joined = ", ".join(repr(p) for p in patterns)
+        raise ValueError(f"no changed line matches {joined}")
+    return selected
+
+
 def _filter_body_lines(
     body: list[str],
     selected: set[int],
@@ -140,9 +183,8 @@ def filter_hunk_lines(
     reverse=True (unstage, discard) swaps those so the patch applies against the
     NEW content the index or working tree already holds.
     """
-    diff_lines = hunk.diff.split("\n")
-    header = diff_lines[0]
-    body = strip_trailing_empty_lines(diff_lines[1:])
+    header = hunk.diff.split("\n", 1)[0]
+    body = _body_lines(hunk)
 
     total = sum(1 for line in body if not is_no_newline_marker(line))
 
