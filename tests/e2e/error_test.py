@@ -93,6 +93,20 @@ def test_malformed_line_spec_rejected(cli: GitHunkCLI) -> None:
     assert "expected start-end" in r.stderr  # readable message, not raw int() error
 
 
+def test_empty_line_spec_rejected(cli: GitHunkCLI) -> None:
+    # An empty -l must error, not silently fall through and stage the whole hunk.
+    cli.repo.write_file("f.py", "a\nb\nc\n")
+    cli.repo.git("add", ".")
+    cli.repo.git("commit", "-m", "init")
+    cli.repo.write_file("f.py", "A\nb\nC\n")
+
+    hunk_id = cli.run_list_json("list", "--unstaged", "--json")[0]["id"]
+    r = cli.run("stage", hunk_id, "-l", "")
+    assert r.returncode != 0
+    assert "empty line specification" in r.stderr
+    assert cli.repo.git("show", ":f.py") == "a\nb\nc\n"  # nothing staged
+
+
 def test_line_spec_with_multiple_hunks_fails(cli: GitHunkCLI) -> None:
     lines = [f"line{i}" for i in range(1, 21)]
     cli.repo.write_file("f.py", "\n".join(lines) + "\n")

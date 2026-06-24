@@ -99,11 +99,18 @@ git-hunk show --unstaged               # show all unstaged hunks
 git-hunk stage d161935                 # stage a hunk
 git-hunk stage d161935 a3f82c1         # stage multiple hunks
 git-hunk stage d161935 -l 3,5-7        # stage specific lines only
+git-hunk stage d161935 --exclude-matching debug    # stage all but lines containing "debug"
+git-hunk stage d161935 --include-matching xfail    # stage only lines containing "xfail"
 git-hunk unstage d161935               # move back to working tree
 git-hunk unstage d161935 -l 3,5-7      # unstage specific lines only
 git-hunk discard d161935               # restore from HEAD
 git-hunk discard d161935 -l ^3,^5-7    # discard excluding specific lines
 ```
+
+`--include-matching` / `--exclude-matching` select changed lines by content
+instead of line number (literal substring by default, `--regex` for regular
+expressions). Both are repeatable and OR'd, case-sensitive, and error if nothing
+matches. They are mutually exclusive with `-l` and with each other.
 
 ### Commit
 

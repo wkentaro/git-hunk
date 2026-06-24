@@ -1,6 +1,7 @@
 import json
 import os
 import re
+from dataclasses import dataclass
 from dataclasses import replace
 from typing import Final
 
@@ -19,6 +20,7 @@ from ._hunk import Hunk
 from ._hunk import parse_diff
 from ._lines import filter_hunk_lines
 from ._lines import parse_line_spec
+from ._lines import resolve_matching_lines
 from ._patch import build_patch
 from ._skills import Skill
 from ._skills import load_skills
@@ -145,19 +147,72 @@ def _select_hunks(hunks: list[Hunk], args: list[str]) -> list[Hunk]:
     return selected
 
 
+@dataclass(frozen=True)
+class _Selection:
+    line_spec: str | None
+    include_matching: tuple[str, ...]
+    exclude_matching: tuple[str, ...]
+    regex: bool
+
+    def is_active(self) -> bool:
+        return (
+            self.line_spec is not None
+            or bool(self.include_matching)
+            or bool(self.exclude_matching)
+        )
+
+    def resolve(self, hunk: Hunk) -> tuple[set[int], bool]:
+        if self.line_spec is not None:
+            return parse_line_spec(self.line_spec)
+        if self.include_matching:
+            lines = resolve_matching_lines(
+                hunk, self.include_matching, regex=self.regex
+            )
+            return lines, False
+        lines = resolve_matching_lines(hunk, self.exclude_matching, regex=self.regex)
+        return lines, True
+
+
+def _build_selection(
+    line_spec: str | None,
+    include_matching: tuple[str, ...],
+    exclude_matching: tuple[str, ...],
+    regex: bool,
+    *,
+    usage: str,
+) -> _Selection:
+    mechanisms = [line_spec is not None, bool(include_matching), bool(exclude_matching)]
+    if sum(mechanisms) > 1:
+        raise CliError(
+            "choose one of -l, --include-matching, or --exclude-matching",
+            usage=usage,
+        )
+    if regex and not (include_matching or exclude_matching):
+        raise CliError(
+            "--regex requires --include-matching or --exclude-matching",
+            usage=usage,
+        )
+    return _Selection(
+        line_spec=line_spec,
+        include_matching=include_matching,
+        exclude_matching=exclude_matching,
+        regex=regex,
+    )
+
+
 def _apply_line_filter(
-    hunks: list[Hunk], line_spec: str | None, *, reverse: bool
+    hunks: list[Hunk], selection: _Selection, *, reverse: bool
 ) -> list[Hunk]:
-    if line_spec is None:
+    if not selection.is_active():
         return hunks
     if len(hunks) != 1:
-        raise CliError("line selection (-l) requires exactly one hunk")
+        raise CliError("line selection requires exactly one hunk")
     if _is_whole_file_hunk(hunks[0]):
         raise CliError(
-            "line selection (-l) is not supported for binary or mode-only changes"
+            "line selection is not supported for binary or mode-only changes"
         )
     try:
-        lines, exclude = parse_line_spec(line_spec)
+        lines, exclude = selection.resolve(hunks[0])
         return [filter_hunk_lines(hunks[0], lines, exclude=exclude, reverse=reverse)]
     except ValueError as exc:
         raise CliError(str(exc)) from exc
@@ -171,7 +226,7 @@ def _is_whole_file_hunk(hunk: Hunk) -> bool:
 
 def _apply_selection(
     args: list[str],
-    line_spec: str | None,
+    selection: _Selection,
     *,
     usage: str,
     command_name: str,
@@ -188,7 +243,7 @@ def _apply_selection(
 
     hunks, diff_output = _get_hunks(staged=staged)
     selected = _select_hunks(hunks, args)
-    selected = _apply_line_filter(selected, line_spec, reverse=reverse)
+    selected = _apply_line_filter(selected, selection, reverse=reverse)
 
     whole_file = [h for h in selected if _is_whole_file_hunk(h)]
     text = [h for h in selected if not _is_whole_file_hunk(h)]
@@ -213,7 +268,7 @@ def _apply_selection(
 
 def _run_patch_command(
     args: list[str],
-    line_spec: str | None,
+    selection: _Selection,
     *,
     usage: str,
     command_name: str,
@@ -225,7 +280,7 @@ def _run_patch_command(
 ) -> None:
     selected = _apply_selection(
         args,
-        line_spec,
+        selection,
         usage=usage,
         command_name=command_name,
         staged=staged,
@@ -407,18 +462,30 @@ def cmd_skills(args: tuple[str, ...], force_json: bool, show_help: bool) -> None
 
 @cli.command("stage", add_help_option=False)
 @click.option("-l", "line_spec", default=None)
+@click.option("--include-matching", "include_matching", multiple=True)
+@click.option("--exclude-matching", "exclude_matching", multiple=True)
+@click.option("--regex", "use_regex", is_flag=True)
 @click.option("--dry-run", "dry_run", is_flag=True)
 @click.option("-h", "--help", "show_help", is_flag=True)
 @click.argument("targets", nargs=-1)
 def cmd_stage(
-    targets: tuple[str, ...], line_spec: str | None, dry_run: bool, show_help: bool
+    targets: tuple[str, ...],
+    line_spec: str | None,
+    include_matching: tuple[str, ...],
+    exclude_matching: tuple[str, ...],
+    use_regex: bool,
+    dry_run: bool,
+    show_help: bool,
 ) -> None:
     if show_help:
         print_help(HELP_STAGE)
         return
+    selection = _build_selection(
+        line_spec, include_matching, exclude_matching, use_regex, usage=USAGE_STAGE
+    )
     _run_patch_command(
         list(targets),
-        line_spec,
+        selection,
         usage=USAGE_STAGE,
         command_name="stage",
         staged=False,
@@ -431,18 +498,30 @@ def cmd_stage(
 
 @cli.command("unstage", add_help_option=False)
 @click.option("-l", "line_spec", default=None)
+@click.option("--include-matching", "include_matching", multiple=True)
+@click.option("--exclude-matching", "exclude_matching", multiple=True)
+@click.option("--regex", "use_regex", is_flag=True)
 @click.option("--dry-run", "dry_run", is_flag=True)
 @click.option("-h", "--help", "show_help", is_flag=True)
 @click.argument("targets", nargs=-1)
 def cmd_unstage(
-    targets: tuple[str, ...], line_spec: str | None, dry_run: bool, show_help: bool
+    targets: tuple[str, ...],
+    line_spec: str | None,
+    include_matching: tuple[str, ...],
+    exclude_matching: tuple[str, ...],
+    use_regex: bool,
+    dry_run: bool,
+    show_help: bool,
 ) -> None:
     if show_help:
         print_help(HELP_UNSTAGE)
         return
+    selection = _build_selection(
+        line_spec, include_matching, exclude_matching, use_regex, usage=USAGE_UNSTAGE
+    )
     _run_patch_command(
         list(targets),
-        line_spec,
+        selection,
         usage=USAGE_UNSTAGE,
         command_name="unstage",
         staged=True,
@@ -455,18 +534,30 @@ def cmd_unstage(
 
 @cli.command("discard", add_help_option=False)
 @click.option("-l", "line_spec", default=None)
+@click.option("--include-matching", "include_matching", multiple=True)
+@click.option("--exclude-matching", "exclude_matching", multiple=True)
+@click.option("--regex", "use_regex", is_flag=True)
 @click.option("--dry-run", "dry_run", is_flag=True)
 @click.option("-h", "--help", "show_help", is_flag=True)
 @click.argument("targets", nargs=-1)
 def cmd_discard(
-    targets: tuple[str, ...], line_spec: str | None, dry_run: bool, show_help: bool
+    targets: tuple[str, ...],
+    line_spec: str | None,
+    include_matching: tuple[str, ...],
+    exclude_matching: tuple[str, ...],
+    use_regex: bool,
+    dry_run: bool,
+    show_help: bool,
 ) -> None:
     if show_help:
         print_help(HELP_DISCARD)
         return
+    selection = _build_selection(
+        line_spec, include_matching, exclude_matching, use_regex, usage=USAGE_DISCARD
+    )
     _run_patch_command(
         list(targets),
-        line_spec,
+        selection,
         usage=USAGE_DISCARD,
         command_name="discard",
         staged=False,
@@ -501,9 +592,12 @@ def cmd_commit(
             tip="commit them with 'git commit', or unstage with 'git-hunk unstage'",
         )
 
+    selection = _Selection(
+        line_spec=line_spec, include_matching=(), exclude_matching=(), regex=False
+    )
     selected = _apply_selection(
         list(targets),
-        line_spec,
+        selection,
         usage=USAGE_COMMIT,
         command_name="commit",
         staged=False,

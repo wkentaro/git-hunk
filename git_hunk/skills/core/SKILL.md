@@ -107,6 +107,19 @@ Line numbers are the 1-based positions shown by `git-hunk show <id>`. After a
 partial stage, the rest of the hunk stays in the working tree with the same ID;
 stage it into a later commit, or drop it.
 
+Select by content instead of line number with `--include-matching` /
+`--exclude-matching` (no `show` round trip, and stable if the hunk shifts):
+
+```bash
+git-hunk stage d161935 --exclude-matching 'print(debug)'  # stage all but matching lines
+git-hunk stage d161935 --include-matching '"mark": "xfail"'  # stage only matching lines
+```
+
+Patterns match the content of changed (`+`/`-`) lines, literal substring by
+default (`--regex` opts into regular expressions). Both flags are repeatable
+(OR'd), case-sensitive, error if nothing matches, and are mutually exclusive
+with `-l` and with each other.
+
 ## Common workflows
 
 ### Dirty tree to conventional commits

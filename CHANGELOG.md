@@ -19,6 +19,11 @@ and this project adheres to
   change without touching the index or working tree (#25).
 - `context_before` field in `list --json`, exposing the function/section heading
   git names after the `@@` header (#27).
+- `--include-matching` / `--exclude-matching` for `stage`, `unstage`, and
+  `discard`, selecting changed lines by content instead of by line number
+  (literal substring by default, `--regex` for regular expressions; repeatable
+  and OR'd), so an agent can drop a line by what it contains without a
+  `show` round trip (#55).
 
 ### Changed
 
