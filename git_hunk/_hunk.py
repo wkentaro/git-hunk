@@ -43,6 +43,12 @@ def count_changes(lines: list[str]) -> tuple[int, int]:
     return additions, deletions
 
 
+def strip_trailing_empty_lines(lines: list[str]) -> list[str]:
+    while lines and lines[-1] == "":
+        lines = lines[:-1]
+    return lines
+
+
 def _body_id(filepath: str, diff_content: str) -> str:
     """Stable across partial staging: ignores @@ headers that shift."""
     body = "\n".join(
@@ -150,9 +156,7 @@ def parse_diff(diff_output: str) -> list[Hunk]:
         # section, so there is nothing finer to split here (use -l for that).
         for part in parts[1:]:
             header_line, *body_lines = part.split("\n")
-
-            while body_lines and body_lines[-1] == "":
-                body_lines = body_lines[:-1]
+            body_lines = strip_trailing_empty_lines(body_lines)
 
             additions, deletions = count_changes(body_lines)
             hunks.append(

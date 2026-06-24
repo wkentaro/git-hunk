@@ -6,6 +6,7 @@ from ._hunk import NO_NEWLINE_MARKER
 from ._hunk import Hunk
 from ._hunk import count_changes
 from ._hunk import is_no_newline_marker
+from ._hunk import strip_trailing_empty_lines
 
 
 def _parse_line_number(token: str) -> int:
@@ -141,10 +142,7 @@ def filter_hunk_lines(
     """
     diff_lines = hunk.diff.split("\n")
     header = diff_lines[0]
-    body = diff_lines[1:]
-
-    while body and body[-1] == "":
-        body = body[:-1]
+    body = strip_trailing_empty_lines(diff_lines[1:])
 
     total = sum(1 for line in body if not is_no_newline_marker(line))
 
