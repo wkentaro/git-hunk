@@ -1,5 +1,6 @@
 import pytest
 
+from git_hunk._hunk import NO_NEWLINE_MARKER
 from git_hunk._hunk import Hunk
 from git_hunk._lines import filter_hunk_lines
 
@@ -110,3 +111,43 @@ def test_reverse_exclude_first_group() -> None:
     assert "+D" in result.diff
     assert " B" in result.diff  # excluded +B kept as NEW context
     assert "-b" not in result.diff  # excluded -b dropped
+
+
+_NO_NEWLINE_TO_NEWLINE = f"@@ -1,2 +1,2 @@\n a\n-b\n{NO_NEWLINE_MARKER}\n+B"
+
+
+def test_keep_addition_splits_stale_no_newline_context() -> None:
+    # The unselected '-b' (no trailing newline) survives as context, but the
+    # kept '+B' now follows it: it must split into -b/+b so the marker stays on
+    # the old side and 'b' gains a newline rather than merging with 'B'.
+    hunk = _make_hunk(_NO_NEWLINE_TO_NEWLINE)
+    result = filter_hunk_lines(hunk, {3}, exclude=False)
+    assert result.diff == (f"@@ -1,2 +1,3 @@\n a\n-b\n{NO_NEWLINE_MARKER}\n+b\n+B")
+    assert result.additions == 2
+    assert result.deletions == 1
+
+
+def test_keep_deletion_drops_no_newline_marker_from_dropped_addition() -> None:
+    # Keeping only '-b' drops '+B' and its marker; 'b' keeps no trailing newline
+    # as the old side's final line, the new side ends at the ' a' context.
+    hunk = _make_hunk(_NO_NEWLINE_TO_NEWLINE)
+    result = filter_hunk_lines(hunk, {2}, exclude=False)
+    assert result.diff == f"@@ -1,2 +1,1 @@\n a\n-b\n{NO_NEWLINE_MARKER}"
+    assert result.additions == 0
+    assert result.deletions == 1
+
+
+_REVERSE_NEW_SIDE_NO_NEWLINE = (
+    f"@@ -1,4 +1,4 @@\n a\n-b\n+B\n c\n-d\n+D\n{NO_NEWLINE_MARKER}"
+)
+
+
+def test_reverse_keeps_no_newline_new_context_without_split() -> None:
+    # Reverse keeps the unselected '+D' (new-side EOF, no trailing newline) as
+    # context. It is always the last body line, so its marker stays put and it
+    # never splits: the '+'-origin split branch of _render_body_lines is dead.
+    hunk = _make_hunk(_REVERSE_NEW_SIDE_NO_NEWLINE)
+    result = filter_hunk_lines(hunk, {3}, exclude=False, reverse=True)
+    assert result.diff == (f"@@ -1,3 +1,4 @@\n a\n+B\n c\n D\n{NO_NEWLINE_MARKER}")
+    assert result.additions == 1
+    assert result.deletions == 0

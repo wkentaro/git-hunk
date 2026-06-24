@@ -87,3 +87,70 @@ def test_list_counts_ignore_no_newline_marker(cli: GitHunkCLI) -> None:
     hunks = cli.run_list_json("list", "--unstaged", "--json")
     assert hunks[0]["additions"] == 1
     assert hunks[0]["deletions"] == 1
+
+
+def test_stage_addition_of_no_newline_to_newline_keeps_lines_separate(
+    cli: GitHunkCLI,
+) -> None:
+    # Regression for #54: staging only the addition of a no-newline -> newline
+    # edit must not merge the old last line with the addition.
+    _commit(cli, "a\nb")
+    cli.repo.write_file("f.txt", "a\nB\n")
+
+    # Body lines: 1= a 2=-b 3=+B. Stage only the addition.
+    cli.run_ok("stage", _only_hunk_id(cli), "-l", "3")
+
+    assert cli.repo.git("show", ":f.txt") == "a\nb\nB\n"
+
+
+def test_stage_addition_then_remainder_reaches_working_tree(cli: GitHunkCLI) -> None:
+    _commit(cli, "a\nb")
+    cli.repo.write_file("f.txt", "a\nB\n")
+
+    cli.run_ok("stage", _only_hunk_id(cli), "-l", "3")
+    assert cli.repo.git("show", ":f.txt") == "a\nb\nB\n"
+
+    remaining = cli.run_list_json("list", "--unstaged", "--json")
+    cli.run_ok("stage", remaining[0]["id"])
+
+    assert cli.repo.git("show", ":f.txt") == "a\nB\n"
+
+
+def test_stage_addition_both_sides_no_newline_keeps_lines_separate(
+    cli: GitHunkCLI,
+) -> None:
+    _commit(cli, "a\nb")
+    cli.repo.write_file("f.txt", "a\nB")
+
+    # Body lines: 1= a 2=-b 3=+B, both last lines lack a trailing newline.
+    cli.run_ok("stage", _only_hunk_id(cli), "-l", "3")
+
+    assert cli.repo.git("show", ":f.txt") == "a\nb\nB"
+
+
+def test_discard_addition_of_no_newline_to_newline_keeps_lines_separate(
+    cli: GitHunkCLI,
+) -> None:
+    _commit(cli, "a\nb")
+    cli.repo.write_file("f.txt", "a\nB\n")
+
+    cli.run_ok("discard", _only_hunk_id(cli), "-l", "3")
+
+    # Discarding only the +B addition reverts it; the -b deletion stays.
+    assert (Path(cli.repo.path) / "f.txt").read_text() == "a\n"
+
+
+def test_unstage_addition_of_no_newline_to_newline_keeps_lines_separate(
+    cli: GitHunkCLI,
+) -> None:
+    _commit(cli, "a\nb")
+    cli.repo.write_file("f.txt", "a\nB\n")
+
+    cli.run_ok("stage", _only_hunk_id(cli))
+    staged = cli.run_list_json("list", "--staged", "--json")
+
+    # Body lines: 1= a 2=-b 3=+B. Unstage only the addition from the index.
+    cli.run_ok("unstage", staged[0]["id"], "-l", "3")
+
+    assert cli.repo.git("show", ":f.txt") == "a\n"
+    assert (Path(cli.repo.path) / "f.txt").read_text() == "a\nB\n"

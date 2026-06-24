@@ -1,6 +1,8 @@
 import re
 from dataclasses import replace
+from typing import NamedTuple
 
+from ._hunk import NO_NEWLINE_MARKER
 from ._hunk import Hunk
 from ._hunk import count_changes
 from ._hunk import is_no_newline_marker
@@ -53,6 +55,65 @@ def parse_line_spec(spec: str) -> tuple[set[int], bool]:
     return lines, exclude
 
 
+class _BodyLine(NamedTuple):
+    prefix: str  # rendered side: ' ' context, '-' old, '+' new
+    text: str
+    no_newline: bool  # the line it represents has no trailing newline
+
+
+def _select_body_lines(
+    body: list[str],
+    selected: set[int],
+    *,
+    keep_prefix: str,
+) -> list[_BodyLine]:
+    """Apply the line selection, folding each no-newline marker onto its line."""
+    kept: list[_BodyLine] = []
+    line_num = 0
+    dropped_last = False
+    for line in body:
+        if is_no_newline_marker(line):
+            if not dropped_last:
+                kept[-1] = kept[-1]._replace(no_newline=True)
+            continue
+        line_num += 1
+        prefix, text = line[:1], line[1:]
+        if prefix == " " or line_num in selected:
+            kept.append(_BodyLine(prefix=prefix, text=text, no_newline=False))
+        elif prefix == keep_prefix:  # unselected change survives as context
+            kept.append(_BodyLine(prefix=" ", text=text, no_newline=False))
+        else:
+            dropped_last = True
+            continue
+        dropped_last = False
+    return kept
+
+
+def _render_body_lines(kept: list[_BodyLine]) -> list[str]:
+    # A no-newline marker is valid only on the final line of the side it
+    # describes. A kept change line always sits at its side's EOF, and a context
+    # marker on the very last body line ends both sides. The remaining case is an
+    # old-side line kept as context that now has lines after it: it was the old
+    # EOF (no trailing newline) but the new side continues past it, so split it
+    # back into a '-'/'+' pair, keeping the marker on the old side while the new
+    # side gains a newline. The mirror (a new-side no-newline line kept as context
+    # under reverse) cannot reach here: a new-side EOF line never has kept lines
+    # after it, so it is always the last body line and takes the branch above.
+    last_index = len(kept) - 1
+    rendered = []
+    for index, line in enumerate(kept):
+        if not line.no_newline:
+            rendered.append(line.prefix + line.text)
+        elif line.prefix != " " or index == last_index:
+            rendered.append(line.prefix + line.text)
+            rendered.append(NO_NEWLINE_MARKER)
+        else:
+            rendered.append("-" + line.text)
+            rendered.append(NO_NEWLINE_MARKER)
+            rendered.append("+" + line.text)
+    return rendered
+
+
 def _filter_body_lines(
     body: list[str],
     selected: set[int],
@@ -63,29 +124,9 @@ def _filter_body_lines(
     # expects. A forward (stage) apply matches OLD content, so unselected '-'
     # lines become context and unselected '+' lines drop; a reverse (unstage,
     # discard) apply matches NEW content, so the two sides swap.
-    drop_prefix = "-" if reverse else "+"
     keep_prefix = "+" if reverse else "-"
-    new_body = []
-    line_num = 0
-    prev_kept = False
-    for line in body:
-        if is_no_newline_marker(line):
-            if prev_kept:
-                new_body.append(line)
-            continue
-        line_num += 1
-        if line_num in selected:
-            new_body.append(line)
-            prev_kept = True
-        elif line.startswith(drop_prefix):
-            prev_kept = False
-        elif line.startswith(keep_prefix):
-            new_body.append(" " + line[1:])
-            prev_kept = True
-        else:
-            new_body.append(line)
-            prev_kept = True
-    return new_body
+    kept = _select_body_lines(body, selected, keep_prefix=keep_prefix)
+    return _render_body_lines(kept)
 
 
 def filter_hunk_lines(
