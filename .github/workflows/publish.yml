@@ -19,7 +19,7 @@ jobs:
         with:
           fetch-depth: 0
           persist-credentials: false
-      - uses: astral-sh/setup-uv@d0cc045d04ccac9d8b7881df0226f9e82c39688e  # v6.8.0
+      - uses: astral-sh/setup-uv@37802adc94f370d6bfd71619e3f0bf239e1f3b78  # v7.6.0
       - name: Build
         run: SOURCE_DATE_EPOCH="$(git log -1 --pretty=%ct)" uv build
       - name: Verify built version matches tag
