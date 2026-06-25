@@ -1,3 +1,4 @@
+from collections import Counter
 from pathlib import Path
 
 from tests.conftest import GitRepo
@@ -78,6 +79,30 @@ def test_empty_hunk_id_rejected_on_show(cli: GitHunkCLI) -> None:
     r = cli.run("show", "")
     assert r.returncode != 0
     assert "must not be empty" in r.stderr
+
+
+def test_ambiguous_hunk_id_rejected(cli: GitHunkCLI) -> None:
+    # IDs are 7-char hex prefixes; with more than 16 hunks two must share a
+    # leading hex char (pigeonhole), so a single-char prefix is ambiguous.
+    for i in range(20):
+        cli.repo.write_file(f"f{i:02d}.py", "old\n")
+    cli.repo.git("add", ".")
+    cli.repo.git("commit", "-m", "init")
+    for i in range(20):
+        cli.repo.write_file(f"f{i:02d}.py", "new\n")
+
+    ids = [h["id"] for h in cli.run_list_json("list", "--unstaged", "--json")]
+    first_char_counts = Counter(hunk_id[0] for hunk_id in ids)
+    prefix = next(
+        (char for char, count in first_char_counts.items() if count > 1), None
+    )
+    assert prefix is not None  # pigeonhole guarantees a collision for >16 hunks
+
+    r = cli.run("stage", prefix)
+    assert r.returncode != 0
+    assert "ambiguous" in r.stderr
+    # An ambiguous id must stage nothing.
+    assert cli.repo.git("diff", "--cached").strip() == ""
 
 
 def test_malformed_line_spec_rejected(cli: GitHunkCLI) -> None:
