@@ -89,3 +89,26 @@ def test_build_patch_groups_by_file() -> None:
     a_pos = patch.index("diff --git a/a.py")
     b_pos = patch.index("diff --git a/b.py")
     assert a_pos < b_pos
+
+
+def test_build_patch_joins_hunks_of_same_file() -> None:
+    diff_output = (
+        "diff --git a/f.py b/f.py\n"
+        "index abc..def 100644\n"
+        "--- a/f.py\n"
+        "+++ b/f.py\n"
+        "@@ -1,2 +1,3 @@\n"
+        " a\n"
+        "+A\n"
+        " b\n"
+        "@@ -10,2 +11,3 @@\n"
+        " c\n"
+        "+C\n"
+        " d\n"
+    )
+    hunk1 = _make_hunk(file="f.py", diff="@@ -1,2 +1,3 @@\n a\n+A\n b")
+    hunk2 = _make_hunk(file="f.py", diff="@@ -10,2 +11,3 @@\n c\n+C\n d")
+    patch = build_patch([hunk1, hunk2], diff_output)
+    assert patch.count("diff --git a/f.py") == 1
+    assert "+A" in patch
+    assert "+C" in patch
