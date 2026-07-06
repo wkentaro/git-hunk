@@ -157,3 +157,14 @@ def test_regex_without_matching_flag_is_rejected(added_lines: GitHunkCLI) -> Non
     assert r.returncode != 0
     assert "--regex requires" in r.stderr
     assert added_lines.repo.git("show", ":f.txt") == "keep\n"
+
+
+def test_empty_include_matching_is_rejected(added_lines: GitHunkCLI) -> None:
+    # An empty pattern would match every line; reject it rather than silently
+    # staging the whole hunk.
+    r = added_lines.run(
+        "stage", _only_id(added_lines, "--unstaged"), "--include-matching", ""
+    )
+    assert r.returncode != 0
+    assert "empty match pattern" in r.stderr
+    assert added_lines.repo.git("show", ":f.txt") == "keep\n"

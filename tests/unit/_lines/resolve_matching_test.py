@@ -63,6 +63,22 @@ def test_zero_matches_errors_with_pattern_in_message(
         resolve_matching_lines(make_hunk(_TWO_GROUP), ["nonexistent"], regex=False)
 
 
+def test_empty_pattern_rejected(make_hunk: Callable[[str], Hunk]) -> None:
+    # An empty pattern matches every line; reject it instead of silently
+    # selecting the whole hunk (parallels an empty -l spec erroring).
+    with pytest.raises(ValueError, match="empty match pattern"):
+        resolve_matching_lines(make_hunk(_TWO_GROUP), [""], regex=False)
+    with pytest.raises(ValueError, match="empty match pattern"):
+        resolve_matching_lines(make_hunk(_TWO_GROUP), ["B", ""], regex=False)
+
+
+def test_whitespace_pattern_allowed(make_hunk: Callable[[str], Hunk]) -> None:
+    # A whitespace pattern is meaningful (matches lines containing it), unlike an
+    # empty one, so it is not rejected.
+    hunk = make_hunk("@@ -1,1 +1,2 @@\n ctx\n+a b")
+    assert resolve_matching_lines(hunk, [" "], regex=False) == {2}
+
+
 def test_interleaved_no_newline_marker_does_not_consume_a_line_number(
     make_hunk: Callable[[str], Hunk],
 ) -> None:

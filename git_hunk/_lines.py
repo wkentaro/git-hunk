@@ -128,7 +128,14 @@ def resolve_matching_lines(
     Patterns are OR'd. Only changed ('+'/'-') lines are considered, matched
     against their content (the text after the prefix). Raises if nothing matches,
     so a typo'd pattern never silently selects nothing or everything.
+
+    An empty pattern is rejected: it would match every changed line and silently
+    select the whole hunk, mirroring how an empty -l spec errors rather than
+    falling through to select everything.
     """
+    if "" in patterns:
+        raise ValueError("empty match pattern")
+
     compiled: list[re.Pattern[str]] | None = None
     if regex:
         try:

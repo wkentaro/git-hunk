@@ -52,5 +52,8 @@ and this project adheres to
 - Split the no-newline last line when partial line-staging (`-l`) gives it a
   trailing newline, so staging only the addition no longer merges it with the
   added line and corrupts the file (#54).
+- Reject an empty `--include-matching` / `--exclude-matching` pattern, which
+  previously matched every line and silently selected the whole hunk, so an
+  accidentally-empty pattern now errors like an empty `-l` spec (#87).
 
 [unreleased]: https://github.com/wkentaro/git-hunk/compare/v0.2.0...HEAD
