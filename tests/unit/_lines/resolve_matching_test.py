@@ -2,6 +2,7 @@ from collections.abc import Callable
 
 import pytest
 
+from git_hunk._hunk import NO_NEWLINE_MARKER
 from git_hunk._hunk import Hunk
 from git_hunk._lines import resolve_matching_lines
 
@@ -60,3 +61,21 @@ def test_zero_matches_errors_with_pattern_in_message(
 ) -> None:
     with pytest.raises(ValueError, match="nonexistent"):
         resolve_matching_lines(make_hunk(_TWO_GROUP), ["nonexistent"], regex=False)
+
+
+def test_interleaved_no_newline_marker_does_not_consume_a_line_number(
+    make_hunk: Callable[[str], Hunk],
+) -> None:
+    # The marker sits between '-old' (line 2) and '+new'; it must be skipped
+    # without incrementing the count, so '+new' stays line 3, matching -l's
+    # numbering (context counted, markers excluded).
+    hunk = make_hunk(f"@@ -1,2 +1,2 @@\n a\n-old\n{NO_NEWLINE_MARKER}\n+new")
+    assert resolve_matching_lines(hunk, ["old"], regex=False) == {2}
+    assert resolve_matching_lines(hunk, ["new"], regex=False) == {3}
+
+
+def test_trailing_no_newline_marker_does_not_shift_line_numbers(
+    make_hunk: Callable[[str], Hunk],
+) -> None:
+    hunk = make_hunk(f"{_TWO_GROUP}\n{NO_NEWLINE_MARKER}")
+    assert resolve_matching_lines(hunk, ["D"], regex=False) == {6}
