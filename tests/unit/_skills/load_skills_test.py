@@ -39,6 +39,24 @@ def test_unclosed_frontmatter_loads_with_directory_name(
     assert skill.description == ""
 
 
+def test_missing_skills_root_returns_empty(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    monkeypatch.setenv("GIT_HUNK_SKILLS_DIR", str(tmp_path / "does-not-exist"))
+
+    assert load_skills() == []
+
+
+def test_directory_without_skill_md_is_skipped(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    _write_skill(tmp_path, "good", _VALID)
+    (tmp_path / "not-a-skill").mkdir()
+    monkeypatch.setenv("GIT_HUNK_SKILLS_DIR", str(tmp_path))
+
+    assert [s.name for s in load_skills()] == ["good"]
+
+
 @pytest.mark.skipif(
     sys.platform == "win32", reason="permission bits are not enforced on Windows"
 )
