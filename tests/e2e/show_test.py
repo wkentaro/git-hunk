@@ -1,3 +1,5 @@
+from git_hunk._hunk import NO_NEWLINE_MARKER
+
 from .conftest import GitHunkCLI
 
 
@@ -83,3 +85,23 @@ def test_show_staged_and_unstaged_together_errors(cli: GitHunkCLI) -> None:
 
     r = cli.run("show", "--staged", "--unstaged")
     assert r.returncode != 0
+
+
+def test_show_renders_no_newline_marker_unnumbered(cli: GitHunkCLI) -> None:
+    cli.repo.write_file("f.txt", "a\nb\nc\n")
+    cli.repo.git("add", ".")
+    cli.repo.git("commit", "-m", "init")
+    cli.repo.write_file("f.txt", "a\nb\ncX")
+
+    hunks = cli.run_list_json("list", "--json")
+    hunk_id = hunks[0]["id"]
+
+    r = cli.run("show", hunk_id)
+    assert r.returncode == 0
+
+    marker_line = next(
+        line for line in r.stdout.splitlines() if NO_NEWLINE_MARKER in line
+    )
+    assert marker_line.strip() == NO_NEWLINE_MARKER
+
+    assert "+cX" in r.stdout
