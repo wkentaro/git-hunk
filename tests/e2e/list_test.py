@@ -217,6 +217,29 @@ def test_list_status_field_in_json(cli: GitHunkCLI) -> None:
     assert hunks[0]["status"] == "unstaged"
 
 
+def test_list_plaintext_blank_lines_separate_sections_and_file_groups(
+    cli: GitHunkCLI,
+) -> None:
+    cli.repo.write_file("s.py", "s\n")
+    cli.repo.write_file("a.py", "a\n")
+    cli.repo.write_file("b.py", "b\n")
+    cli.repo.git("add", ".")
+    cli.repo.git("commit", "-m", "init")
+
+    cli.repo.write_file("s.py", "S\n")
+    cli.repo.git("add", "s.py")
+    cli.repo.write_file("a.py", "A\n")
+    cli.repo.write_file("b.py", "B\n")
+
+    blocks = cli.run_ok("list").strip("\n").split("\n\n")
+    assert len(blocks) == 3
+    assert blocks[0].startswith("staged:")
+    assert "s.py" in blocks[0]
+    assert blocks[1].startswith("unstaged:")
+    assert "a.py" in blocks[1]
+    assert "b.py" in blocks[2]
+
+
 def test_list_context_before_field_in_json_matches_display(cli: GitHunkCLI) -> None:
     body = ["def foo():"] + [f"    x{i} = {i}" for i in range(8)]
     cli.repo.write_file("f.py", "\n".join(body) + "\n")
