@@ -1,5 +1,6 @@
 import json
 import os
+import posixpath
 import re
 import stat
 from dataclasses import dataclass
@@ -126,6 +127,13 @@ def _find_hunks_by_ids(hunks: list[Hunk], ids: list[str]) -> list[Hunk]:
     return found
 
 
+def _normalize_path_arg(arg: str) -> str:
+    # git reports forward-slash paths on every platform, so translate the
+    # OS-native separator and collapse ./ before comparing a CLI path argument
+    # against them (os.path would rewrite separators the wrong way on Windows).
+    return posixpath.normpath(arg.replace(os.sep, "/"))
+
+
 def _select_hunks(hunks: list[Hunk], args: list[str]) -> list[Hunk]:
     files = {h.file for h in hunks}
     selected: list[Hunk] = []
@@ -135,7 +143,7 @@ def _select_hunks(hunks: list[Hunk], args: list[str]) -> list[Hunk]:
             raise CliError("hunk id or file path must not be empty or whitespace")
         # A path that matches a changed file wins; otherwise hunk ids are hex,
         # so a non-hex argument can only have been meant as a (missing) path.
-        path = os.path.normpath(arg)
+        path = _normalize_path_arg(arg)
         if path in files:
             matches = [h for h in hunks if h.file == path]
         elif re.fullmatch(r"[0-9a-f]+", arg):
@@ -319,7 +327,8 @@ def _get_untracked_entries(files: list[str] | None = None) -> list[Hunk]:
     _require_git_repo()
     paths = get_untracked_files()
     if files:
-        paths = [p for p in paths if p in files]
+        wanted = {_normalize_path_arg(f) for f in files}
+        paths = [p for p in paths if p in wanted]
     return [
         Hunk(
             id="",

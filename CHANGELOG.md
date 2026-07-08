@@ -55,5 +55,9 @@ and this project adheres to
 - Reject an empty `--include-matching` / `--exclude-matching` pattern, which
   previously matched every line and silently selected the whole hunk, so an
   accidentally-empty pattern now errors like an empty `-l` spec (#87).
+- Normalize file-path arguments before matching, so `git-hunk list ./foo.py`
+  surfaces an untracked `foo.py` instead of silently dropping it, and path
+  arguments resolve consistently across `list`/`stage`/`unstage`/`discard`
+  regardless of the platform's path separator (#95).
 
 [unreleased]: https://github.com/wkentaro/git-hunk/compare/v0.2.0...HEAD

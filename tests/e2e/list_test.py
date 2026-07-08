@@ -127,6 +127,22 @@ def test_list_file_filter(cli: GitHunkCLI) -> None:
     assert hunks[0]["file"]["text"] == "a.py"
 
 
+def test_list_file_filter_untracked_normalizes_path(cli: GitHunkCLI) -> None:
+    cli.repo.write_file("f.py", "init\n")
+    cli.repo.git("add", ".")
+    cli.repo.git("commit", "-m", "init")
+
+    cli.repo.write_file("untracked.py", "new\n")
+    cli.repo.write_file("sub/nested.py", "new\n")
+
+    hunks = cli.run_list_json("list", "--json", "./untracked.py")
+    assert [h["file"]["text"] for h in hunks] == ["untracked.py"]
+    assert hunks[0]["status"] == "untracked"
+
+    hunks = cli.run_list_json("list", "--json", "sub/nested.py")
+    assert [h["file"]["text"] for h in hunks] == ["sub/nested.py"]
+
+
 def test_list_new_file(cli: GitHunkCLI) -> None:
     cli.repo.write_file("f.py", "init\n")
     cli.repo.git("add", ".")
