@@ -88,8 +88,6 @@ def _print_status_section(
     color: str,
     show_hunks: bool = True,
 ) -> None:
-    if not hunks:
-        return
     out.print(f"[dim]{header}[/dim]")
     by_file: dict[str, list[Hunk]] = defaultdict(list)
     for hunk in hunks:
