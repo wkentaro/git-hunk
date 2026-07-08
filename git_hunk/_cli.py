@@ -339,6 +339,31 @@ def _get_untracked_entries(files: list[str] | None = None) -> list[Hunk]:
     ]
 
 
+def _collect_hunks(
+    *,
+    staged: bool,
+    unstaged: bool,
+    files: list[str] | None,
+    include_untracked: bool,
+) -> list[Hunk]:
+    if staged and unstaged:
+        raise CliError("cannot use --staged and --unstaged together")
+
+    if staged:
+        hunks, _ = _get_hunks(staged=True, files=files)
+        return hunks
+    if unstaged:
+        hunks, _ = _get_hunks(staged=False, files=files)
+        return hunks
+
+    hunks_staged, _ = _get_hunks(staged=True, files=files)
+    hunks_unstaged, _ = _get_hunks(staged=False, files=files)
+    hunks = hunks_staged + hunks_unstaged
+    if include_untracked:
+        hunks += _get_untracked_entries(files=files)
+    return hunks
+
+
 @cli.command("list", add_help_option=False)
 @click.option("--staged", is_flag=True)
 @click.option("--unstaged", is_flag=True)
@@ -358,17 +383,12 @@ def cmd_list(
 
     file_list = list(files) if files else None
 
-    if staged and unstaged:
-        raise CliError("cannot use --staged and --unstaged together")
-
-    if staged:
-        hunks, _ = _get_hunks(staged=True, files=file_list)
-    elif unstaged:
-        hunks, _ = _get_hunks(staged=False, files=file_list)
-    else:
-        hunks_staged, _ = _get_hunks(staged=True, files=file_list)
-        hunks_unstaged, _ = _get_hunks(staged=False, files=file_list)
-        hunks = hunks_staged + hunks_unstaged + _get_untracked_entries(files=file_list)
+    hunks = _collect_hunks(
+        staged=staged,
+        unstaged=unstaged,
+        files=file_list,
+        include_untracked=True,
+    )
 
     if force_json:
         envelope = {
@@ -397,17 +417,12 @@ def cmd_show(
         print_help(HELP_SHOW)
         return
 
-    if staged and unstaged:
-        raise CliError("cannot use --staged and --unstaged together")
-
-    if staged:
-        hunks, _ = _get_hunks(staged=True)
-    elif unstaged:
-        hunks, _ = _get_hunks(staged=False)
-    else:
-        hunks_staged, _ = _get_hunks(staged=True)
-        hunks_unstaged, _ = _get_hunks(staged=False)
-        hunks = hunks_staged + hunks_unstaged
+    hunks = _collect_hunks(
+        staged=staged,
+        unstaged=unstaged,
+        files=None,
+        include_untracked=False,
+    )
 
     if ids:
         matched = _find_hunks_by_ids(hunks, list(ids))
