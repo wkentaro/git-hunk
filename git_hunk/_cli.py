@@ -93,6 +93,10 @@ def _require_git_repo() -> None:
         raise CliError("not a git repository")
 
 
+def _echo_json(data: object) -> None:
+    click.echo(json.dumps(data, indent=2))
+
+
 def _get_hunks(staged: bool, files: list[str] | None = None) -> tuple[list[Hunk], str]:
     _require_git_repo()
     diff_output = get_diff(staged=staged, files=files)
@@ -371,7 +375,7 @@ def cmd_list(
             "schema_version": JSON_SCHEMA_VERSION,
             "hunks": [h.to_dict() for h in hunks],
         }
-        click.echo(json.dumps(envelope, indent=2))
+        _echo_json(envelope)
     else:
         print_hunk_list(hunks)
 
@@ -415,7 +419,7 @@ def cmd_show(
             "schema_version": JSON_SCHEMA_VERSION,
             "hunks": [h.to_dict(include_lines=True) for h in matched],
         }
-        click.echo(json.dumps(envelope, indent=2))
+        _echo_json(envelope)
     else:
         print_hunk_diffs(matched)
 
@@ -449,7 +453,7 @@ def cmd_skills(args: tuple[str, ...], force_json: bool, show_help: bool) -> None
         skills = load_skills()
         if force_json:
             data = [{"name": s.name, "description": s.description} for s in skills]
-            click.echo(json.dumps(data, indent=2))
+            _echo_json(data)
         else:
             print_skill_list(skills)
         return
@@ -461,7 +465,7 @@ def cmd_skills(args: tuple[str, ...], force_json: bool, show_help: bool) -> None
         selected = [_find_skill(skills, name) for name in rest]
         if force_json:
             data = [{"name": s.name, "content": s.content} for s in selected]
-            click.echo(json.dumps(data, indent=2))
+            _echo_json(data)
         else:
             click.echo("\n".join(s.content.rstrip("\n") for s in selected))
         return
@@ -473,7 +477,7 @@ def cmd_skills(args: tuple[str, ...], force_json: bool, show_help: bool) -> None
             )
         path = _find_skill(load_skills(), rest[0]).path if rest else skills_root()
         if force_json:
-            click.echo(json.dumps({"path": str(path)}, indent=2))
+            _echo_json({"path": str(path)})
         else:
             click.echo(str(path))
         return
