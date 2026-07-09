@@ -1,6 +1,8 @@
 from collections import Counter
 from pathlib import Path
 
+import pytest
+
 from tests.conftest import GitRepo
 
 from .conftest import GitHunkCLI
@@ -130,6 +132,30 @@ def test_empty_line_spec_rejected(cli: GitHunkCLI) -> None:
     assert r.returncode != 0
     assert "empty line specification" in r.stderr
     assert cli.repo.git("show", ":f.py") == "a\nb\nc\n"  # nothing staged
+
+
+def test_git_apply_failure_becomes_clean_error(
+    cli: GitHunkCLI, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    # A low-level git failure during apply must surface as a clean CLI error,
+    # not a raw traceback. _apply_selection rebuilds the patch fresh from the
+    # working tree each run, so a genuine `git apply` failure is not practically
+    # reproducible here; inject one at the apply boundary instead.
+    cli.repo.write_file("f.py", "old\n")
+    cli.repo.git("add", ".")
+    cli.repo.git("commit", "-m", "init")
+    cli.repo.write_file("f.py", "new\n")
+
+    hunk_id = cli.run_list_json("list", "--unstaged", "--json")[0]["id"]
+
+    def _fail(*args: object, **kwargs: object) -> None:
+        raise RuntimeError("git apply refused the patch")
+
+    monkeypatch.setattr("git_hunk._cli.apply_patch", _fail)
+
+    r = cli.run("stage", hunk_id)
+    assert r.returncode == 1
+    assert "git apply refused the patch" in r.stderr
 
 
 def test_line_spec_with_multiple_hunks_fails(cli: GitHunkCLI) -> None:
