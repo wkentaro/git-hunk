@@ -48,6 +48,17 @@ def test_dot_slash_prefixed_path(multi_hunk_repo: GitHunkCLI) -> None:
     assert staged == ["big.py"]
 
 
+def test_subdirectory_path(cli: GitHunkCLI) -> None:
+    cli.repo.write_file("sub/nested.py", "old\n")
+    cli.repo.git("add", ".")
+    cli.repo.git("commit", "-m", "init")
+    cli.repo.write_file("sub/nested.py", "new\n")
+
+    cli.run_ok("stage", "sub/nested.py")
+    staged = cli.repo.git("diff", "--cached", "--name-only").split()
+    assert staged == ["sub/nested.py"]
+
+
 def test_mixing_path_and_id(multi_hunk_repo: GitHunkCLI) -> None:
     cli = multi_hunk_repo
     hunks = cli.run_list_json("list", "--unstaged", "--json")
