@@ -1,3 +1,4 @@
+import json
 from pathlib import Path
 
 import pytest
@@ -67,6 +68,16 @@ def test_path_rejects_multiple_names(cli: GitHunkCLI) -> None:
     result = cli.run("skills", "path", "core", "extra")
     assert result.returncode == 2
     assert "at most one" in result.stderr
+
+
+def test_path_json(cli: GitHunkCLI) -> None:
+    data = json.loads(cli.run_ok("skills", "path", "--json"))
+    assert data["path"].endswith("skills")
+
+
+def test_path_json_of_named_skill(cli: GitHunkCLI) -> None:
+    data = json.loads(cli.run_ok("skills", "path", "core", "--json"))
+    assert Path(data["path"]).parts[-2:] == ("skills", "core")
 
 
 def test_list_rejects_arguments(cli: GitHunkCLI) -> None:
