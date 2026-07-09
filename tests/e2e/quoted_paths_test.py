@@ -60,12 +60,15 @@ def test_filename_with_b_slash_substring_stages(cli: GitHunkCLI) -> None:
 
 @pytest.mark.skipif(
     sys.platform == "win32",
-    reason="tab, newline, backslash, and double-quote are illegal in Windows filenames",
+    reason=(
+        "tab, newline, backslash, double-quote, and control characters "
+        "are illegal in Windows filenames"
+    ),
 )
 @pytest.mark.parametrize(
     "path",
-    ["od\ttab.txt", "od\nnl.txt", "od\\back.txt", 'od"q.txt'],
-    ids=["tab", "newline", "backslash", "quote"],
+    ["od\ttab.txt", "od\nnl.txt", "od\\back.txt", 'od"q.txt', "od\x1besc.txt"],
+    ids=["tab", "newline", "backslash", "quote", "escape"],
 )
 def test_quoted_path_modified_file_round_trips(cli: GitHunkCLI, path: str) -> None:
     cli.repo.write_file(path, "a\nb\n")
