@@ -100,7 +100,10 @@ def _echo_json(data: object) -> None:
 
 def _get_hunks(staged: bool, files: list[str] | None = None) -> tuple[list[Hunk], str]:
     _require_git_repo()
-    diff_output = get_diff(staged=staged, files=files)
+    try:
+        diff_output = get_diff(staged=staged, files=files)
+    except RuntimeError as exc:
+        raise CliError(str(exc)) from exc
     hunks = parse_diff(diff_output)
     status = "staged" if staged else "unstaged"
     hunks = [replace(h, status=status) for h in hunks]
