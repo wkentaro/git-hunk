@@ -217,9 +217,12 @@ def print_version(version: str) -> None:
     _err().print(f"git-hunk [dim]{version}[/dim]")
 
 
-_LINE_OPT_ROW = """\
+_LINE_SELECT_ROW = """\
   [bold cyan]-l[/bold cyan] [cyan]<lines>[/cyan]  Select specific lines within a hunk (requires exactly one hunk)
-             e.g.: -l 3,5-7  (include)   -l ^3,^5-7  (exclude)
+             e.g.: -l 3,5-7  (include)   -l ^3,^5-7  (exclude)"""  # noqa: E501
+
+_LINE_OPT_ROW = f"""\
+{_LINE_SELECT_ROW}
   [bold cyan]--include-matching[/bold cyan] [cyan]<pattern>[/cyan]  Select changed lines containing <pattern> (repeatable, OR'd)
   [bold cyan]--exclude-matching[/bold cyan] [cyan]<pattern>[/cyan]  Select every changed line except those matching (repeatable, OR'd)
   [bold cyan]--regex[/bold cyan]    Treat matching patterns as regular expressions (default: literal substring)"""  # noqa: E501
@@ -390,7 +393,7 @@ hook) the hunks are left staged so you can retry with [bold cyan]git commit[/bol
 
 [bold green]Options:[/bold green]
   [bold cyan]-m[/bold cyan] [cyan]<msg>[/cyan]    Commit message (required)
-{_LINE_OPT_ROW}
+{_LINE_SELECT_ROW}
 
 {_format_examples(_EXAMPLES_COMMIT)}"""  # noqa: E501
 

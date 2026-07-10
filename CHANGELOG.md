@@ -34,6 +34,9 @@ and this project adheres to
 
 ### Fixed
 
+- `commit --help` no longer advertises `--include-matching`,
+  `--exclude-matching`, and `--regex`, which the command never accepted; the
+  help now lists only the options `commit` actually supports (#105).
 - Preserve `\ No newline at end of file` markers so staging the last line of a
   file without a trailing newline no longer fails or silently stages nothing
   (#9).
