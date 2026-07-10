@@ -33,8 +33,18 @@ def get_diff(staged: bool = False, files: list[str] | None = None) -> str:
     return run_git(*args)
 
 
-def get_untracked_files() -> list[str]:
-    output = run_git("ls-files", "--others", "--exclude-standard", "-z")
+def get_repo_root() -> str:
+    return run_git("rev-parse", "--show-toplevel").strip()
+
+
+def get_untracked_files(files: list[str] | None = None) -> list[str]:
+    # --full-name yields repo-root-relative paths, matching get_diff's basis, so
+    # untracked and tracked hunks report `file` consistently from a subdirectory.
+    # files is a pathspec git resolves relative to cwd, exactly as get_diff does.
+    args = ["ls-files", "--others", "--exclude-standard", "--full-name", "-z", "--"]
+    if files:
+        args.extend(files)
+    output = run_git(*args)
     return [f for f in output.split("\0") if f]
 
 

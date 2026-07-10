@@ -59,5 +59,8 @@ and this project adheres to
   surfaces an untracked `foo.py` instead of silently dropping it, and path
   arguments resolve consistently across `list`/`stage`/`unstage`/`discard`
   regardless of the platform's path separator (#95).
+- Report untracked files with repo-root-relative paths, matching tracked hunks,
+  so running `git-hunk` from a subdirectory no longer emits an untracked `file`
+  on a different path basis than the staged/unstaged hunks beside it (#103).
 
 [unreleased]: https://github.com/wkentaro/git-hunk/compare/v0.2.0...HEAD

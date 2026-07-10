@@ -14,6 +14,7 @@ from ._git import apply_patch
 from ._git import commit
 from ._git import discard_files
 from ._git import get_diff
+from ._git import get_repo_root
 from ._git import get_untracked_files
 from ._git import is_git_repo
 from ._git import stage_files
@@ -325,17 +326,17 @@ def _working_tree_mode(path: str) -> str:
 
 def _get_untracked_entries(files: list[str] | None = None) -> list[Hunk]:
     _require_git_repo()
-    paths = get_untracked_files()
-    if files:
-        wanted = {_normalize_path_arg(f) for f in files}
-        paths = [p for p in paths if p in wanted]
+    paths = get_untracked_files(files=files)
+    if not paths:
+        return []
+    root = get_repo_root()
     return [
         Hunk(
             id="",
             file=p,
             change_kind="A",
             a_mode=None,
-            b_mode=_working_tree_mode(p),
+            b_mode=_working_tree_mode(posixpath.join(root, p)),
             binary=False,
             header=None,
             context_before=None,
