@@ -126,6 +126,10 @@ def split_file_diffs(diff_output: str) -> list[str]:
     return re.split(r"(?=^diff --git )", diff_output, flags=re.MULTILINE)
 
 
+def split_at_hunk_headers(file_diff: str, *, maxsplit: int = 0) -> list[str]:
+    return re.split(r"(?=^@@)", file_diff, maxsplit=maxsplit, flags=re.MULTILINE)
+
+
 def _unquote_c_path(path: str) -> str:
     C_ESCAPES: Final = {
         "a": "\a",
@@ -285,7 +289,7 @@ def parse_diff(diff_output: str) -> list[Hunk]:
             i += 1
             continue
 
-        parts = re.split(r"(?=^@@)", file_diff, flags=re.MULTILINE)
+        parts = split_at_hunk_headers(file_diff)
 
         if len(parts) == 1:
             # No text hunks: surface a pure mode change (chmod) that would
