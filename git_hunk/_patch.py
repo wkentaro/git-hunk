@@ -1,7 +1,6 @@
-import re
-
 from ._hunk import Hunk
 from ._hunk import extract_file_path
+from ._hunk import split_at_hunk_headers
 from ._hunk import split_file_diffs
 
 
@@ -11,9 +10,7 @@ def _extract_file_headers(diff_output: str) -> dict[str, str]:
         filepath = extract_file_path(file_diff)
         if filepath is None:
             continue
-        headers[filepath] = re.split(
-            r"(?=^@@)", file_diff, maxsplit=1, flags=re.MULTILINE
-        )[0]
+        headers[filepath] = split_at_hunk_headers(file_diff, maxsplit=1)[0]
     return headers
 
 
