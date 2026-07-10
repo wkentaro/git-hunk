@@ -15,13 +15,16 @@ class GitHunkCLI:
     def __init__(self, repo: GitRepo) -> None:
         self.repo = repo
 
-    def run(self, *args: str) -> subprocess.CompletedProcess[str]:
+    def run(
+        self, *args: str, subdir: str | None = None
+    ) -> subprocess.CompletedProcess[str]:
         # rich sizes its output from COLUMNS; pin it so the lines tests assert
         # verbatim do not wrap when the suite runs in a narrow terminal.
         runner = CliRunner(env={"COLUMNS": "200"})
         old_cwd = os.getcwd()
+        cwd = os.path.join(self.repo.path, subdir) if subdir else self.repo.path
         try:
-            os.chdir(self.repo.path)
+            os.chdir(cwd)
             result = runner.invoke(git_hunk_cli, list(args))
         finally:
             os.chdir(old_cwd)
@@ -36,8 +39,8 @@ class GitHunkCLI:
             stderr=result.stderr or "",
         )
 
-    def run_ok(self, *args: str) -> str:
-        r = self.run(*args)
+    def run_ok(self, *args: str, subdir: str | None = None) -> str:
+        r = self.run(*args, subdir=subdir)
         assert r.returncode == 0, f"git-hunk {' '.join(args)} failed: {r.stderr}"
         return r.stdout
 
@@ -46,13 +49,18 @@ class GitHunkCLI:
         # `list --json` returns an envelope; use run_list_json for that.
         return cast("list[dict[str, Any]]", json.loads(self.run_ok(*args)))
 
-    def run_list_envelope(self, *args: str) -> dict[str, Any]:
-        return cast("dict[str, Any]", json.loads(self.run_ok(*args)))
+    def run_list_envelope(
+        self, *args: str, subdir: str | None = None
+    ) -> dict[str, Any]:
+        return cast("dict[str, Any]", json.loads(self.run_ok(*args, subdir=subdir)))
 
-    def run_list_json(self, *args: str) -> list[dict[str, Any]]:
+    def run_list_json(
+        self, *args: str, subdir: str | None = None
+    ) -> list[dict[str, Any]]:
         # `list --json` (and `show --json`) wrap the hunks in a versioned
         # envelope; tests that only need the hunks call this to unwrap it.
-        return cast("list[dict[str, Any]]", self.run_list_envelope(*args)["hunks"])
+        envelope = self.run_list_envelope(*args, subdir=subdir)
+        return cast("list[dict[str, Any]]", envelope["hunks"])
 
 
 @pytest.fixture
