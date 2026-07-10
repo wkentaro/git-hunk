@@ -148,3 +148,11 @@ def test_line_spec_with_multiple_hunks_fails(cli: GitHunkCLI) -> None:
     r = cli.run("stage", hunks[0]["id"], hunks[1]["id"], "-l", "1")
     assert r.returncode != 0
     assert "exactly one hunk" in r.stderr
+
+
+def test_bad_pathspec_reports_clean_error(cli: GitHunkCLI) -> None:
+    # A git failure on a user-supplied path argument must surface as a clean
+    # CLI error, not a raw Python traceback.
+    r = cli.run("list", ":(bogus)x")
+    assert r.returncode != 0
+    assert "pathspec" in r.stderr
