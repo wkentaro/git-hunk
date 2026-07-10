@@ -3,6 +3,7 @@ import os
 import posixpath
 import re
 import stat
+from collections.abc import Callable
 from dataclasses import dataclass
 from dataclasses import replace
 from typing import Final
@@ -509,14 +510,23 @@ def cmd_skills(args: tuple[str, ...], force_json: bool, show_help: bool) -> None
     raise CliError(f"unrecognized skills subcommand '{subcommand}'", usage=USAGE_SKILLS)
 
 
+def _add_patch_selection_options(command: Callable[..., None]) -> Callable[..., None]:
+    options = [
+        click.option("-l", "line_spec", default=None),
+        click.option("--include-matching", "include_matching", multiple=True),
+        click.option("--exclude-matching", "exclude_matching", multiple=True),
+        click.option("--regex", "use_regex", is_flag=True),
+        click.option("--dry-run", "dry_run", is_flag=True),
+        click.option("-h", "--help", "show_help", is_flag=True),
+        click.argument("targets", nargs=-1),
+    ]
+    for option in reversed(options):
+        command = option(command)
+    return command
+
+
 @cli.command("stage", add_help_option=False)
-@click.option("-l", "line_spec", default=None)
-@click.option("--include-matching", "include_matching", multiple=True)
-@click.option("--exclude-matching", "exclude_matching", multiple=True)
-@click.option("--regex", "use_regex", is_flag=True)
-@click.option("--dry-run", "dry_run", is_flag=True)
-@click.option("-h", "--help", "show_help", is_flag=True)
-@click.argument("targets", nargs=-1)
+@_add_patch_selection_options
 def cmd_stage(
     targets: tuple[str, ...],
     line_spec: str | None,
@@ -546,13 +556,7 @@ def cmd_stage(
 
 
 @cli.command("unstage", add_help_option=False)
-@click.option("-l", "line_spec", default=None)
-@click.option("--include-matching", "include_matching", multiple=True)
-@click.option("--exclude-matching", "exclude_matching", multiple=True)
-@click.option("--regex", "use_regex", is_flag=True)
-@click.option("--dry-run", "dry_run", is_flag=True)
-@click.option("-h", "--help", "show_help", is_flag=True)
-@click.argument("targets", nargs=-1)
+@_add_patch_selection_options
 def cmd_unstage(
     targets: tuple[str, ...],
     line_spec: str | None,
@@ -582,13 +586,7 @@ def cmd_unstage(
 
 
 @cli.command("discard", add_help_option=False)
-@click.option("-l", "line_spec", default=None)
-@click.option("--include-matching", "include_matching", multiple=True)
-@click.option("--exclude-matching", "exclude_matching", multiple=True)
-@click.option("--regex", "use_regex", is_flag=True)
-@click.option("--dry-run", "dry_run", is_flag=True)
-@click.option("-h", "--help", "show_help", is_flag=True)
-@click.argument("targets", nargs=-1)
+@_add_patch_selection_options
 def cmd_discard(
     targets: tuple[str, ...],
     line_spec: str | None,
