@@ -1,5 +1,9 @@
+import sys
+from pathlib import Path
 from typing import Any
 from typing import cast
+
+import pytest
 
 from git_hunk._cli import JSON_SCHEMA_VERSION
 
@@ -187,6 +191,27 @@ def test_list_default_shows_untracked(cli: GitHunkCLI) -> None:
     assert untracked[0]["change_kind"] == "A"
     assert untracked[0]["a_mode"] is None
     assert untracked[0]["b_mode"] == "100644"
+
+
+@pytest.mark.skipif(
+    sys.platform == "win32", reason="git does not track symlinks on Windows"
+)
+def test_list_untracked_symlink_reports_symlink_mode(cli: GitHunkCLI) -> None:
+    # An untracked symlink derives its would-be added mode from the working tree
+    # (lstat), so b_mode must be "120000" rather than a regular-file mode.
+    cli.repo.write_file("f.py", "init\n")
+    cli.repo.git("add", ".")
+    cli.repo.git("commit", "-m", "init")
+
+    (Path(cli.repo.path) / "link").symlink_to("f.py")
+
+    hunks = cli.run_list_json("list", "--json")
+    untracked = [h for h in hunks if h["status"] == "untracked"]
+    assert len(untracked) == 1
+    assert untracked[0]["file"]["text"] == "link"
+    assert untracked[0]["change_kind"] == "A"
+    assert untracked[0]["a_mode"] is None
+    assert untracked[0]["b_mode"] == "120000"
 
 
 def test_empty_new_file_is_not_a_bogus_mode_hunk(cli: GitHunkCLI) -> None:
