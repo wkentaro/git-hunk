@@ -20,6 +20,7 @@ from ._git import stage_files
 from ._git import unstage_files
 from ._hunk import Hunk
 from ._hunk import parse_diff
+from ._hunk import whole_file_hunk
 from ._lines import filter_hunk_lines
 from ._lines import parse_line_spec
 from ._lines import resolve_matching_lines
@@ -330,18 +331,12 @@ def _get_untracked_entries(files: list[str] | None = None) -> list[Hunk]:
         wanted = {_normalize_path_arg(f) for f in files}
         paths = [p for p in paths if p in wanted]
     return [
-        Hunk(
-            id="",
-            file=p,
+        whole_file_hunk(
+            p,
             change_kind="A",
             a_mode=None,
             b_mode=_working_tree_mode(p),
             binary=False,
-            header=None,
-            context_before=None,
-            additions=0,
-            deletions=0,
-            diff="",
             status="untracked",
         )
         for p in paths
