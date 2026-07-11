@@ -103,7 +103,7 @@ git-hunk stage d161935 --exclude-matching debug    # stage all but lines contain
 git-hunk stage d161935 --include-matching xfail    # stage only lines containing "xfail"
 git-hunk unstage d161935               # move back to working tree
 git-hunk unstage d161935 -l 3,5-7      # unstage specific lines only
-git-hunk discard d161935               # restore from HEAD
+git-hunk discard d161935               # restore from the index
 git-hunk discard d161935 -l ^3,^5-7    # discard excluding specific lines
 ```
 
