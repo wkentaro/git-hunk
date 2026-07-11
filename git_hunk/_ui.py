@@ -276,7 +276,7 @@ _EXAMPLES_UNSTAGE: Final = [
     ("git-hunk unstage d161935 --dry-run", "Preview without changing anything"),
 ]
 _EXAMPLES_DISCARD: Final = [
-    ("git-hunk discard d161935", "Restore a hunk from HEAD"),
+    ("git-hunk discard d161935", "Restore a hunk from the index"),
     ("git-hunk discard src/foo.py", "Discard every hunk in a file"),
     ("git-hunk discard d161935 -l ^3,^5-7", "Discard excluding specific lines"),
     ("git-hunk discard d161935 --dry-run", "Preview without changing anything"),
@@ -316,7 +316,7 @@ Non-interactive git hunk staging for AI agents.
   [bold cyan]show[/bold cyan]     Show diff for one or more hunks
   [bold cyan]stage[/bold cyan]    Stage specific hunks
   [bold cyan]unstage[/bold cyan]  Unstage specific hunks
-  [bold cyan]discard[/bold cyan]  Discard specific hunks (restore from HEAD)
+  [bold cyan]discard[/bold cyan]  Discard specific hunks (restore from the index)
   [bold cyan]commit[/bold cyan]   Stage specific hunks and commit them in one step
   [bold cyan]skills[/bold cyan]   Load bundled skill content for AI agents
 
@@ -361,7 +361,7 @@ Stage one or more specific hunks. IDs support prefix matching.
 {_format_examples(_EXAMPLES_STAGE)}"""
 
 HELP_DISCARD = f"""\
-Discard unstaged changes for one or more specific hunks (restore from HEAD).
+Discard unstaged changes for one or more specific hunks (restore from the index).
 IDs support prefix matching.
 
 {USAGE_DISCARD}

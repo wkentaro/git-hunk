@@ -59,5 +59,9 @@ and this project adheres to
   surfaces an untracked `foo.py` instead of silently dropping it, and path
   arguments resolve consistently across `list`/`stage`/`unstage`/`discard`
   regardless of the platform's path separator (#95).
+- Correct the `discard` help, README, and skill docs, which described it as
+  restoring "from HEAD" when it restores from the index: discarding an unstaged
+  hunk reverts it to the staged content, leaving a staged sibling edit intact
+  (#109).
 
 [unreleased]: https://github.com/wkentaro/git-hunk/compare/v0.2.0...HEAD

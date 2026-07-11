@@ -134,7 +134,7 @@ Stage a hunk but leave its debug lines behind, then discard them:
 ```bash
 git-hunk show d161935               # find the debug line numbers
 git-hunk stage d161935 -l ^4        # stage all but the debug line on line 4
-git-hunk discard d161935 -l 4       # restore that line from HEAD
+git-hunk discard d161935 -l 4       # restore that line from the index
 ```
 
 ### Separate a refactor from a feature
@@ -165,7 +165,7 @@ coordinate first and push with `git push --force-with-lease`.
 
 ```bash
 git-hunk unstage <id> <id> ...   # move staged hunks back to the working tree
-git-hunk discard <id> <id> ...   # permanently restore unstaged hunks from HEAD
+git-hunk discard <id> <id> ...   # permanently restore unstaged hunks from the index
 ```
 
 Both take `-l <lines>` for partial ranges, like `stage`. `discard` is
