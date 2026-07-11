@@ -39,3 +39,21 @@ def test_discard_one_of_multiple(cli: GitHunkCLI) -> None:
 
     content = cli.repo.run("cat", "f.py").stdout
     assert "CHANGED18" in content
+
+
+def test_discard_restores_from_index_not_head(cli: GitHunkCLI) -> None:
+    cli.repo.write_file("f.py", "line1\nline2\nline3\n")
+    cli.repo.git("add", ".")
+    cli.repo.git("commit", "-m", "init")
+
+    cli.repo.write_file("f.py", "STAGED\nline2\nline3\n")
+    cli.repo.git("add", ".")
+    cli.repo.write_file("f.py", "STAGED\nline2\nUNSTAGED\n")
+
+    unstaged = cli.run_list_json("list", "--unstaged", "--json")
+    assert len(unstaged) == 1
+
+    cli.run_ok("discard", unstaged[0]["id"])
+
+    content = cli.repo.run("cat", "f.py").stdout
+    assert content == "STAGED\nline2\nline3\n"
