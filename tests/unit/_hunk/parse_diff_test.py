@@ -180,3 +180,27 @@ def test_typechange_from_binary_is_marked_binary() -> None:
     assert hunks[0].binary is True
     assert hunks[0].a_mode == "100644"
     assert hunks[0].b_mode == "120000"
+
+
+def test_chunk_without_diff_header_is_skipped() -> None:
+    # A chunk with no `diff --git` header has no extractable path, so parse_diff
+    # skips it rather than emitting a pathless hunk; the following well-formed
+    # file diff still parses. The leading chunk carries an @@ body so the skip is
+    # load-bearing: without it a spurious hunk with no file would be counted.
+    diff = (
+        "@@ -1 +1 @@\n"
+        "-orphan\n"
+        "+orphan2\n"
+        "diff --git a/f.py b/f.py\n"
+        "index abc..def 100644\n"
+        "--- a/f.py\n"
+        "+++ b/f.py\n"
+        "@@ -1,2 +1,3 @@\n"
+        " a\n"
+        "+b\n"
+        " c\n"
+    )
+    hunks = parse_diff(diff)
+    assert len(hunks) == 1
+    assert hunks[0].file == "f.py"
+    assert hunks[0].additions == 1
