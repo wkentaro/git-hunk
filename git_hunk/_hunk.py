@@ -94,20 +94,24 @@ def strip_trailing_empty_lines(lines: list[str]) -> list[str]:
     return lines
 
 
+def _hash_id(payload: str) -> str:
+    ID_LENGTH: Final = 7
+    # surrogateescape mirrors _git.run_git's decode so non-UTF-8 bytes hash.
+    data = payload.encode(errors="surrogateescape")
+    return hashlib.sha256(data).hexdigest()[:ID_LENGTH]
+
+
 def _body_id(filepath: str, diff_content: str) -> str:
     """Stable across partial staging: ignores @@ headers that shift."""
     body = "\n".join(
         line for line in diff_content.split("\n") if not line.startswith("@@")
     )
-    # surrogateescape mirrors _git.run_git's decode so non-UTF-8 bytes hash.
-    data = f"{filepath}:{body}".encode(errors="surrogateescape")
-    return hashlib.sha256(data).hexdigest()[:7]
+    return _hash_id(f"{filepath}:{body}")
 
 
 def _full_id(filepath: str, diff_content: str) -> str:
     """Fallback for identical changed lines — includes @@ line numbers."""
-    data = f"{filepath}:{diff_content}".encode(errors="surrogateescape")
-    return hashlib.sha256(data).hexdigest()[:7]
+    return _hash_id(f"{filepath}:{diff_content}")
 
 
 def _with_stable_ids(hunks: list[Hunk]) -> list[Hunk]:
