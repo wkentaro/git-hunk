@@ -230,6 +230,7 @@ _LINE_OPTS = f"""\
   [bold cyan]--dry-run[/bold cyan]   Report what would change without touching the index or working tree"""  # noqa: E501
 
 USAGE = "[bold green]Usage:[/bold green] [bold cyan]git-hunk[/bold cyan] [cyan]<COMMAND>[/cyan]"  # noqa: E501
+USAGE_LIST = "[bold green]Usage:[/bold green] [bold cyan]git-hunk list[/bold cyan] [cyan][OPTIONS][/cyan] [cyan][<file>...][/cyan]"  # noqa: E501
 USAGE_SHOW = "[bold green]Usage:[/bold green] [bold cyan]git-hunk show[/bold cyan] [cyan][<id>...][/cyan] [cyan][OPTIONS][/cyan]"  # noqa: E501
 USAGE_STAGE = "[bold green]Usage:[/bold green] [bold cyan]git-hunk stage[/bold cyan] [cyan]<id|file>[/cyan] [cyan][<id|file>...][/cyan] [cyan][OPTIONS][/cyan]"  # noqa: E501
 USAGE_UNSTAGE = "[bold green]Usage:[/bold green] [bold cyan]git-hunk unstage[/bold cyan] [cyan]<id|file>[/cyan] [cyan][<id|file>...][/cyan] [cyan][OPTIONS][/cyan]"  # noqa: E501
@@ -329,7 +330,7 @@ Non-interactive git hunk staging for AI agents.
 HELP_LIST = f"""\
 List hunks (unstaged, staged, and untracked by default).
 
-[bold green]Usage:[/bold green] [bold cyan]git-hunk list[/bold cyan] [cyan][OPTIONS][/cyan] [cyan][<file>...][/cyan]
+{USAGE_LIST}
 
 [bold green]Options:[/bold green]
   [bold cyan]--staged[/bold cyan]      Show only staged hunks

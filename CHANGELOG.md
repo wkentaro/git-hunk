@@ -59,5 +59,7 @@ and this project adheres to
   surfaces an untracked `foo.py` instead of silently dropping it, and path
   arguments resolve consistently across `list`/`stage`/`unstage`/`discard`
   regardless of the platform's path separator (#95).
+- Show a `Usage:` hint on the `--staged`/`--unstaged` conflict error for `list`
+  and `show`, matching every other conflicting-flags error (#117).
 
 [unreleased]: https://github.com/wkentaro/git-hunk/compare/v0.2.0...HEAD
