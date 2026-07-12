@@ -40,6 +40,30 @@ def test_get_json(cli: GitHunkCLI) -> None:
     assert "## The core loop" in skills[0]["content"]
 
 
+@pytest.fixture
+def two_skills(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    for name in ("alpha", "beta"):
+        skill_dir = tmp_path / name
+        skill_dir.mkdir()
+        (skill_dir / "SKILL.md").write_text(
+            f"---\nname: {name}\ndescription: {name.capitalize()} skill\n---\n\n"
+            f"{name.capitalize()} body line\n",
+            encoding="utf-8",
+        )
+    monkeypatch.setenv("GIT_HUNK_SKILLS_DIR", str(tmp_path))
+
+
+def test_get_multiple_joins_bodies(cli: GitHunkCLI, two_skills: None) -> None:
+    out = cli.run_ok("skills", "get", "alpha", "beta")
+    assert "Alpha body line\n---\nname: beta" in out
+
+
+def test_get_multiple_json(cli: GitHunkCLI, two_skills: None) -> None:
+    skills = cli.run_json("skills", "get", "alpha", "beta", "--json")
+    assert [s["name"] for s in skills] == ["alpha", "beta"]
+    assert "Beta body line" in skills[1]["content"]
+
+
 def test_get_unknown_skill_errors(cli: GitHunkCLI) -> None:
     result = cli.run("skills", "get", "nope")
     assert result.returncode == 1
