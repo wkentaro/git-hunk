@@ -219,6 +219,8 @@ def test_list_unstaged_filter(cli: GitHunkCLI) -> None:
 def test_list_staged_and_unstaged_mutual_exclusion(cli: GitHunkCLI) -> None:
     r = cli.run("list", "--staged", "--unstaged")
     assert r.returncode != 0
+    assert "cannot use --staged and --unstaged together" in r.stderr
+    assert "Usage: git-hunk list" in r.stderr
 
 
 def test_list_status_field_in_json(cli: GitHunkCLI) -> None:

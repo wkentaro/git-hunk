@@ -38,6 +38,8 @@ from ._ui import HELP_UNSTAGE
 from ._ui import USAGE
 from ._ui import USAGE_COMMIT
 from ._ui import USAGE_DISCARD
+from ._ui import USAGE_LIST
+from ._ui import USAGE_SHOW
 from ._ui import USAGE_SKILLS
 from ._ui import USAGE_STAGE
 from ._ui import USAGE_UNSTAGE
@@ -354,9 +356,10 @@ def _collect_hunks(
     unstaged: bool,
     files: list[str] | None,
     include_untracked: bool,
+    usage: str,
 ) -> list[Hunk]:
     if staged and unstaged:
-        raise CliError("cannot use --staged and --unstaged together")
+        raise CliError("cannot use --staged and --unstaged together", usage=usage)
 
     if staged:
         hunks, _ = _get_hunks(staged=True, files=files)
@@ -397,6 +400,7 @@ def cmd_list(
         unstaged=unstaged,
         files=file_list,
         include_untracked=True,
+        usage=USAGE_LIST,
     )
 
     if force_json:
@@ -431,6 +435,7 @@ def cmd_show(
         unstaged=unstaged,
         files=None,
         include_untracked=False,
+        usage=USAGE_SHOW,
     )
 
     if ids:
