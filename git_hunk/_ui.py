@@ -59,16 +59,20 @@ def _append_stats(text: Text, hunk: Hunk) -> None:
         text.append(f"-{hunk.deletions}", style="red")
 
 
+def _append_context_and_stats(text: Text, hunk: Hunk) -> None:
+    if hunk.context_before:
+        text.append(f"  {_safe(hunk.context_before)}", style="dim italic")
+    text.append("  ")
+    _append_stats(text, hunk)
+
+
 def _print_hunk_line(out: Console, hunk: Hunk) -> None:
     line = Text()
     line.append("  ")
     line.append(hunk.id, style="cyan")
     line.append("  ")
     line.append(_safe(_header_text(hunk)), style="dim")
-    if hunk.context_before:
-        line.append(f"  {_safe(hunk.context_before)}", style="dim italic")
-    line.append("  ")
-    _append_stats(line, hunk)
+    _append_context_and_stats(line, hunk)
     out.print(line)
 
 
@@ -181,10 +185,7 @@ def print_applied(hunks: list[Hunk], *, verb: str) -> None:
         line.append("  ")
         line.append(_safe(hunk.file), style="bold")
         line.append(f"  {_safe(_header_text(hunk))}", style="dim")
-        if hunk.context_before:
-            line.append(f"  {_safe(hunk.context_before)}", style="dim italic")
-        line.append("  ")
-        _append_stats(line, hunk)
+        _append_context_and_stats(line, hunk)
         err.print(line)
 
 
