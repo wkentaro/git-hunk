@@ -176,7 +176,12 @@ def _bare_header(at_line: str) -> str:
     # "@@ -1,3 +1,3 @@ def foo():" -> "@@ -1,3 +1,3 @@" (strip git's heading; the
     # heading is carried separately in context_before).
     m = re.match(r"(@@ -\d+(?:,\d+)? \+\d+(?:,\d+)? @@)", at_line)
-    return m.group(1) if m else at_line
+    if not m:
+        # Unreachable for real input: parse_diff only ever passes a line that the
+        # (?=^@@) split guarantees starts with git's well-formed @@ header. Raise
+        # rather than silently mislabel if that invariant is ever broken.
+        raise ValueError(f"cannot parse hunk header: {at_line}")
+    return m.group(1)
 
 
 def _extract_context_before(header: str) -> str | None:
