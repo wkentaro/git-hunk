@@ -76,5 +76,7 @@ and this project adheres to
 - Report a git failure on a bad path argument (e.g. `git-hunk list ':(bogus)x'`)
   as a clean `error:` message instead of crashing with a raw Python traceback
   (#107).
+- Show a `Usage:` hint on the `--staged`/`--unstaged` conflict error for `list`
+  and `show`, matching every other conflicting-flags error (#117).
 
 [unreleased]: https://github.com/wkentaro/git-hunk/compare/v0.2.0...HEAD
