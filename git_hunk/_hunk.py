@@ -210,31 +210,30 @@ def _whole_file_hunk(
     )
 
 
+def _search_header_line(pattern: str, file_diff: str) -> re.Match[str] | None:
+    return re.search(pattern, file_diff, flags=re.MULTILINE)
+
+
 def _block_modes(file_diff: str) -> tuple[str, str | None, str | None]:
     """Derive (change_kind, a_mode, b_mode) from one file diff's header lines."""
-    new_file = re.search(r"^new file mode (\d+)", file_diff, flags=re.MULTILINE)
+    new_file = _search_header_line(r"^new file mode (\d+)", file_diff)
     if new_file:
         return "A", None, new_file.group(1)
-    deleted = re.search(r"^deleted file mode (\d+)", file_diff, flags=re.MULTILINE)
+    deleted = _search_header_line(r"^deleted file mode (\d+)", file_diff)
     if deleted:
         return "D", deleted.group(1), None
-    old_mode = re.search(r"^old mode (\d+)", file_diff, flags=re.MULTILINE)
-    new_mode = re.search(r"^new mode (\d+)", file_diff, flags=re.MULTILINE)
+    old_mode = _search_header_line(r"^old mode (\d+)", file_diff)
+    new_mode = _search_header_line(r"^new mode (\d+)", file_diff)
     if old_mode and new_mode:
         return "M", old_mode.group(1), new_mode.group(1)
-    index = re.search(
-        r"^index [0-9a-f]+\.\.[0-9a-f]+ (\d+)", file_diff, flags=re.MULTILINE
-    )
+    index = _search_header_line(r"^index [0-9a-f]+\.\.[0-9a-f]+ (\d+)", file_diff)
     if index:
         return "M", index.group(1), index.group(1)
     return "M", None, None
 
 
 def _is_binary(file_diff: str) -> bool:
-    return (
-        re.search(r"^Binary files .* differ$", file_diff, flags=re.MULTILINE)
-        is not None
-    )
+    return _search_header_line(r"^Binary files .* differ$", file_diff) is not None
 
 
 def parse_diff(diff_output: str) -> list[Hunk]:
