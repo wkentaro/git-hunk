@@ -107,5 +107,8 @@ and this project adheres to
 - Report untracked files with repo-root-relative paths, matching tracked hunks,
   so running `git-hunk` from a subdirectory no longer emits an untracked `file`
   on a different path basis than the staged/unstaged hunks beside it (#103).
+- Report a git failure while checking for already-staged changes in `commit`
+  (e.g. a corrupt index) as a clean `error:` message instead of crashing with a
+  raw Python traceback (#124).
 
 [unreleased]: https://github.com/wkentaro/git-hunk/compare/v0.2.0...HEAD
