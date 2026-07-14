@@ -71,5 +71,7 @@ and this project adheres to
   into a trailing subcommand, so `git-hunk -h stage src/foo.py` prints help
   without staging and `git-hunk -V list` prints the version without listing
   (#145).
+- Report a clean `error:` message instead of a raw `FileNotFoundError`
+  traceback when the `git` executable is not found on `PATH` (#122).
 
 [unreleased]: https://github.com/wkentaro/git-hunk/compare/v0.2.0...HEAD
