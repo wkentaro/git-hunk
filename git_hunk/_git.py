@@ -9,11 +9,14 @@ def run_git(*args: str, input: str | None = None, check: bool = True) -> str:
     # Git output and input may contain bytes that are not valid UTF-8 (e.g. a
     # Latin-1 source file). surrogateescape round-trips those bytes losslessly
     # so a rebuilt patch hands git back exactly what it emitted.
-    result = subprocess.run(
-        ["git", "-c", "core.quotePath=false"] + list(args),
-        capture_output=True,
-        input=input.encode(errors="surrogateescape") if input is not None else None,
-    )
+    try:
+        result = subprocess.run(
+            ["git", "-c", "core.quotePath=false"] + list(args),
+            capture_output=True,
+            input=input.encode(errors="surrogateescape") if input is not None else None,
+        )
+    except FileNotFoundError as exc:
+        raise RuntimeError("git executable not found on PATH") from exc
     if check and result.returncode != 0:
         stderr = result.stderr.decode(errors="surrogateescape").strip()
         raise RuntimeError(f"git {' '.join(args)} failed: {stderr}")

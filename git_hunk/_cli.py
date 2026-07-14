@@ -90,8 +90,11 @@ class CliGroup(click.Group):
 
 
 def _require_git_repo() -> None:
-    if not is_git_repo():
-        raise CliError("not a git repository")
+    try:
+        if not is_git_repo():
+            raise CliError("not a git repository")
+    except RuntimeError as exc:
+        raise CliError(str(exc)) from exc
 
 
 def _echo_json(data: object) -> None:

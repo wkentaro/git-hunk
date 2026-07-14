@@ -1,9 +1,26 @@
 from collections import Counter
 from pathlib import Path
 
+import pytest
+
 from tests.conftest import GitRepo
 
 from .conftest import GitHunkCLI
+
+
+def test_missing_git_binary_reports_clean_error(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    empty_bin = tmp_path / "bin"
+    empty_bin.mkdir()
+    monkeypatch.setenv("PATH", str(empty_bin))
+
+    repo = GitRepo(str(tmp_path))
+    cli = GitHunkCLI(repo)
+    r = cli.run("list")
+    assert r.returncode != 0
+    assert "git executable not found" in r.stderr
+    assert "Traceback" not in r.stderr
 
 
 def test_not_a_git_repo(tmp_path: Path) -> None:
