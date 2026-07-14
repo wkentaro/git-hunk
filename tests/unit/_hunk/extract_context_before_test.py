@@ -1,3 +1,5 @@
+import pytest
+
 from git_hunk._hunk import _extract_context_before
 
 
@@ -22,5 +24,6 @@ def test_none_when_trailing_context_is_whitespace_only() -> None:
     assert _extract_context_before("@@ -1,3 +1,4 @@   ") is None
 
 
-def test_none_when_header_does_not_match() -> None:
-    assert _extract_context_before("diff --git a/f.py b/f.py") is None
+def test_raises_when_header_does_not_match() -> None:
+    with pytest.raises(ValueError, match="cannot parse hunk header"):
+        _extract_context_before("diff --git a/f.py b/f.py")

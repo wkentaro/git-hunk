@@ -182,7 +182,10 @@ def _bare_header(at_line: str) -> str:
 def _extract_context_before(header: str) -> str | None:
     match = re.search(r"@@.*?@@\s*(.*)", header)
     if not match:
-        return None
+        # Unreachable for real input: parse_diff only ever passes a real git @@
+        # hunk header, which always closes its range with a second @@. Raise
+        # rather than silently drop the heading if that invariant is ever broken.
+        raise ValueError(f"cannot parse hunk header: {header}")
     return match.group(1).strip() or None
 
 
