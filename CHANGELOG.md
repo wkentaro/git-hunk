@@ -59,5 +59,7 @@ and this project adheres to
   surfaces an untracked `foo.py` instead of silently dropping it, and path
   arguments resolve consistently across `list`/`stage`/`unstage`/`discard`
   regardless of the platform's path separator (#95).
+- Report a clean `error:` message instead of a raw `FileNotFoundError`
+  traceback when the `git` executable is not found on `PATH` (#122).
 
 [unreleased]: https://github.com/wkentaro/git-hunk/compare/v0.2.0...HEAD
