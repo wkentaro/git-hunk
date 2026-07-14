@@ -635,7 +635,11 @@ def cmd_commit(
         raise CliError("commit requires a message (-m)", usage=USAGE_COMMIT)
 
     _require_git_repo()
-    if get_diff(staged=True).strip():
+    try:
+        already_staged = get_diff(staged=True).strip()
+    except RuntimeError as exc:
+        raise CliError(str(exc)) from exc
+    if already_staged:
         raise CliError(
             "cannot commit: changes are already staged",
             tip="commit them with 'git commit', or unstage with 'git-hunk unstage'",

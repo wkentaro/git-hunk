@@ -125,3 +125,16 @@ def test_commit_aborts_when_index_already_has_staged_changes(cli: GitHunkCLI) ->
     assert _commit_count(cli) == before
     # The pre-staged change is untouched; nothing new was committed or staged.
     assert cli.repo.git("diff", "--cached", "--name-only").strip() == "a.txt"
+
+
+def test_commit_reports_clean_error_when_staged_diff_fails(cli: GitHunkCLI) -> None:
+    # A git failure while checking for already-staged changes must surface as a
+    # clean CLI error, not a raw Python traceback. A corrupt index makes
+    # `git diff --cached` fail while the repo still looks like a work tree.
+    _init(cli, {"f.txt": "a\n"})
+    cli.repo.write_file("f.txt", "AAA\n")
+    (Path(cli.repo.path) / ".git" / "index").write_bytes(b"garbage")
+
+    r = cli.run("commit", "deadbeef", "-m", "fix: x")
+    assert r.returncode != 0
+    assert r.stderr.startswith("error:")

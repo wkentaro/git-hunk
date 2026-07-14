@@ -59,5 +59,8 @@ and this project adheres to
   surfaces an untracked `foo.py` instead of silently dropping it, and path
   arguments resolve consistently across `list`/`stage`/`unstage`/`discard`
   regardless of the platform's path separator (#95).
+- Report a git failure while checking for already-staged changes in `commit`
+  (e.g. a corrupt index) as a clean `error:` message instead of crashing with a
+  raw Python traceback (#124).
 
 [unreleased]: https://github.com/wkentaro/git-hunk/compare/v0.2.0...HEAD
