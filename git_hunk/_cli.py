@@ -19,6 +19,7 @@ from ._git import is_git_repo
 from ._git import stage_files
 from ._git import unstage_files
 from ._hunk import Hunk
+from ._hunk import is_whole_file_hunk
 from ._hunk import parse_diff
 from ._lines import filter_hunk_lines
 from ._lines import parse_line_spec
@@ -220,7 +221,7 @@ def _apply_line_filter(
         return hunks
     if len(hunks) != 1:
         raise CliError("line selection requires exactly one hunk")
-    if _is_whole_file_hunk(hunks[0]):
+    if is_whole_file_hunk(hunks[0]):
         raise CliError(
             "line selection is not supported for binary, mode, or type changes"
         )
@@ -229,12 +230,6 @@ def _apply_line_filter(
         return [filter_hunk_lines(hunks[0], lines, exclude=exclude, reverse=reverse)]
     except ValueError as exc:
         raise CliError(str(exc)) from exc
-
-
-def _is_whole_file_hunk(hunk: Hunk) -> bool:
-    # Binary and mode-only changes carry no text diff and are applied by staging
-    # the whole file rather than by a patch.
-    return not hunk.diff
 
 
 def _apply_selection(
@@ -258,8 +253,8 @@ def _apply_selection(
     selected = _select_hunks(hunks, args)
     selected = _apply_line_filter(selected, selection, reverse=reverse)
 
-    whole_file = [h for h in selected if _is_whole_file_hunk(h)]
-    text = [h for h in selected if not _is_whole_file_hunk(h)]
+    whole_file = [h for h in selected if is_whole_file_hunk(h)]
+    text = [h for h in selected if not is_whole_file_hunk(h)]
 
     try:
         if text:

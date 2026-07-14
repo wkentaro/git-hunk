@@ -17,6 +17,7 @@ from rich.text import Text
 
 from ._hunk import Hunk
 from ._hunk import is_no_newline_marker
+from ._hunk import is_whole_file_hunk
 from ._skills import Skill
 
 
@@ -130,7 +131,7 @@ def print_hunk_list(hunks: list[Hunk]) -> None:
 
 def _print_hunk_diff(out: Console, hunk: Hunk) -> None:
     out.print(f"[bold]{escape(_safe(hunk.file))}[/bold]  [dim]{escape(hunk.id)}[/dim]")
-    if not hunk.diff:
+    if is_whole_file_hunk(hunk):
         out.print(Text(_safe(_header_text(hunk)), style="dim"))
         return
     line_num = 0

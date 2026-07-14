@@ -65,6 +65,12 @@ class Hunk:
         return data
 
 
+def is_whole_file_hunk(hunk: Hunk) -> bool:
+    # Binary and mode-only changes carry no text diff and are applied by staging
+    # the whole file rather than by a patch.
+    return not hunk.diff
+
+
 def _body_lines(diff: str) -> list[dict[str, Any]]:
     if not diff:
         return []
