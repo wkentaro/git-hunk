@@ -180,3 +180,34 @@ def test_typechange_from_binary_is_marked_binary() -> None:
     assert hunks[0].binary is True
     assert hunks[0].a_mode == "100644"
     assert hunks[0].b_mode == "120000"
+
+
+def test_delete_then_unrelated_add_is_not_merged_as_typechange() -> None:
+    # The type-change merge only fires when the add block shares the delete's
+    # path. A delete followed by an add for a *different* file (git sorts diff
+    # blocks by path, so this is a real ordering) must stay two hunks, not merge
+    # into a bogus "T".
+    diff = (
+        "diff --git a/a.txt b/a.txt\n"
+        "deleted file mode 100644\n"
+        "index ce01362..0000000\n"
+        "--- a/a.txt\n"
+        "+++ /dev/null\n"
+        "@@ -1 +0,0 @@\n"
+        "-gone\n"
+        "diff --git a/b.txt b/b.txt\n"
+        "new file mode 100644\n"
+        "index 0000000..1de5659\n"
+        "--- /dev/null\n"
+        "+++ b/b.txt\n"
+        "@@ -0,0 +1 @@\n"
+        "+fresh\n"
+    )
+    hunks = parse_diff(diff)
+    assert len(hunks) == 2
+    assert hunks[0].file == "a.txt"
+    assert hunks[0].change_kind == "D"
+    assert hunks[0].deletions == 1
+    assert hunks[1].file == "b.txt"
+    assert hunks[1].change_kind == "A"
+    assert hunks[1].additions == 1
