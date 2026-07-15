@@ -126,6 +126,34 @@ def test_mode_only_change_surfaced() -> None:
     assert hunks[0].diff == ""
 
 
+def test_mode_and_content_change_together() -> None:
+    # A chmod plus an edit to the same file is one diff block carrying both the
+    # old/new mode headers and an @@ body. The content hunk must carry the mode
+    # metadata, not collapse to the whole-file mode-only path.
+    diff = (
+        "diff --git a/m.sh b/m.sh\n"
+        "old mode 100644\n"
+        "new mode 100755\n"
+        "index abc..def\n"
+        "--- a/m.sh\n"
+        "+++ b/m.sh\n"
+        "@@ -1 +1 @@\n"
+        "-line one\n"
+        "+line one changed\n"
+    )
+    hunks = parse_diff(diff)
+    assert len(hunks) == 1
+    assert hunks[0].file == "m.sh"
+    assert hunks[0].change_kind == "M"
+    assert hunks[0].a_mode == "100644"
+    assert hunks[0].b_mode == "100755"
+    assert hunks[0].binary is False
+    assert hunks[0].header == "@@ -1 +1 @@"
+    assert hunks[0].additions == 1
+    assert hunks[0].deletions == 1
+    assert hunks[0].diff == "@@ -1 +1 @@\n-line one\n+line one changed"
+
+
 def test_typechange_is_single_whole_file_hunk() -> None:
     # git emits a file -> symlink type change as a delete block followed by an
     # add block for the same path; parse_diff merges them into one "T" hunk.
