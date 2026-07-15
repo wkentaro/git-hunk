@@ -98,6 +98,15 @@ def _echo_json(data: object) -> None:
     click.echo(json.dumps(data, indent=2))
 
 
+def _echo_hunks_json(hunks: list[Hunk], *, include_lines: bool = False) -> None:
+    _echo_json(
+        {
+            "schema_version": JSON_SCHEMA_VERSION,
+            "hunks": [h.to_dict(include_lines=include_lines) for h in hunks],
+        }
+    )
+
+
 def _get_hunks(staged: bool, files: list[str] | None = None) -> tuple[list[Hunk], str]:
     _require_git_repo()
     diff_output = get_diff(staged=staged, files=files)
@@ -400,11 +409,7 @@ def cmd_list(
     )
 
     if force_json:
-        envelope = {
-            "schema_version": JSON_SCHEMA_VERSION,
-            "hunks": [h.to_dict() for h in hunks],
-        }
-        _echo_json(envelope)
+        _echo_hunks_json(hunks)
     else:
         print_hunk_list(hunks)
 
@@ -439,11 +444,7 @@ def cmd_show(
         matched = hunks
 
     if force_json:
-        envelope = {
-            "schema_version": JSON_SCHEMA_VERSION,
-            "hunks": [h.to_dict(include_lines=True) for h in matched],
-        }
-        _echo_json(envelope)
+        _echo_hunks_json(matched, include_lines=True)
     else:
         print_hunk_diffs(matched)
 
