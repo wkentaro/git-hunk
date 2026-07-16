@@ -189,6 +189,25 @@ def test_list_default_shows_untracked(cli: GitHunkCLI) -> None:
     assert untracked[0]["b_mode"] == "100644"
 
 
+def test_status_filters_exclude_untracked(cli: GitHunkCLI) -> None:
+    cli.repo.write_file("f.py", "old\n")
+    cli.repo.git("add", ".")
+    cli.repo.git("commit", "-m", "init")
+
+    cli.repo.write_file("f.py", "staged\n")
+    cli.repo.git("add", "f.py")
+    cli.repo.write_file("f.py", "unstaged\n")
+    cli.repo.write_file("untracked.py", "new\n")
+
+    staged = cli.run_list_json("list", "--staged", "--json")
+    assert len(staged) == 1
+    assert staged[0]["status"] == "staged"
+
+    unstaged = cli.run_list_json("list", "--unstaged", "--json")
+    assert len(unstaged) == 1
+    assert unstaged[0]["status"] == "unstaged"
+
+
 def test_empty_new_file_is_not_a_bogus_mode_hunk(cli: GitHunkCLI) -> None:
     # A staged empty new file has no @@ body and no mode change; it must not
     # surface as a whole-file hunk (which would render "Mode None -> ...").
