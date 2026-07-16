@@ -7,7 +7,7 @@ from ._hunk import NO_NEWLINE_MARKER
 from ._hunk import Hunk
 from ._hunk import count_changes
 from ._hunk import is_no_newline_marker
-from ._hunk import strip_trailing_empty_lines
+from ._hunk import split_diff_body
 
 
 def _parse_line_number(token: str) -> int:
@@ -117,7 +117,7 @@ def _render_body_lines(kept: list[_BodyLine]) -> list[str]:
 
 
 def _body_lines(hunk: Hunk) -> list[str]:
-    return strip_trailing_empty_lines(hunk.diff.split("\n")[1:])
+    return split_diff_body(hunk.diff)
 
 
 def resolve_matching_lines(

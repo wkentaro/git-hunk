@@ -66,12 +66,8 @@ class Hunk:
 
 
 def _body_lines(diff: str) -> list[dict[str, Any]]:
-    if not diff:
-        return []
-    _, *body = diff.split("\n")
-    body = strip_trailing_empty_lines(body)
     lines: list[dict[str, Any]] = []
-    for line in body:
+    for line in split_diff_body(diff):
         if is_no_newline_marker(line):
             if lines:
                 lines[-1]["no_newline"] = True
@@ -92,6 +88,11 @@ def strip_trailing_empty_lines(lines: list[str]) -> list[str]:
     while lines and lines[-1] == "":
         lines = lines[:-1]
     return lines
+
+
+def split_diff_body(diff: str) -> list[str]:
+    """Lines after a hunk's @@ header, with trailing blank lines dropped."""
+    return strip_trailing_empty_lines(diff.split("\n")[1:])
 
 
 def _body_id(filepath: str, diff_content: str) -> str:
@@ -308,8 +309,8 @@ def parse_diff(diff_output: str) -> list[Hunk]:
         # separates changes more than 6 context lines apart into their own @@
         # section, so there is nothing finer to split here (use -l for that).
         for part in parts[1:]:
-            header_line, *body_lines = part.split("\n")
-            body_lines = strip_trailing_empty_lines(body_lines)
+            header_line = part.split("\n", 1)[0]
+            body_lines = split_diff_body(part)
 
             additions, deletions = count_changes(body_lines)
             hunks.append(
