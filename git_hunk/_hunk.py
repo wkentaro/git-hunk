@@ -72,12 +72,8 @@ def is_whole_file_hunk(hunk: Hunk) -> bool:
 
 
 def _body_lines(diff: str) -> list[dict[str, Any]]:
-    if not diff:
-        return []
-    _, *body = diff.split("\n")
-    body = strip_trailing_empty_lines(body)
     lines: list[dict[str, Any]] = []
-    for line in body:
+    for line in split_diff_body(diff=diff):
         if is_no_newline_marker(line):
             if lines:
                 lines[-1]["no_newline"] = True
@@ -94,10 +90,11 @@ def count_changes(lines: list[str]) -> tuple[int, int]:
     return additions, deletions
 
 
-def strip_trailing_empty_lines(lines: list[str]) -> list[str]:
-    while lines and lines[-1] == "":
-        lines = lines[:-1]
-    return lines
+def split_diff_body(diff: str) -> list[str]:
+    body_lines = diff.split("\n")[1:]
+    while body_lines and body_lines[-1] == "":
+        body_lines.pop()
+    return body_lines
 
 
 def _hash_id(payload: str) -> str:
@@ -324,8 +321,8 @@ def parse_diff(diff_output: str) -> list[Hunk]:
         # separates changes more than 6 context lines apart into their own @@
         # section, so there is nothing finer to split here (use -l for that).
         for part in parts[1:]:
-            header_line, *body_lines = part.split("\n")
-            body_lines = strip_trailing_empty_lines(body_lines)
+            header_line = part.split("\n", 1)[0]
+            body_lines = split_diff_body(diff=part)
 
             additions, deletions = count_changes(body_lines)
             hunks.append(

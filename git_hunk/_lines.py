@@ -7,7 +7,7 @@ from ._hunk import NO_NEWLINE_MARKER
 from ._hunk import Hunk
 from ._hunk import count_changes
 from ._hunk import is_no_newline_marker
-from ._hunk import strip_trailing_empty_lines
+from ._hunk import split_diff_body
 
 
 def _parse_line_number(token: str) -> int:
@@ -116,10 +116,6 @@ def _render_body_lines(kept: list[_BodyLine]) -> list[str]:
     return rendered
 
 
-def _body_lines(hunk: Hunk) -> list[str]:
-    return strip_trailing_empty_lines(hunk.diff.split("\n")[1:])
-
-
 def resolve_matching_lines(
     hunk: Hunk, patterns: Sequence[str], *, regex: bool
 ) -> set[int]:
@@ -145,7 +141,7 @@ def resolve_matching_lines(
 
     selected: set[int] = set()
     line_num = 0
-    for line in _body_lines(hunk):
+    for line in split_diff_body(diff=hunk.diff):
         if is_no_newline_marker(line):
             continue
         line_num += 1
@@ -191,7 +187,7 @@ def filter_hunk_lines(
     NEW content the index or working tree already holds.
     """
     header = hunk.diff.split("\n", 1)[0]
-    body = _body_lines(hunk)
+    body = split_diff_body(diff=hunk.diff)
 
     total = sum(1 for line in body if not is_no_newline_marker(line))
 
