@@ -73,8 +73,7 @@ def _body_lines(diff: str) -> list[dict[str, Any]]:
     lines: list[dict[str, Any]] = []
     for line in body:
         if is_no_newline_marker(line):
-            if lines:
-                lines[-1]["no_newline"] = True
+            lines[-1]["no_newline"] = True
             continue
         lines.append(
             {"n": len(lines) + 1, "op": line[:1], "content": _byte_safe(line[1:])}
