@@ -28,8 +28,17 @@ and this project adheres to
 ### Changed
 
 - **Breaking:** `list --json` now wraps its output in a versioned envelope,
-  `{"schema_version": 1, "hunks": [...]}`, instead of a bare array, so consumers
+  `{"schema_version": 2, "hunks": [...]}`, instead of a bare array, so consumers
   can depend on a documented, versioned shape (#23).
+- **Breaking:** `--json` output is now the typed v2 hunk schema defined in
+  ADR 0001, so consumers read typed fields instead of regex-parsing free text:
+  the file-level fields `change_kind`, `a_mode`, `b_mode`, and `binary` are
+  stamped on every hunk; `file`, `context_before`, and each line's `content` are
+  byte-safe `{"text": ...}` / `{"bytes": ...}` objects (`context_before` is
+  `null` when the hunk has no section heading); `header` is the bare `@@` range
+  and is `null` for a whole-file (binary or mode-only) hunk; `show --json`
+  carries a structured per-line `lines[]` body (each `{n, op, content}`, with an
+  optional `no_newline`) and the raw `diff` string is dropped (#67).
 - README image paths are rewritten to absolute URLs so they render on PyPI.
 
 ### Fixed
