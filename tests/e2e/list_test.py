@@ -1,5 +1,9 @@
+import os
+import sys
 from typing import Any
 from typing import cast
+
+import pytest
 
 from git_hunk._cli import JSON_SCHEMA_VERSION
 
@@ -187,6 +191,28 @@ def test_list_default_shows_untracked(cli: GitHunkCLI) -> None:
     assert untracked[0]["change_kind"] == "A"
     assert untracked[0]["a_mode"] is None
     assert untracked[0]["b_mode"] == "100644"
+
+
+@pytest.mark.skipif(
+    sys.platform == "win32", reason="git does not track the executable bit on Windows"
+)
+def test_list_untracked_executable_reports_executable_mode(cli: GitHunkCLI) -> None:
+    # An untracked file's would-be added mode is derived from the working tree
+    # (lstat), so an executable file must report b_mode "100755" rather than
+    # the regular-file "100644".
+    cli.repo.write_file("f.py", "init\n")
+    cli.repo.git("add", ".")
+    cli.repo.git("commit", "-m", "init")
+
+    os.chmod(cli.repo.write_file("run.sh", "echo hi\n"), 0o755)
+
+    hunks = cli.run_list_json("list", "--json")
+    untracked = [h for h in hunks if h["status"] == "untracked"]
+    assert len(untracked) == 1
+    assert untracked[0]["file"]["text"] == "run.sh"
+    assert untracked[0]["change_kind"] == "A"
+    assert untracked[0]["a_mode"] is None
+    assert untracked[0]["b_mode"] == "100755"
 
 
 def test_empty_new_file_is_not_a_bogus_mode_hunk(cli: GitHunkCLI) -> None:
