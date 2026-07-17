@@ -51,6 +51,13 @@ def test_out_of_range_errors(make_hunk: Callable[[str], Hunk]) -> None:
         filter_hunk_lines(hunk, {99}, exclude=False)
 
 
+def test_unparsable_header_errors(make_hunk: Callable[[str], Hunk]) -> None:
+    diff = "@@ -bad +bad @@ def foo():\n ctx1\n+add1\n ctx2"
+    hunk = make_hunk(diff)
+    with pytest.raises(ValueError, match="cannot parse hunk header"):
+        filter_hunk_lines(hunk, {2}, exclude=False)
+
+
 def test_header_recalculated(make_hunk: Callable[[str], Hunk]) -> None:
     diff = "@@ -1,4 +1,5 @@ def foo():\n ctx1\n-del1\n+add1\n+add2\n ctx2"
     hunk = make_hunk(diff)
