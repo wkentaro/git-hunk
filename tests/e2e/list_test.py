@@ -1,3 +1,4 @@
+import os
 import sys
 from pathlib import Path
 from typing import Any
@@ -231,6 +232,17 @@ def test_list_untracked_symlink_reports_symlink_mode(cli: GitHunkCLI) -> None:
     assert untracked[0]["change_kind"] == "A"
     assert untracked[0]["a_mode"] is None
     assert untracked[0]["b_mode"] == "120000"
+
+
+@pytest.mark.skipif(
+    sys.platform == "win32", reason="git does not track the executable bit on Windows"
+)
+def test_list_untracked_executable_reports_executable_mode(cli: GitHunkCLI) -> None:
+    os.chmod(cli.repo.write_file("run.sh", "echo hi\n"), 0o755)
+
+    [hunk] = cli.run_list_json("list", "--json")
+    assert hunk["status"] == "untracked"
+    assert hunk["b_mode"] == "100755"
 
 
 def test_empty_new_file_is_not_a_bogus_mode_hunk(cli: GitHunkCLI) -> None:
