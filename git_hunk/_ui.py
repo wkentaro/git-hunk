@@ -35,6 +35,11 @@ def _safe(text: str) -> str:
     return text.encode("utf-8", errors="backslashreplace").decode("utf-8")
 
 
+def _column_gap(text: str, width: int) -> str:
+    GUTTER: Final = 2
+    return " " * (width - len(text) + GUTTER)
+
+
 def _whole_file_label(hunk: Hunk) -> str:
     # Human label for a hunk with no @@ range, derived from its typed fields
     # (the data layer no longer stores the label string).
@@ -159,8 +164,8 @@ def print_skill_list(skills: list[Skill]) -> None:
     width = max(len(skill.name) for skill in skills)
     for skill in skills:
         summary = skill.description.split("\n", 1)[0]
-        pad = " " * (width - len(skill.name) + 2)
-        line = Text.assemble(Text(skill.name, style="cyan"), Text(pad + summary, "dim"))
+        gap = _column_gap(skill.name, width)
+        line = Text.assemble(Text(skill.name, style="cyan"), Text(gap + summary, "dim"))
         out.print(line, no_wrap=True, overflow="ellipsis")
 
 
@@ -242,8 +247,8 @@ def _format_examples(rows: list[tuple[str, str]]) -> str:
     width = max(len(command) for command, _ in rows)
     lines = ["[bold green]Examples:[/bold green]"]
     for command, comment in rows:
-        pad = " " * (width - len(command) + 2)
-        lines.append(f"  [cyan]{command}[/cyan]{pad}[dim]# {comment}[/dim]")
+        gap = _column_gap(command, width)
+        lines.append(f"  [cyan]{command}[/cyan]{gap}[dim]# {comment}[/dim]")
     return "\n".join(lines)
 
 
