@@ -93,12 +93,9 @@ def _print_status_section(
     for hunk in hunks:
         by_file[hunk.file].append(hunk)
     for i, (filepath, file_hunks) in enumerate(by_file.items()):
-        if show_hunks:
-            _print_file_group(out, filepath, file_hunks, color=color)
-            if i < len(by_file) - 1:
-                out.print()
-        else:
-            out.print(f"[{color}]{escape(_safe(filepath))}[/{color}]")
+        _print_file_group(out, filepath, file_hunks if show_hunks else [], color=color)
+        if show_hunks and i < len(by_file) - 1:
+            out.print()
 
 
 def print_hunk_list(hunks: list[Hunk]) -> None:
