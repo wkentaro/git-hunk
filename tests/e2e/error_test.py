@@ -36,6 +36,30 @@ def test_help(cli: GitHunkCLI) -> None:
     assert "git-hunk stage d161935" in r.stderr
 
 
+def test_version_short_circuits_subcommand(cli: GitHunkCLI) -> None:
+    cli.repo.write_file("f.py", "one\n")
+    cli.repo.git("add", ".")
+    cli.repo.git("commit", "-m", "init")
+    cli.repo.write_file("f.py", "CHANGED\n")
+
+    r = cli.run("-V", "list")
+    assert r.returncode == 0
+    assert "git-hunk" in r.stderr
+    assert "f.py" not in r.stdout
+
+
+def test_help_short_circuits_subcommand(cli: GitHunkCLI) -> None:
+    cli.repo.write_file("f.py", "one\n")
+    cli.repo.git("add", ".")
+    cli.repo.git("commit", "-m", "init")
+    cli.repo.write_file("f.py", "CHANGED\n")
+
+    r = cli.run("-h", "stage", "f.py")
+    assert r.returncode == 0
+    assert "Examples:" in r.stderr
+    assert cli.repo.git("diff", "--cached").strip() == ""
+
+
 def test_unknown_command(cli: GitHunkCLI) -> None:
     r = cli.run("bogus")
     assert r.returncode != 0
