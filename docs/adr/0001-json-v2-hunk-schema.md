@@ -73,7 +73,7 @@ mode-only one (both have empty bodies). Do not infer binary-ness from an empty b
 
 `header`: for a text hunk, the **bare** `@@ -a,b +c,d @@` range with git's trailing
 section heading stripped (#50). The section heading lives only in `context_before`.
-For a whole-file hunk (binary or mode-only — no `@@` range), `header` is `null`.
+For a whole-file hunk (binary, mode-only, or type change — no `@@` range), `header` is `null`.
 
 The internal `Hunk.diff` attribute used to build patches for `git apply` keeps git's
 original `@@` line **verbatim** (including the section heading); only the JSON `header`
