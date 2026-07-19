@@ -40,9 +40,8 @@ argument could be both.
 
 `git-hunk commit <id|file> ... -m "type: msg"` collapses steps 3-4 (stage one
 group, then commit it) into a single call. It aborts if anything is already
-staged, so the commit holds exactly the selected hunks; use the separate `stage`
-
-- `git commit` when you want to inspect the staged diff in between.
+staged, so the commit holds exactly the selected hunks; use the separate
+`stage` + `git commit` when you want to inspect the staged diff in between.
 
 ## Quickstart
 
