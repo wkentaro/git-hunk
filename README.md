@@ -209,8 +209,9 @@ renaming, removing, or changing the type of an existing field bumps it. (Before
 3. For staging: reconstructs a minimal patch and pipes it through `git apply --cached`
 4. For discarding: reconstructs a reverse patch and applies it to the working tree
 
-IDs are stable across partial staging -- they are derived from the changed lines,
-not the `@@` line numbers that shift as you stage hunks.
+IDs are derived from the changed lines, not the `@@` line numbers that shift as
+you stage other hunks -- so an unrelated hunk keeps its id, while staging only
+part of a hunk gives the leftover a new one.
 
 ## Contributing
 

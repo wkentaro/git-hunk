@@ -59,5 +59,8 @@ and this project adheres to
   surfaces an untracked `foo.py` instead of silently dropping it, and path
   arguments resolve consistently across `list`/`stage`/`unstage`/`discard`
   regardless of the platform's path separator (#95).
+- Correct the skill guide and README's claim that a partially staged hunk's
+  leftover keeps the same id, so the guide now says to re-run `git-hunk list` to
+  get the leftover's new id (#149).
 
 [unreleased]: https://github.com/wkentaro/git-hunk/compare/v0.2.0...HEAD
