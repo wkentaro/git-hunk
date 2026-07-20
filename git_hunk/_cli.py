@@ -112,7 +112,7 @@ def _find_hunks_by_ids(hunks: list[Hunk], ids: list[str]) -> list[Hunk]:
     for hunk_id in ids:
         if not hunk_id.strip():
             raise CliError("hunk id must not be empty or whitespace")
-        matches = [h for h in hunks if h.id.startswith(hunk_id)]
+        matches = [h for h in hunks if h.id.startswith(hunk_id.lower())]
         if len(matches) == 0:
             available = [h.id for h in hunks]
             tip = f"available hunk ids: {', '.join(available)}" if available else None
@@ -146,7 +146,7 @@ def _select_hunks(hunks: list[Hunk], args: list[str]) -> list[Hunk]:
         path = _normalize_path_arg(arg)
         if path in files:
             matches = [h for h in hunks if h.file == path]
-        elif re.fullmatch(r"[0-9a-f]+", arg):
+        elif re.fullmatch(r"[0-9a-fA-F]+", arg):
             matches = _find_hunks_by_ids(hunks, [arg])
         else:
             raise CliError(
