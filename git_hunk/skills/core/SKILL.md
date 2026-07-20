@@ -24,8 +24,9 @@ git commit -m "type: msg"     # 4. commit it
 git-hunk list                 # 5. repeat until nothing is left behind
 ```
 
-IDs are content-based hashes. They're stable across partial staging and support
-prefix matching, so a 7-char prefix like `d161935` is enough.
+IDs are content-based hashes and support prefix matching, so a 7-char prefix like
+`d161935` is enough. They stay stable as you stage other hunks in the file, but
+staging only part of a hunk gives the leftover a new id.
 
 `stage`, `unstage`, and `discard` also accept a file path as shorthand for every
 hunk in that file, so you don't have to enumerate IDs:
@@ -104,8 +105,9 @@ git-hunk stage d161935 -l ^3,^5-7   # include everything except lines 3 and 5-7
 ```
 
 Line numbers are the 1-based positions shown by `git-hunk show <id>`. After a
-partial stage, the rest of the hunk stays in the working tree with the same ID;
-stage it into a later commit, or drop it.
+partial stage, the leftover stays in the working tree under a new id (the id
+hashes the hunk body, which the partial stage changed); re-run `git-hunk list`
+to get that id before staging the leftover into a later commit or dropping it.
 
 Select by content instead of line number with `--include-matching` /
 `--exclude-matching` (no `show` round trip, and stable if the hunk shifts):

@@ -95,7 +95,7 @@ def strip_trailing_empty_lines(lines: list[str]) -> list[str]:
 
 
 def _body_id(filepath: str, diff_content: str) -> str:
-    """Stable across partial staging: ignores @@ headers that shift."""
+    """Ignore @@ line numbers so a hunk's id survives other hunks being staged."""
     body = "\n".join(
         line for line in diff_content.split("\n") if not line.startswith("@@")
     )
@@ -111,7 +111,7 @@ def _full_id(filepath: str, diff_content: str) -> str:
 
 
 def _with_stable_ids(hunks: list[Hunk]) -> list[Hunk]:
-    # Pass 1: body-only IDs (stable across staging).
+    # Pass 1: body-only IDs, stable while other hunks are staged.
     # Pass 2: for colliding IDs, upgrade to full IDs to disambiguate.
     with_body_ids = [replace(h, id=_body_id(h.file, h.diff)) for h in hunks]
 
