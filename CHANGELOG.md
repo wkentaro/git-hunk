@@ -81,5 +81,7 @@ and this project adheres to
   (#107).
 - Show a `Usage:` hint on the `--staged`/`--unstaged` conflict error for `list`
   and `show`, matching every other conflicting-flags error (#117).
+- Match hunk ids case-insensitively, so an uppercased id like `git-hunk show 713B7B9` resolves like git's own object-id lookup instead of failing with a
+  misleading "not found" / "no changed file matches" error (#150).
 
 [unreleased]: https://github.com/wkentaro/git-hunk/compare/v0.2.0...HEAD

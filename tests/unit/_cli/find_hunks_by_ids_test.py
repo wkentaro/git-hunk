@@ -34,6 +34,13 @@ def test_multiple_ids_resolve_in_order(hunks: list[Hunk]) -> None:
     assert _find_hunks_by_ids(hunks, ["ab12", "ab34"]) == [hunks[0], hunks[1]]
 
 
+@pytest.mark.parametrize("query", ["AB12", "Ab12", "AB12CD0"])
+def test_uppercase_prefix_resolves_case_insensitively(
+    hunks: list[Hunk], query: str
+) -> None:
+    assert _find_hunks_by_ids(hunks, [query]) == [hunks[0]]
+
+
 def test_ambiguous_prefix_raises_with_matches_tip(hunks: list[Hunk]) -> None:
     with pytest.raises(CliError) as exc_info:
         _find_hunks_by_ids(hunks, ["ab"])
