@@ -35,6 +35,10 @@ def _safe(text: str) -> str:
     return text.encode("utf-8", errors="backslashreplace").decode("utf-8")
 
 
+def _safe_escape(text: str) -> str:
+    return escape(_safe(text))
+
+
 def _whole_file_label(hunk: Hunk) -> str:
     # Human label for a hunk with no @@ range, derived from its typed fields
     # (the data layer no longer stores the label string).
@@ -75,7 +79,7 @@ def _print_hunk_line(out: Console, hunk: Hunk) -> None:
 def _print_file_group(
     out: Console, filepath: str, file_hunks: list[Hunk], *, color: str
 ) -> None:
-    out.print(f"[{color}]{escape(_safe(filepath))}[/{color}]")
+    out.print(f"[{color}]{_safe_escape(filepath)}[/{color}]")
     for hunk in file_hunks:
         _print_hunk_line(out, hunk)
 
@@ -98,7 +102,7 @@ def _print_status_section(
             if i < len(by_file) - 1:
                 out.print()
         else:
-            out.print(f"[{color}]{escape(_safe(filepath))}[/{color}]")
+            out.print(f"[{color}]{_safe_escape(filepath)}[/{color}]")
 
 
 def print_hunk_list(hunks: list[Hunk]) -> None:
@@ -129,7 +133,7 @@ def print_hunk_list(hunks: list[Hunk]) -> None:
 
 
 def _print_hunk_diff(out: Console, hunk: Hunk) -> None:
-    out.print(f"[bold]{escape(_safe(hunk.file))}[/bold]  [dim]{escape(hunk.id)}[/dim]")
+    out.print(f"[bold]{_safe_escape(hunk.file)}[/bold]  [dim]{escape(hunk.id)}[/dim]")
     if not hunk.diff:
         out.print(Text(_safe(_header_text(hunk)), style="dim"))
         return
@@ -205,9 +209,9 @@ def print_error(
     usage: str | None = None,
 ) -> None:
     err = _err()
-    err.print(f"[bold red]error[/bold red]: {escape(_safe(msg))}")
+    err.print(f"[bold red]error[/bold red]: {_safe_escape(msg)}")
     if tip:
-        err.print(f"\n  [green]tip[/green]: {escape(_safe(tip))}")
+        err.print(f"\n  [green]tip[/green]: {_safe_escape(tip)}")
     if usage:
         err.print(f"\n{usage}")
         err.print("\nFor more information, try '[bold cyan]--help[/bold cyan]'.")
