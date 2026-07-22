@@ -218,10 +218,11 @@ def print_version(version: str) -> None:
 
 
 _LINE_OPT_ROW = """\
-  [bold cyan]-l[/bold cyan] [cyan]<lines>[/cyan]  Select specific lines within a hunk (requires exactly one hunk)
+  [bold cyan]-l[/bold cyan] [cyan]<lines>[/cyan]  Select specific lines within a hunk
              e.g.: -l 3,5-7  (include)   -l ^3,^5-7  (exclude)
   [bold cyan]--include-matching[/bold cyan] [cyan]<pattern>[/cyan]  Select changed lines containing <pattern> (repeatable, OR'd)
   [bold cyan]--exclude-matching[/bold cyan] [cyan]<pattern>[/cyan]  Select every changed line except those matching (repeatable, OR'd)
+             Line selection (-l, --include-matching, --exclude-matching) requires exactly one hunk.
   [bold cyan]--regex[/bold cyan]    Treat matching patterns as regular expressions (default: literal substring)"""  # noqa: E501
 
 _LINE_OPTS = f"""\

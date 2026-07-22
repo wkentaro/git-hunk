@@ -59,5 +59,9 @@ and this project adheres to
   surfaces an untracked `foo.py` instead of silently dropping it, and path
   arguments resolve consistently across `list`/`stage`/`unstage`/`discard`
   regardless of the platform's path separator (#95).
+- Scope the "requires exactly one hunk" note in `--help` to all line-selection
+  options, so `--include-matching` / `--exclude-matching` no longer read as
+  working across multiple hunks when they share the same single-hunk
+  constraint as `-l` (#155).
 
 [unreleased]: https://github.com/wkentaro/git-hunk/compare/v0.2.0...HEAD
