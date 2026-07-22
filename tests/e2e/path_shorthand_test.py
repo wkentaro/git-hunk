@@ -100,6 +100,14 @@ def test_line_selection_rejected_for_multi_hunk_path(
     assert "exactly one hunk" in r.stderr
 
 
+def test_matching_selection_rejected_for_multi_hunk_path(
+    multi_hunk_repo: GitHunkCLI,
+) -> None:
+    r = multi_hunk_repo.run("stage", "big.py", "--include-matching", "L")
+    assert r.returncode != 0
+    assert "exactly one hunk" in r.stderr
+
+
 def test_unknown_path_errors_clearly(multi_hunk_repo: GitHunkCLI) -> None:
     # A non-hex argument can only be a path, so the error names the file.
     r = multi_hunk_repo.run("stage", "does-not-exist.py")
