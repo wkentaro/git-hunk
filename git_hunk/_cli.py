@@ -3,6 +3,7 @@ import os
 import posixpath
 import re
 import stat
+from collections.abc import Callable
 from dataclasses import dataclass
 from dataclasses import replace
 from typing import Final
@@ -373,11 +374,22 @@ def _collect_hunks(
     return hunks
 
 
+def _add_status_json_options(
+    command: Callable[..., None],
+) -> Callable[..., None]:
+    options = [
+        click.option("--staged", is_flag=True),
+        click.option("--unstaged", is_flag=True),
+        click.option("--json", "force_json", is_flag=True),
+        click.option("-h", "--help", "show_help", is_flag=True),
+    ]
+    for option in reversed(options):
+        command = option(command)
+    return command
+
+
 @cli.command("list", add_help_option=False)
-@click.option("--staged", is_flag=True)
-@click.option("--unstaged", is_flag=True)
-@click.option("--json", "force_json", is_flag=True)
-@click.option("-h", "--help", "show_help", is_flag=True)
+@_add_status_json_options
 @click.argument("files", nargs=-1)
 def cmd_list(
     staged: bool,
@@ -410,10 +422,7 @@ def cmd_list(
 
 
 @cli.command("show", add_help_option=False)
-@click.option("--staged", is_flag=True)
-@click.option("--unstaged", is_flag=True)
-@click.option("--json", "force_json", is_flag=True)
-@click.option("-h", "--help", "show_help", is_flag=True)
+@_add_status_json_options
 @click.argument("ids", nargs=-1)
 def cmd_show(
     staged: bool,
