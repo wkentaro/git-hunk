@@ -47,8 +47,8 @@ and this project adheres to
   renders verbatim instead of being swallowed as markup (#14).
 - Reject empty or whitespace-only hunk ids, and report malformed `-l` ranges
   with a readable error (#15).
-- Constrain the source distribution to the package, tests, and metadata so it
-  no longer ships unrelated `tmp/` files (#16).
+- Constrain the source distribution to the package and metadata so it no longer
+  ships unrelated `tmp/` files (#16).
 - Split the no-newline last line when partial line-staging (`-l`) gives it a
   trailing newline, so staging only the addition no longer merges it with the
   added line and corrupts the file (#54).
