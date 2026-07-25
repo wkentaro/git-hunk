@@ -122,3 +122,24 @@ def test_show_renders_no_newline_marker_unnumbered(cli: GitHunkCLI) -> None:
     assert marker_line.strip() == NO_NEWLINE_MARKER
 
     assert "+cX" in r.stdout
+
+
+def test_show_puts_exactly_one_rule_between_consecutive_hunks(
+    cli: GitHunkCLI,
+) -> None:
+    # The rule divides hunks, so it appears between them and never leads the
+    # output: N hunks render N-1 rules. Three files rather than two, so that a
+    # rule firing once and never again stays distinguishable from the contract.
+    paths = ["a.py", "b.py", "c.py"]
+    for path in paths:
+        cli.repo.write_file(path, "old\n")
+    cli.repo.git("add", ".")
+    cli.repo.git("commit", "-m", "init")
+    for path in paths:
+        cli.repo.write_file(path, "new\n")
+
+    lines = cli.run_ok("show").splitlines()
+    rules = [i for i, line in enumerate(lines) if set(line.strip()) == {"─"}]
+    headers = [i for i, line in enumerate(lines) if line.split(" ")[0] in paths]
+    assert len(rules) == len(paths) - 1
+    assert headers[0] < rules[0] < headers[1] < rules[1] < headers[2]

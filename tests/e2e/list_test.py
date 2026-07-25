@@ -272,3 +272,20 @@ def test_list_context_before_field_in_json_matches_display(cli: GitHunkCLI) -> N
     assert hunks[0]["context_before"] == {"text": "def foo():"}
     # Parity: the field equals the function context shown in the human display.
     assert "def foo():" in cli.run_ok("list")
+
+
+def test_list_plaintext_untracked_paths_are_not_separated_by_blank_lines(
+    cli: GitHunkCLI,
+) -> None:
+    # The tracked sections put a blank line between file groups; the untracked
+    # section is a flat inventory instead, so its paths stay consecutive.
+    cli.repo.write_file("f.py", "init\n")
+    cli.repo.git("add", ".")
+    cli.repo.git("commit", "-m", "init")
+
+    cli.repo.write_file("a.py", "new\n")
+    cli.repo.write_file("b.py", "new\n")
+
+    blocks = cli.run_ok("list").strip("\n").split("\n\n")
+    assert len(blocks) == 1
+    assert blocks[0].splitlines() == ["untracked:", "a.py", "b.py"]
