@@ -256,6 +256,23 @@ def test_list_plaintext_blank_lines_separate_sections_and_file_groups(
     assert "b.py" in blocks[2]
 
 
+def test_list_plaintext_untracked_section_lists_bare_paths(cli: GitHunkCLI) -> None:
+    # An untracked entry carries no addressable id, so its section is inventory
+    # only: one bare path per file, never a hunk line (which would render an
+    # empty id and a bogus "Mode None -> 100644" label).
+    cli.repo.write_file("f.py", "init\n")
+    cli.repo.git("add", ".")
+    cli.repo.git("commit", "-m", "init")
+
+    cli.repo.write_file("f.py", "changed\n")
+    cli.repo.write_file("untracked.py", "new\n")
+
+    blocks = cli.run_ok("list").strip("\n").split("\n\n")
+    assert len(blocks) == 2
+    assert blocks[0].startswith("unstaged:")
+    assert blocks[1].splitlines() == ["untracked:", "untracked.py"]
+
+
 def test_list_context_before_field_in_json_matches_display(cli: GitHunkCLI) -> None:
     body = ["def foo():"] + [f"    x{i} = {i}" for i in range(8)]
     cli.repo.write_file("f.py", "\n".join(body) + "\n")
