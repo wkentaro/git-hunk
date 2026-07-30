@@ -24,6 +24,10 @@ and this project adheres to
   (literal substring by default, `--regex` for regular expressions; repeatable
   and OR'd), so an agent can drop a line by what it contains without a
   `show` round trip (#55).
+- `commits` skill (`git-hunk skills get commits`) covering how to group hunks
+  into commits, order them, and write conventional commit messages, kept
+  separate from `core` so a project that already defines its own commit
+  conventions can load `core` alone.
 
 ### Changed
 
@@ -31,6 +35,10 @@ and this project adheres to
   `{"schema_version": 1, "hunks": [...]}`, instead of a bare array, so consumers
   can depend on a documented, versioned shape (#23).
 - README image paths are rewritten to absolute URLs so they render on PyPI.
+- The `core` skill documents the tool only. Guidance on grouping commits,
+  ordering them, and formatting their messages moved to the new `commits`
+  skill, so a project's own conventions apply unless that skill is loaded
+  too.
 
 ### Fixed
 

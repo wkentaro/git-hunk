@@ -40,6 +40,12 @@ def test_get_json(cli: GitHunkCLI) -> None:
     assert "## The core loop" in skills[0]["content"]
 
 
+def test_get_concatenates_multiple_skills(cli: GitHunkCLI) -> None:
+    out = cli.run_ok("skills", "get", "core", "commits")
+    assert "name: core" in out
+    assert "name: commits" in out
+
+
 def test_get_unknown_skill_errors(cli: GitHunkCLI) -> None:
     result = cli.run("skills", "get", "nope")
     assert result.returncode == 1
