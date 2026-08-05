@@ -77,6 +77,30 @@ def test_help_short_circuits_subcommand(cli: GitHunkCLI) -> None:
     assert cli.repo.git("diff", "--cached").strip() == ""
 
 
+def test_commit_help_omits_unsupported_matching_options(cli: GitHunkCLI) -> None:
+    r = cli.run("commit", "--help")
+    assert r.returncode == 0
+    assert "-m" in r.stderr
+    assert "-l" in r.stderr
+    assert "--include-matching" not in r.stderr
+    assert "--exclude-matching" not in r.stderr
+    assert "--regex" not in r.stderr
+
+
+def test_commit_rejects_matching_options(cli: GitHunkCLI) -> None:
+    r = cli.run("commit", "d161935", "--include-matching", "x", "-m", "msg")
+    assert r.returncode != 0
+
+
+def test_stage_help_advertises_matching_options(cli: GitHunkCLI) -> None:
+    r = cli.run("stage", "--help")
+    assert r.returncode == 0
+    assert "-l" in r.stderr
+    assert "--include-matching" in r.stderr
+    assert "--exclude-matching" in r.stderr
+    assert "--regex" in r.stderr
+
+
 def test_unknown_command(cli: GitHunkCLI) -> None:
     r = cli.run("bogus")
     assert r.returncode != 0
