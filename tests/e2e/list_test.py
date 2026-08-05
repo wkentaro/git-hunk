@@ -221,6 +221,16 @@ def test_empty_new_file_is_not_a_bogus_mode_hunk(cli: GitHunkCLI) -> None:
     assert "Mode None" not in cli.run_ok("list", "--staged")
 
 
+def test_no_hunks_message_goes_to_stderr(cli: GitHunkCLI) -> None:
+    cli.repo.write_file("f.py", "x\n")
+    cli.repo.git("add", ".")
+    cli.repo.git("commit", "-m", "init")
+
+    r = cli.run("list")
+    assert r.returncode == 0
+    assert "No hunks." in r.stderr
+
+
 def test_list_unstaged_filter(cli: GitHunkCLI) -> None:
     cli.repo.write_file("f.py", "old\n")
     cli.repo.git("add", ".")

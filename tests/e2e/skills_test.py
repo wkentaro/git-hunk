@@ -116,11 +116,13 @@ def test_list_rejects_arguments(cli: GitHunkCLI) -> None:
     assert "takes no arguments" in result.stderr
 
 
-def test_list_empty_skills_dir_exits_zero(
+def test_list_empty_skills_dir_exits_zero_and_says_no_skills(
     cli: GitHunkCLI, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     monkeypatch.setenv("GIT_HUNK_SKILLS_DIR", str(tmp_path))
-    assert cli.run("skills", "list").returncode == 0
+    r = cli.run("skills", "list")
+    assert r.returncode == 0
+    assert "No skills." in r.stderr
     assert cli.run_json("skills", "list", "--json") == []
 
 
