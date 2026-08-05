@@ -51,6 +51,15 @@ stale:
 git-hunk skills get core
 ```
 
+`core` covers the tool itself. A separate `logical-commits` skill covers how to
+group hunks into commits and order them; it is optional, so a project that
+already defines its own commit conventions can load `core` alone:
+
+```bash
+git-hunk skills                           # list available skills
+git-hunk skills get core logical-commits  # load both
+```
+
 `git-hunk --help` points here first.
 
 ## Quick start

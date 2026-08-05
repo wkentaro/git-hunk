@@ -288,6 +288,7 @@ _EXAMPLES_COMMIT: Final = [
 _EXAMPLES_SKILLS: Final = [
     ("git-hunk skills", "List available skills"),
     ("git-hunk skills get core", "Load the core usage guide"),
+    ("git-hunk skills get core logical-commits", "Load several skills at once"),
     ("git-hunk skills path", "Print the skills directory path"),
 ]
 _EXAMPLES_ALL: Final = (
