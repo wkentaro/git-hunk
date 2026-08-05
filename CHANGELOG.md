@@ -110,5 +110,9 @@ and this project adheres to
 - Report a git failure while checking for already-staged changes in `commit`
   (e.g. a corrupt index) as a clean `error:` message instead of crashing with a
   raw Python traceback (#124).
+- Scope the "requires exactly one hunk" note in `--help` to all line-selection
+  options, so `--include-matching` / `--exclude-matching` no longer read as
+  working across multiple hunks when they share the same single-hunk
+  constraint as `-l` (#155).
 
 [unreleased]: https://github.com/wkentaro/git-hunk/compare/v0.2.0...HEAD

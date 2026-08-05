@@ -219,14 +219,21 @@ def print_version(version: str) -> None:
     _err().print(f"git-hunk [dim]{version}[/dim]")
 
 
-_LINE_SELECT_ROW = """\
+_LINE_SELECT_EXAMPLE = """\
+             e.g.: -l 3,5-7  (include)   -l ^3,^5-7  (exclude)"""
+
+# `commit` accepts -l as its only line-selection option, so the constraint rides
+# on the -l row itself; the multi-option block below states it once for the group.
+_LINE_SELECT_ROW = f"""\
   [bold cyan]-l[/bold cyan] [cyan]<lines>[/cyan]  Select specific lines within a hunk (requires exactly one hunk)
-             e.g.: -l 3,5-7  (include)   -l ^3,^5-7  (exclude)"""  # noqa: E501
+{_LINE_SELECT_EXAMPLE}"""  # noqa: E501
 
 _LINE_OPT_ROW = f"""\
-{_LINE_SELECT_ROW}
+  [bold cyan]-l[/bold cyan] [cyan]<lines>[/cyan]  Select specific lines within a hunk
+{_LINE_SELECT_EXAMPLE}
   [bold cyan]--include-matching[/bold cyan] [cyan]<pattern>[/cyan]  Select changed lines containing <pattern> (repeatable, OR'd)
   [bold cyan]--exclude-matching[/bold cyan] [cyan]<pattern>[/cyan]  Select every changed line except those matching (repeatable, OR'd)
+             Line selection (-l, --include-matching, --exclude-matching) requires exactly one hunk.
   [bold cyan]--regex[/bold cyan]    Treat matching patterns as regular expressions (default: literal substring)"""  # noqa: E501
 
 _LINE_OPTS = f"""\
