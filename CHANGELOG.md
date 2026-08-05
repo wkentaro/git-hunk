@@ -73,5 +73,8 @@ and this project adheres to
   (#145).
 - Report a clean `error:` message instead of a raw `FileNotFoundError`
   traceback when the `git` executable is not found on `PATH` (#122).
+- Report a git failure on a bad path argument (e.g. `git-hunk list ':(bogus)x'`)
+  as a clean `error:` message instead of crashing with a raw Python traceback
+  (#107).
 
 [unreleased]: https://github.com/wkentaro/git-hunk/compare/v0.2.0...HEAD
