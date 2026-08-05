@@ -192,15 +192,16 @@ def _extract_context_before(header: str) -> str | None:
     return match.group(1).strip() or None
 
 
-def _whole_file_hunk(
+def whole_file_hunk(
     filepath: str,
     *,
     change_kind: str,
     a_mode: str | None,
     b_mode: str | None,
     binary: bool,
+    status: str = "unstaged",
 ) -> Hunk:
-    """A change applied by staging the whole file (binary, mode-only, type)."""
+    """A change applied by staging the whole file (binary, mode-only, type, new)."""
     return Hunk(
         id="",
         file=filepath,
@@ -213,6 +214,7 @@ def _whole_file_hunk(
         additions=0,
         deletions=0,
         diff="",
+        status=status,
     )
 
 
@@ -267,7 +269,7 @@ def parse_diff(diff_output: str) -> list[Hunk]:
             next_kind, _, new_b_mode = _block_modes(next_diff)
             if next_kind == "A" and extract_file_path(next_diff) == filepath:
                 hunks.append(
-                    _whole_file_hunk(
+                    whole_file_hunk(
                         filepath,
                         change_kind="T",
                         a_mode=a_mode,
@@ -280,7 +282,7 @@ def parse_diff(diff_output: str) -> list[Hunk]:
 
         if _is_binary(file_diff):
             hunks.append(
-                _whole_file_hunk(
+                whole_file_hunk(
                     filepath,
                     change_kind=change_kind,
                     a_mode=a_mode,
@@ -299,7 +301,7 @@ def parse_diff(diff_output: str) -> list[Hunk]:
             # no @@ body) is left out, matching git-hunk's prior behavior.
             if change_kind == "M" and a_mode != b_mode:
                 hunks.append(
-                    _whole_file_hunk(
+                    whole_file_hunk(
                         filepath,
                         change_kind=change_kind,
                         a_mode=a_mode,
