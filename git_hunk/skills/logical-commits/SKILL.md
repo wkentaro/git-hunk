@@ -1,9 +1,9 @@
 ---
-name: commits
+name: logical-commits
 description: How to group hunks into commits, order them so each is independently valid, and write conventional commit messages. Use when the user asks how to split a pile of changes into commits and has no convention of their own.
 ---
 
-# git-hunk commits
+# git-hunk logical commits
 
 Judgment guidance for splitting changes into commits. The mechanics of
 inspecting and staging hunks are in the `core` skill; this skill covers only
