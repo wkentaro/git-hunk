@@ -4,11 +4,12 @@
 
 - **Hunk** — the atomic, addressable unit of git-hunk. A contiguous change a user can
   `stage` / `show` / `discard` by `id`. Usually one `@@` section of a unified diff; for
-  binary or mode-only changes it is a synthetic **whole-file hunk** (no `@@` range). The
-  top-level object in `--json` (the tool is hunk-centric, not file-centric).
+  binary, mode-only, or type changes it is a synthetic **whole-file hunk** (no `@@` range).
+  The top-level object in `--json` (the tool is hunk-centric, not file-centric).
 
-- **Whole-file hunk** — a hunk with no `@@` text range: a binary change, or a mode-only
-  (chmod) change. Has `header: null` and (in `show --json`) `lines: []`.
+- **Whole-file hunk** — a hunk with no `@@` text range: a binary change, a mode-only
+  (chmod) change, or a type change (e.g. file ↔ symlink). Has `header: null` and (in
+  `show --json`) `lines: []`.
 
 - **change_kind** — the git status letter for the hunk's file: `A` added, `D` deleted,
   `M` modified, `T` typechange. Always present. `R` (rename) / `C` (copy) are reserved,
