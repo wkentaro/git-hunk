@@ -97,5 +97,8 @@ and this project adheres to
   restoring "from HEAD" when it restores from the index: discarding an unstaged
   hunk reverts it to the staged content, leaving a staged sibling edit intact
   (#109).
+- Correct the skill guide and README's claim that a partially staged hunk's
+  leftover keeps the same id, so the guide now says to re-run `git-hunk list` to
+  get the leftover's new id (#149).
 
 [unreleased]: https://github.com/wkentaro/git-hunk/compare/v0.2.0...HEAD
