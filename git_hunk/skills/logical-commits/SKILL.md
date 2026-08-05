@@ -1,6 +1,7 @@
 ---
 name: logical-commits
 description: Group hunks into logical commits, one logical change per commit, ordered so each commit is independently valid, with a message that describes that one change. Use when splitting a pile of changes into commits in a project with no commit conventions of its own.
+allowed-tools: Bash(git-hunk:*), Bash(git:*)
 ---
 
 # git-hunk logical commits
