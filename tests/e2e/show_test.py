@@ -18,6 +18,21 @@ def test_show_hunk_by_full_id(cli: GitHunkCLI) -> None:
     assert "+new" in r.stdout
 
 
+def test_show_hunk_by_uppercase_id(cli: GitHunkCLI) -> None:
+    cli.repo.write_file("f.py", "old\n")
+    cli.repo.git("add", ".")
+    cli.repo.git("commit", "-m", "init")
+    cli.repo.write_file("f.py", "new\n")
+
+    hunks = cli.run_list_json("list", "--json")
+    hunk_id = hunks[0]["id"]
+
+    r = cli.run("show", hunk_id.upper())
+    assert r.returncode == 0
+    assert "-old" in r.stdout
+    assert "+new" in r.stdout
+
+
 def test_show_hunk_by_prefix(cli: GitHunkCLI) -> None:
     cli.repo.write_file("f.py", "old\n")
     cli.repo.git("add", ".")

@@ -24,6 +24,19 @@ def test_stage_single_hunk(cli: GitHunkCLI) -> None:
     assert "CHANGED18" in unstaged
 
 
+def test_stage_hunk_by_uppercase_id(cli: GitHunkCLI) -> None:
+    cli.repo.write_file("f.py", "old\n")
+    cli.repo.git("add", ".")
+    cli.repo.git("commit", "-m", "init")
+    cli.repo.write_file("f.py", "new\n")
+
+    hunks = cli.run_list_json("list", "--json")
+    cli.run_ok("stage", hunks[0]["id"].upper())
+
+    staged = cli.repo.git("diff", "--cached")
+    assert "+new" in staged
+
+
 def test_stage_multiple_hunks(cli: GitHunkCLI) -> None:
     lines = [f"line{i}" for i in range(1, 21)]
     cli.repo.write_file("f.py", "\n".join(lines) + "\n")
