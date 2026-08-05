@@ -100,5 +100,9 @@ and this project adheres to
 - Correct the skill guide and README's claim that a partially staged hunk's
   leftover keeps the same id, so the guide now says to re-run `git-hunk list` to
   get the leftover's new id (#149).
+- Correct the README JSON table and skill docs, which described every listed
+  hunk as carrying a usable `id`: an `untracked` entry's `id` is empty, so no
+  git-hunk command can address it, and plain `list` renders it as a bare path
+  (#162).
 
 [unreleased]: https://github.com/wkentaro/git-hunk/compare/v0.2.0...HEAD

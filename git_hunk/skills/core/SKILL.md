@@ -159,11 +159,15 @@ git-hunk discard d161935 --dry-run   # preview the restore, change nothing
 ## Reading the output
 
 In `list` (see Quickstart), hunks group under `staged`, `unstaged`, and
-`untracked` (new files git isn't tracking yet). Each hunk line is `id`, the `@@`
-header with its enclosing context, then `+N -N`. A binary, mode-only, or type
-change has no `@@` line; it shows a `Binary file (modified|added|deleted)`,
-`Mode <old> -> <new>`, or `Type change (<old> -> <new>)` label instead and is
-staged whole (no `-l`).
+`untracked` (new files git isn't tracking yet). Each staged or unstaged hunk
+line is `id`, the `@@` header with its enclosing context, then `+N -N`. A binary,
+mode-only, or type change has no `@@` line; it shows a
+`Binary file (modified|added|deleted)`, `Mode <old> -> <new>`, or
+`Type change (<old> -> <new>)` label instead and is staged whole (no `-l`).
+
+The `untracked` group is inventory only: it lists bare paths, and an untracked
+file has no hunk id (`""` in `--json`), so no git-hunk command can address it.
+Stage those with `git add <file>`.
 
 ## Useful flags
 
