@@ -12,7 +12,9 @@ each a stable ID, and stage them in deliberate groups so a pile of unrelated
 changes becomes a clean series of focused commits.
 
 The hard part is judgment, not commands: deciding what belongs in which commit
-and in what order.
+and in what order. If the project has no commit conventions of its own, load
+the `logical-commits` skill (`git-hunk skills get logical-commits`) for that
+judgment.
 
 ## The core loop
 
