@@ -92,6 +92,23 @@ def test_show_no_args_shows_all(cli: GitHunkCLI) -> None:
     assert "+unstaged" in r.stdout
 
 
+def test_show_excludes_untracked_files_that_list_includes(cli: GitHunkCLI) -> None:
+    cli.repo.write_file("tracked.py", "old\n")
+    cli.repo.git("add", ".")
+    cli.repo.git("commit", "-m", "init")
+    cli.repo.write_file("tracked.py", "new\n")
+    cli.repo.write_file("fresh.py", "fresh\n")
+
+    listed = cli.run_list_json("list", "--json")
+    untracked = [h for h in listed if h["status"] == "untracked"]
+    assert [h["file"]["text"] for h in untracked] == ["fresh.py"]
+
+    r = cli.run("show")
+    assert r.returncode == 0
+    assert "tracked.py" in r.stdout
+    assert "fresh.py" not in r.stdout
+
+
 def test_show_staged_and_unstaged_together_errors(cli: GitHunkCLI) -> None:
     cli.repo.write_file("f.py", "old\n")
     cli.repo.git("add", ".")

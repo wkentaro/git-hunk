@@ -16,7 +16,9 @@ class GitHunkCLI:
         self.repo = repo
 
     def run(self, *args: str) -> subprocess.CompletedProcess[str]:
-        runner = CliRunner()
+        # rich sizes its output from COLUMNS; pin it so the lines tests assert
+        # verbatim do not wrap when the suite runs in a narrow terminal.
+        runner = CliRunner(env={"COLUMNS": "200"})
         old_cwd = os.getcwd()
         try:
             os.chdir(self.repo.path)
