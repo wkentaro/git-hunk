@@ -1,5 +1,7 @@
 from pathlib import Path
 
+import pytest
+
 from .conftest import GitHunkCLI
 
 
@@ -78,6 +80,19 @@ def test_commit_requires_message(cli: GitHunkCLI) -> None:
 
     before = _commit_count(cli)
     r = cli.run("commit", _unstaged_ids(cli)[0])
+    assert r.returncode != 0
+    assert "message" in r.stderr
+    assert _commit_count(cli) == before
+    assert cli.repo.git("diff", "--cached").strip() == ""
+
+
+@pytest.mark.parametrize("message", ["", "   "], ids=["empty", "whitespace"])
+def test_commit_rejects_blank_message(cli: GitHunkCLI, message: str) -> None:
+    _init(cli, {"f.txt": "a\n"})
+    cli.repo.write_file("f.txt", "AAA\n")
+
+    before = _commit_count(cli)
+    r = cli.run("commit", _unstaged_ids(cli)[0], "-m", message)
     assert r.returncode != 0
     assert "message" in r.stderr
     assert _commit_count(cli) == before
