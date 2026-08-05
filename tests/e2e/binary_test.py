@@ -100,6 +100,34 @@ def test_stage_added_binary(cli: GitHunkCLI) -> None:
     assert cli.repo.git("diff", "--cached").strip() == ""
 
 
+def test_stage_and_unstage_text_and_binary_hunk_together(cli: GitHunkCLI) -> None:
+    # git-hunk's pitch is grouping hunks by intent, so a single command may mix a
+    # text hunk (applied via a patch) with a whole-file binary hunk (staged whole).
+    root = Path(cli.repo.path)
+    (root / "t.txt").write_text("hello\n")
+    (root / "a.bin").write_bytes(b"\x00\x01bin\xff")
+    cli.repo.git("add", ".")
+    cli.repo.git("commit", "-m", "init")
+    (root / "t.txt").write_text("hello\nworld\n")
+    (root / "a.bin").write_bytes(b"\x00\x02BIN\xfe")
+
+    unstaged = {
+        h["file"]["text"]: h for h in cli.run_list_json("list", "--unstaged", "--json")
+    }
+    cli.run_ok("stage", unstaged["t.txt"]["id"], unstaged["a.bin"]["id"])
+    assert sorted(cli.repo.git("diff", "--cached", "--name-only").split()) == [
+        "a.bin",
+        "t.txt",
+    ]
+    assert cli.repo.git("diff", "--name-only").strip() == ""
+
+    staged = {
+        h["file"]["text"]: h for h in cli.run_list_json("list", "--staged", "--json")
+    }
+    cli.run_ok("unstage", staged["t.txt"]["id"], staged["a.bin"]["id"])
+    assert cli.repo.git("diff", "--cached").strip() == ""
+
+
 @pytest.mark.skipif(
     sys.platform == "win32", reason="git does not track symlinks on Windows"
 )
