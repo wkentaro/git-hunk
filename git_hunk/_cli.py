@@ -311,9 +311,10 @@ def _run_patch_command(
 def cli(ctx: click.Context, show_help: bool, show_version: bool) -> None:
     if show_version:
         print_version(__version__)
-        return
+        ctx.exit()
     if show_help or ctx.invoked_subcommand is None:
         print_help(HELP)
+        ctx.exit()
 
 
 def _working_tree_mode(path: str) -> str:
