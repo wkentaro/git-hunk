@@ -25,8 +25,8 @@ and this project adheres to
   and OR'd), so an agent can drop a line by what it contains without a
   `show` round trip (#55).
 - `logical-commits` skill (`git-hunk skills get logical-commits`) covering how
-  to group hunks into commits, order them, and write conventional commit
-  messages, kept separate from `core` so a project that already defines its own
+  to group hunks into logical commits and order them so each is independently
+  valid, kept separate from `core` so a project that already defines its own
   commit conventions can load `core` alone (#178).
 
 ### Changed
@@ -35,10 +35,10 @@ and this project adheres to
   `{"schema_version": 1, "hunks": [...]}`, instead of a bare array, so consumers
   can depend on a documented, versioned shape (#23).
 - README image paths are rewritten to absolute URLs so they render on PyPI.
-- The `core` skill documents the tool only. Guidance on grouping commits,
-  ordering them, and formatting their messages moved to the new
-  `logical-commits` skill, so a project's own conventions apply unless that
-  skill is loaded too (#178).
+- The `core` skill documents the tool only. Guidance on grouping and ordering
+  commits moved to the new `logical-commits` skill, and the conventional-commits
+  message-format opinion is dropped entirely, so a project's own conventions
+  apply (#178).
 
 ### Fixed
 
