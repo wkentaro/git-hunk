@@ -10,6 +10,13 @@ def test_non_ascii_path_unquoted() -> None:
     assert extract_file_path("diff --git a/файл.txt b/файл.txt") == "файл.txt"
 
 
+def test_c_quoted_path_with_octal_escaped_control_char() -> None:
+    # ESC (0x1b) has no single-letter C escape, so git falls back to a 3-digit
+    # octal escape even under core.quotePath=false.
+    line = r'diff --git "a/f\033x.txt" "b/f\033x.txt"'
+    assert extract_file_path(line) == "f\x1bx.txt"
+
+
 def test_path_containing_b_slash_substring() -> None:
     line = "diff --git a/a b/c.txt b/a b/c.txt"
     assert extract_file_path(line) == "a b/c.txt"
