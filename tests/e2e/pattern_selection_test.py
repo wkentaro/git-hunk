@@ -168,3 +168,40 @@ def test_empty_include_matching_is_rejected(added_lines: GitHunkCLI) -> None:
     assert r.returncode != 0
     assert "empty match pattern" in r.stderr
     assert added_lines.repo.git("show", ":f.txt") == "keep\n"
+
+
+# `stage`, `unstage` and `discard` share one selection-flag validator, so the
+# rejections above must hold for the reverse verbs too.
+_conflicting_flags = pytest.mark.parametrize(
+    "flags, message",
+    [
+        (["-l", "2", "--include-matching", "DEBUG"], "choose one of"),
+        (
+            ["--include-matching", "DEBUG", "--exclude-matching", "FEATURE"],
+            "choose one of",
+        ),
+        (["--regex"], "--regex requires"),
+    ],
+    ids=["line-spec-and-include", "include-and-exclude", "regex-alone"],
+)
+
+
+@_conflicting_flags
+def test_unstage_rejects_conflicting_selection_flags(
+    added_lines: GitHunkCLI, flags: list[str], message: str
+) -> None:
+    added_lines.run_ok("stage", _only_id(added_lines, "--unstaged"))
+    r = added_lines.run("unstage", _only_id(added_lines, "--staged"), *flags)
+    assert r.returncode != 0
+    assert message in r.stderr
+    assert added_lines.repo.git("show", ":f.txt") == "keep\nDEBUG line\nFEATURE line\n"
+
+
+@_conflicting_flags
+def test_discard_rejects_conflicting_selection_flags(
+    added_lines: GitHunkCLI, flags: list[str], message: str
+) -> None:
+    r = added_lines.run("discard", _only_id(added_lines, "--unstaged"), *flags)
+    assert r.returncode != 0
+    assert message in r.stderr
+    assert _working(added_lines) == "keep\nDEBUG line\nFEATURE line\n"

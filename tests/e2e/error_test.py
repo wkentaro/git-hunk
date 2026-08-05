@@ -135,6 +135,40 @@ def test_empty_hunk_id_rejected(cli: GitHunkCLI) -> None:
     assert cli.repo.git("diff").strip() != ""
 
 
+@pytest.fixture
+def unstaged_change(cli: GitHunkCLI) -> GitHunkCLI:
+    cli.repo.write_file("f.py", "old\n")
+    cli.repo.git("add", ".")
+    cli.repo.git("commit", "-m", "init")
+    cli.repo.write_file("f.py", "new\n")
+    return cli
+
+
+# `stage`, `unstage`, `discard` and `commit` all resolve targets through the
+# same empty-argument guard, so each must refuse to touch its own state.
+def test_empty_hunk_id_rejected_on_stage(unstaged_change: GitHunkCLI) -> None:
+    r = unstaged_change.run("stage", "")
+    assert r.returncode != 0
+    assert "must not be empty" in r.stderr
+    assert unstaged_change.repo.git("diff", "--cached").strip() == ""
+
+
+def test_empty_hunk_id_rejected_on_unstage(unstaged_change: GitHunkCLI) -> None:
+    unstaged_change.repo.git("add", ".")
+    r = unstaged_change.run("unstage", "")
+    assert r.returncode != 0
+    assert "must not be empty" in r.stderr
+    assert unstaged_change.repo.git("diff", "--cached").strip() != ""
+
+
+def test_empty_hunk_id_rejected_on_commit(unstaged_change: GitHunkCLI) -> None:
+    head = unstaged_change.repo.git("rev-parse", "HEAD")
+    r = unstaged_change.run("commit", "-m", "msg", "")
+    assert r.returncode != 0
+    assert "must not be empty" in r.stderr
+    assert unstaged_change.repo.git("rev-parse", "HEAD") == head
+
+
 def test_empty_hunk_id_rejected_on_show(cli: GitHunkCLI) -> None:
     cli.repo.write_file("f.py", "old\n")
     cli.repo.git("add", ".")
