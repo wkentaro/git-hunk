@@ -85,6 +85,8 @@ def test_show_staged_and_unstaged_together_errors(cli: GitHunkCLI) -> None:
 
     r = cli.run("show", "--staged", "--unstaged")
     assert r.returncode != 0
+    assert "cannot use --staged and --unstaged together" in r.stderr
+    assert "Usage: git-hunk show" in r.stderr
 
 
 def test_show_renders_no_newline_marker_unnumbered(cli: GitHunkCLI) -> None:
