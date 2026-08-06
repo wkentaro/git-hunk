@@ -40,9 +40,10 @@ def test_suite_ignores_an_inherited_git_environment(tmp_path: Path) -> None:
 
     assert result.returncode == 0, result.stdout + result.stderr
 
-    decoy_log = subprocess.run(
-        ["git", "-C", str(decoy), "log", "--oneline"],
+    decoy_commits = subprocess.run(
+        ["git", "-C", str(decoy), "rev-list", "--all", "--count"],
         capture_output=True,
         text=True,
+        check=True,
     )
-    assert decoy_log.stdout == ""
+    assert decoy_commits.stdout.strip() == "0"
