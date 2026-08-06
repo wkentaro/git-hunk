@@ -1,9 +1,11 @@
-import re
+from dataclasses import replace
 from typing import Final
 
 from ._hunk import Hunk
 from ._hunk import extract_file_path
+from ._hunk import format_hunk_range
 from ._hunk import is_mode_hunk
+from ._hunk import parse_hunk_range
 from ._hunk import split_at_hunk_headers
 from ._hunk import split_file_diffs
 
@@ -40,13 +42,11 @@ def _needs_modification_header(hunk: Hunk) -> bool:
     # Partial line selection turns unselected changes into context, so an added
     # file's patch gains an old side and a deleted file's patch gains a new one.
     # Its "/dev/null" header no longer describes the patch and git rejects it.
-    match = re.match(r"@@ -\d+(?:,(\d+))? \+\d+(?:,(\d+))? @@", hunk.diff)
-    if match is None:
+    if not hunk.diff:
         return False
-    old_count = int(match.group(1) or 1)
-    new_count = int(match.group(2) or 1)
-    return (hunk.change_kind == "A" and old_count > 0) or (
-        hunk.change_kind == "D" and new_count > 0
+    hunk_range = parse_hunk_range(hunk.diff.splitlines()[0])
+    return (hunk.change_kind == "A" and hunk_range.old_count > 0) or (
+        hunk.change_kind == "D" and hunk_range.new_count > 0
     )
 
 
@@ -69,7 +69,33 @@ def _make_modification_header(header: str) -> str:
     return "\n".join((diff_line, old_line, new_line)) + "\n"
 
 
-def build_patch(hunks: list[Hunk], diff_output: str) -> str:
+def _normalize_hunk_ranges(hunks: list[Hunk], *, reverse: bool) -> list[str]:
+    parsed = []
+    for hunk in hunks:
+        header, separator, body = hunk.diff.partition("\n")
+        hunk_range = parse_hunk_range(header)
+        target_start = hunk_range.new_start if reverse else hunk_range.old_start
+        parsed.append((target_start, hunk_range, separator, body))
+
+    normalized = []
+    selected_delta = 0
+    for _, hunk_range, separator, body in sorted(parsed, key=lambda item: item[0]):
+        if reverse:
+            old_start = (
+                hunk_range.new_start - selected_delta if hunk_range.old_count else 0
+            )
+            hunk_range = replace(hunk_range, old_start=old_start)
+        else:
+            new_start = (
+                hunk_range.old_start + selected_delta if hunk_range.new_count else 0
+            )
+            hunk_range = replace(hunk_range, new_start=new_start)
+        normalized.append(format_hunk_range(hunk_range) + separator + body)
+        selected_delta += hunk_range.new_count - hunk_range.old_count
+    return normalized
+
+
+def build_patch(hunks: list[Hunk], diff_output: str, *, reverse: bool) -> str:
     files: dict[str, list[Hunk]] = {}
     for hunk in hunks:
         files.setdefault(hunk.file, []).append(hunk)
@@ -90,7 +116,8 @@ def build_patch(hunks: list[Hunk], diff_output: str) -> str:
             header = headers[filepath]
         if any(_needs_modification_header(hunk) for hunk in file_hunks):
             header = _make_modification_header(header)
-        hunk_diffs = "\n".join(hunk.diff for hunk in file_hunks if hunk.diff)
+        text_hunks = [hunk for hunk in file_hunks if hunk.diff]
+        hunk_diffs = "\n".join(_normalize_hunk_ranges(text_hunks, reverse=reverse))
         patches.append(header + hunk_diffs + ("\n" if hunk_diffs else ""))
 
     return "".join(patches)

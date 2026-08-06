@@ -29,6 +29,7 @@ def test_to_dict_context_before_null_when_absent() -> None:
 
 def test_to_dict_typed_fields_and_byte_safe_file() -> None:
     serialized = _text_hunk(context_before=None).to_dict()
+    assert serialized["id_stability"] == "stable"
     assert serialized["file"] == {"text": "f.py"}
     assert serialized["change_kind"] == "M"
     assert serialized["a_mode"] == "100644"

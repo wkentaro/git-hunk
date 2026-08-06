@@ -23,7 +23,10 @@ def _make_hunk(*, hunk_id: str) -> Hunk:
 
 @pytest.fixture
 def hunks() -> list[Hunk]:
-    return [_make_hunk(hunk_id="ab12cd0"), _make_hunk(hunk_id="ab34ef0")]
+    return [
+        _make_hunk(hunk_id="ab12cd0" + "0" * 57),
+        _make_hunk(hunk_id="ab34ef0" + "0" * 57),
+    ]
 
 
 def test_unique_prefix_resolves_to_one_hunk(hunks: list[Hunk]) -> None:

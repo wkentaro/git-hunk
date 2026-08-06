@@ -44,7 +44,14 @@ def get_diff(*, worktree_root: str, staged: bool) -> str:
     # --src-prefix/--dst-prefix override diff.noprefix and diff.mnemonicPrefix
     # the same way --default-prefix does, but predate it, so the supported git
     # floor stays at --no-relative's 2.28 instead of --default-prefix's 2.41.
-    args = ["diff", "--no-relative", "--src-prefix=a/", "--dst-prefix=b/", "-U3"]
+    args = [
+        "diff",
+        "--no-relative",
+        "--src-prefix=a/",
+        "--dst-prefix=b/",
+        "--full-index",
+        "-U3",
+    ]
     if staged:
         args.append("--cached")
     return run_git(*args, worktree_root=worktree_root)

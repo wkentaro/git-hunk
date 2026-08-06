@@ -201,7 +201,7 @@ def test_mode_and_content_change_together() -> None:
     assert text_hunk.additions == 1
     assert text_hunk.deletions == 1
     assert text_hunk.diff == "@@ -1 +1 @@\n-line one\n+line one changed"
-    assert mode_hunk.id != text_hunk.id
+    assert mode_hunk.base_id != text_hunk.base_id
 
 
 def test_typechange_is_single_whole_file_hunk() -> None:

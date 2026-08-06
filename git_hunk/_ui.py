@@ -16,6 +16,7 @@ from rich.rule import Rule
 from rich.text import Text
 
 from ._hunk import Hunk
+from ._hunk import format_hunk_id
 from ._hunk import is_no_newline_marker
 from ._hunk import is_whole_file_hunk
 from ._skills import Skill
@@ -58,6 +59,12 @@ def _header_text(hunk: Hunk) -> str:
     return hunk.header if hunk.header is not None else _whole_file_label(hunk)
 
 
+def _append_hunk_id(text: Text, hunk: Hunk, *, style: str = "cyan") -> None:
+    text.append(format_hunk_id(hunk), style=style)
+    if hunk.id_stability == "conditional":
+        text.append(" conditional", style="yellow")
+
+
 def _append_context_and_stats(text: Text, hunk: Hunk) -> None:
     if hunk.context_before:
         text.append(f"  {_safe(hunk.context_before)}", style="dim italic")
@@ -73,7 +80,7 @@ def _append_context_and_stats(text: Text, hunk: Hunk) -> None:
 def _print_hunk_line(out: Console, hunk: Hunk) -> None:
     line = Text()
     line.append("  ")
-    line.append(hunk.id, style="cyan")
+    _append_hunk_id(line, hunk)
     line.append("  ")
     line.append(_safe(_header_text(hunk)), style="dim")
     _append_context_and_stats(text=line, hunk=hunk)
@@ -137,7 +144,10 @@ def print_hunk_list(hunks: list[Hunk]) -> None:
 
 
 def _print_hunk_diff(out: Console, hunk: Hunk) -> None:
-    out.print(f"[bold]{_safe_escape(hunk.file)}[/bold]  [dim]{escape(hunk.id)}[/dim]")
+    heading = Text(_safe(hunk.file), style="bold")
+    heading.append("  ")
+    _append_hunk_id(heading, hunk, style="dim cyan")
+    out.print(heading)
     if is_whole_file_hunk(hunk):
         out.print(Text(_safe(_header_text(hunk)), style="dim"))
         return
@@ -185,7 +195,7 @@ def print_applied(hunks: list[Hunk], *, verb: str) -> None:
     for hunk in hunks:
         line = Text()
         line.append(f"  {verb} ", style="bold green")
-        line.append(hunk.id, style="cyan")
+        _append_hunk_id(line, hunk)
         line.append("  ")
         line.append(_safe(hunk.file), style="bold")
         line.append(f"  {_safe(_header_text(hunk))}", style="dim")
@@ -248,9 +258,12 @@ _EXACT_PATH_HELP: Final = """\
 Directories, globs, and Git pathspec syntax are not expanded. Quote shell
 metacharacters so the shell passes them unchanged."""
 
+_ID_HELP: Final = "Hunk IDs accept unambiguous, case-insensitive prefixes."
+
 _TARGET_HELP: Final = f"""\
 A file operand is an exact Repository path relative to the worktree root; the
 other kind of operand is a Hunk ID.
+{_ID_HELP}
 {_EXACT_PATH_HELP}"""
 
 USAGE = "[bold green]Usage:[/bold green] [bold cyan]git-hunk[/bold cyan] [cyan]<COMMAND>[/cyan]"  # noqa: E501
@@ -368,7 +381,7 @@ File operands are exact Repository paths relative to the worktree root.
 
 HELP_SHOW = f"""\
 Show the diff for one or more hunks. Shows all hunks when no IDs given.
-IDs support prefix matching.
+{_ID_HELP}
 
 {USAGE_SHOW}
 
@@ -380,7 +393,7 @@ IDs support prefix matching.
 {_format_examples(_EXAMPLES_SHOW)}"""
 
 HELP_STAGE = f"""\
-Stage one or more specific hunks. IDs support prefix matching.
+Stage one or more specific hunks.
 {_TARGET_HELP}
 
 {USAGE_STAGE}
@@ -391,7 +404,6 @@ Stage one or more specific hunks. IDs support prefix matching.
 
 HELP_DISCARD = f"""\
 Discard unstaged changes for one or more specific hunks (restore from the index).
-IDs support prefix matching.
 {_TARGET_HELP}
 
 {USAGE_DISCARD}
@@ -402,7 +414,6 @@ IDs support prefix matching.
 
 HELP_UNSTAGE = f"""\
 Unstage one or more specific hunks (move from index back to working tree).
-IDs support prefix matching.
 {_TARGET_HELP}
 
 {USAGE_UNSTAGE}
@@ -412,10 +423,10 @@ IDs support prefix matching.
 {_format_examples(_EXAMPLES_UNSTAGE)}"""
 
 HELP_COMMIT = f"""\
-Stage one or more specific hunks and commit them in one step. IDs support prefix
-matching. Aborts if anything is already staged, so the commit contains exactly
-the selected hunks. If the commit is rejected (e.g. by a pre-commit hook) the
-hunks are left staged so you can retry with [bold cyan]git commit[/bold cyan].
+Stage one or more specific hunks and commit them in one step. Aborts if anything
+is already staged, so the commit contains exactly the selected hunks. If the
+commit is rejected (e.g. by a pre-commit hook) the hunks are left staged so you
+can retry with [bold cyan]git commit[/bold cyan].
 {_TARGET_HELP}
 
 {USAGE_COMMIT}

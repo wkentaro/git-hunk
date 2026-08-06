@@ -98,6 +98,18 @@ def test_stage_text_hunk_leaves_mode_and_other_text_unstaged(
     assert "changed 28" in cli.repo.git("diff")
 
 
+def test_stage_text_hunk_keeps_unchanged_mode_hunk_id(
+    mode_and_two_text_changes: GitHunkCLI,
+) -> None:
+    cli = mode_and_two_text_changes
+    mode_hunk, text_hunks = _get_hunks(cli, "--unstaged")
+
+    cli.run_ok("stage", str(text_hunks[0]["id"]))
+
+    unchanged_mode_hunk, _ = _get_hunks(cli, "--unstaged")
+    assert unchanged_mode_hunk["id"] == mode_hunk["id"]
+
+
 def test_stage_mode_and_one_text_hunk_leaves_other_text_unstaged(
     mode_and_two_text_changes: GitHunkCLI,
 ) -> None:

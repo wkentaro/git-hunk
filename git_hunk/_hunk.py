@@ -1,13 +1,15 @@
 import base64
 import hashlib
 import re
-from collections import Counter
 from dataclasses import dataclass
 from dataclasses import replace
 from typing import Any
 from typing import Final
+from typing import Literal
 
 NO_NEWLINE_MARKER: Final = "\\ No newline at end of file"
+HUMAN_ID_MIN_LENGTH: Final = 7
+_HUNK_RANGE_RE: Final = re.compile(r"@@ -(\d+)(?:,(\d+))? \+(\d+)(?:,(\d+))? @@")
 
 
 def is_no_newline_marker(line: str) -> bool:
@@ -41,10 +43,14 @@ class Hunk:
     deletions: int
     diff: str
     status: str = "unstaged"
+    base_id: str = ""
+    id_stability: Literal["stable", "conditional"] = "stable"
+    id_prefix_length: int = HUMAN_ID_MIN_LENGTH
 
     def to_dict(self, *, include_lines: bool = False) -> dict[str, Any]:
         data: dict[str, Any] = {
             "id": self.id,
+            "id_stability": self.id_stability,
             "file": _byte_safe(self.file),
             "status": self.status,
             "change_kind": self.change_kind,
@@ -63,6 +69,47 @@ class Hunk:
         if include_lines:
             data["lines"] = _body_lines(self.diff)
         return data
+
+
+@dataclass(frozen=True)
+class HunkRange:
+    old_start: int
+    old_count: int
+    new_start: int
+    new_count: int
+    suffix: str = ""
+
+
+def parse_hunk_range(header: str) -> HunkRange:
+    match = _HUNK_RANGE_RE.match(header)
+    if match is None:
+        raise ValueError(f"cannot parse hunk header: {header}")
+    return HunkRange(
+        old_start=int(match.group(1)),
+        old_count=int(match.group(2) or 1),
+        new_start=int(match.group(3)),
+        new_count=int(match.group(4) or 1),
+        suffix=header[match.end() :],
+    )
+
+
+def format_hunk_range(
+    hunk_range: HunkRange, *, include_single_counts: bool = False
+) -> str:
+    def format_side(start: int, count: int) -> str:
+        if count == 1 and not include_single_counts:
+            return str(start)
+        return f"{start},{count}"
+
+    return (
+        f"@@ -{format_side(hunk_range.old_start, hunk_range.old_count)} "
+        f"+{format_side(hunk_range.new_start, hunk_range.new_count)} @@"
+        f"{hunk_range.suffix}"
+    )
+
+
+def format_hunk_id(hunk: Hunk) -> str:
+    return hunk.id[: hunk.id_prefix_length]
 
 
 def is_whole_file_hunk(hunk: Hunk) -> bool:
@@ -115,36 +162,104 @@ def split_diff_body(diff: str) -> list[str]:
     return body_lines
 
 
-def _hash_id(payload: str) -> str:
-    ID_LENGTH: Final = 7
-    # surrogateescape mirrors _git.run_git's decode so non-UTF-8 bytes hash.
-    data = payload.encode(errors="surrogateescape")
-    return hashlib.sha256(data).hexdigest()[:ID_LENGTH]
+def _hash_id(*parts: str) -> str:
+    digest = hashlib.sha256()
+    for part in parts:
+        data = part.encode(errors="surrogateescape")
+        digest.update(len(data).to_bytes(8, byteorder="big"))
+        digest.update(data)
+    return digest.hexdigest()
 
 
-def _body_id(filepath: str, diff_content: str) -> str:
-    """Ignore @@ line numbers so a hunk's id survives other hunks being staged."""
+def _compute_text_hunk_id(filepath: str, diff_content: str) -> str:
     body = "\n".join(
         line for line in diff_content.split("\n") if not line.startswith("@@")
     )
-    return _hash_id(f"{filepath}:{body}")
+    return _hash_id("text", filepath, body)
 
 
-def _full_id(filepath: str, diff_content: str) -> str:
-    """Fallback for identical changed lines — includes @@ line numbers."""
-    return _hash_id(f"{filepath}:{diff_content}")
+def _compute_whole_file_hunk_id(
+    filepath: str,
+    *,
+    change_kind: str,
+    a_mode: str | None,
+    b_mode: str | None,
+    a_object_id: str | None,
+    b_object_id: str | None,
+) -> str:
+    return _hash_id(
+        "whole-file",
+        filepath,
+        change_kind,
+        a_mode or "",
+        b_mode or "",
+        a_object_id or "",
+        b_object_id or "",
+    )
 
 
-def _with_stable_ids(hunks: list[Hunk]) -> list[Hunk]:
-    # Pass 1: body-only IDs, stable while other hunks are staged.
-    # Pass 2: for colliding IDs, upgrade to full IDs to disambiguate.
-    with_body_ids = [replace(h, id=_body_id(h.file, h.diff)) for h in hunks]
+def _compute_worktree_position(hunk: Hunk, hunks: list[Hunk]) -> int:
+    if hunk.header is None:
+        return 0
+    hunk_range = parse_hunk_range(hunk.header)
+    b_start = hunk_range.new_start
+    if hunk.status == "unstaged":
+        return b_start
 
-    counts = Counter(h.id for h in with_body_ids)
-    return [
-        replace(h, id=_full_id(h.file, h.diff)) if counts[h.id] > 1 else h
-        for h in with_body_ids
-    ]
+    position = b_start
+    for peer in hunks:
+        if peer.status != "unstaged" or peer.file != hunk.file:
+            continue
+        if peer.header is None:
+            continue
+        peer_range = parse_hunk_range(peer.header)
+        a_start = peer_range.old_start
+        a_count = peer_range.old_count
+        b_count = peer_range.new_count
+        if a_start < b_start or (a_start == b_start and a_count == 0):
+            position += b_count - a_count
+    return position
+
+
+def assign_hunk_ids(hunks: list[Hunk]) -> list[Hunk]:
+    result = hunks[:]
+    groups: dict[str, list[tuple[int, Hunk]]] = {}
+    for index, hunk in enumerate(hunks):
+        if hunk.base_id:
+            groups.setdefault(hunk.base_id, []).append((index, hunk))
+
+    for base_id, members in groups.items():
+        if len(members) == 1:
+            index, hunk = members[0]
+            result[index] = replace(hunk, id=base_id, id_stability="stable")
+            continue
+        ordered = sorted(
+            members,
+            key=lambda member: _compute_worktree_position(member[1], hunks),
+        )
+        for ordinal, (index, hunk) in enumerate(ordered):
+            result[index] = replace(
+                hunk,
+                id=_hash_id("conditional", base_id, str(ordinal)),
+                id_stability="conditional",
+            )
+    return _assign_id_prefix_lengths(result)
+
+
+def _assign_id_prefix_lengths(hunks: list[Hunk]) -> list[Hunk]:
+    result = []
+    for hunk in hunks:
+        if not hunk.id:
+            result.append(hunk)
+            continue
+        prefix_length = HUMAN_ID_MIN_LENGTH
+        while prefix_length < len(hunk.id) and any(
+            peer is not hunk and peer.id.startswith(hunk.id[:prefix_length])
+            for peer in hunks
+        ):
+            prefix_length += 1
+        result.append(replace(hunk, id_prefix_length=prefix_length))
+    return result
 
 
 def split_file_diffs(diff_output: str) -> list[str]:
@@ -227,8 +342,22 @@ def whole_file_hunk(
     a_mode: str | None,
     b_mode: str | None,
     binary: bool,
+    a_object_id: str | None,
+    b_object_id: str | None,
     status: str = "unstaged",
 ) -> Hunk:
+    base_id = (
+        ""
+        if status == "untracked"
+        else _compute_whole_file_hunk_id(
+            filepath,
+            change_kind=change_kind,
+            a_mode=a_mode,
+            b_mode=b_mode,
+            a_object_id=a_object_id,
+            b_object_id=b_object_id,
+        )
+    )
     return Hunk(
         id="",
         file=filepath,
@@ -242,6 +371,7 @@ def whole_file_hunk(
         deletions=0,
         diff="",
         status=status,
+        base_id=base_id,
     )
 
 
@@ -263,6 +393,15 @@ def _block_modes(file_diff: str) -> tuple[str, str | None, str | None]:
     if index:
         return "M", index.group(1), index.group(1)
     return "M", None, None
+
+
+def _extract_block_object_ids(file_diff: str) -> tuple[str | None, str | None]:
+    match = re.search(
+        r"^index ([0-9a-f]+)\.\.([0-9a-f]+)(?: |$)",
+        file_diff,
+        flags=re.MULTILINE,
+    )
+    return (match.group(1), match.group(2)) if match else (None, None)
 
 
 def _is_binary(file_diff: str) -> bool:
@@ -288,6 +427,7 @@ def parse_diff(diff_output: str) -> list[Hunk]:
             continue
 
         change_kind, a_mode, b_mode = _block_modes(file_diff)
+        a_object_id, b_object_id = _extract_block_object_ids(file_diff)
 
         # git emits a type change (e.g. file -> symlink) as two consecutive blocks
         # for the same path: a delete of the old type then an add of the new one.
@@ -295,6 +435,7 @@ def parse_diff(diff_output: str) -> list[Hunk]:
         if change_kind == "D" and next_diff is not None:
             next_kind, _, new_b_mode = _block_modes(next_diff)
             if next_kind == "A" and extract_file_path(next_diff) == filepath:
+                _, new_object_id = _extract_block_object_ids(next_diff)
                 hunks.append(
                     whole_file_hunk(
                         filepath,
@@ -302,6 +443,8 @@ def parse_diff(diff_output: str) -> list[Hunk]:
                         a_mode=a_mode,
                         b_mode=new_b_mode,
                         binary=_is_binary(file_diff) or _is_binary(next_diff),
+                        a_object_id=a_object_id,
+                        b_object_id=new_object_id,
                     )
                 )
                 i += 2
@@ -315,6 +458,8 @@ def parse_diff(diff_output: str) -> list[Hunk]:
                     a_mode=a_mode,
                     b_mode=b_mode,
                     binary=True,
+                    a_object_id=a_object_id,
+                    b_object_id=b_object_id,
                 )
             )
             i += 1
@@ -330,6 +475,8 @@ def parse_diff(diff_output: str) -> list[Hunk]:
                     a_mode=a_mode,
                     b_mode=b_mode,
                     binary=False,
+                    a_object_id=None,
+                    b_object_id=None,
                 )
             )
 
@@ -342,6 +489,8 @@ def parse_diff(diff_output: str) -> list[Hunk]:
                         a_mode=a_mode,
                         b_mode=b_mode,
                         binary=False,
+                        a_object_id=a_object_id,
+                        b_object_id=b_object_id,
                     )
                 )
             i += 1
@@ -368,8 +517,9 @@ def parse_diff(diff_output: str) -> list[Hunk]:
                     additions=additions,
                     deletions=deletions,
                     diff=header_line + "\n" + "\n".join(body_lines),
+                    base_id=_compute_text_hunk_id(filepath, part),
                 )
             )
         i += 1
 
-    return _with_stable_ids(hunks)
+    return hunks
