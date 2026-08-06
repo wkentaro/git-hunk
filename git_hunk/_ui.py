@@ -48,6 +48,9 @@ def _whole_file_label(hunk: Hunk) -> str:
     if hunk.binary:
         labels = {"A": "Binary file (added)", "D": "Binary file (deleted)"}
         return labels.get(hunk.change_kind, "Binary file (modified)")
+    EMPTY_LABELS: Final = {"A": "Empty file (added)", "D": "Empty file (deleted)"}
+    if hunk.change_kind in EMPTY_LABELS:
+        return EMPTY_LABELS[hunk.change_kind]
     return f"Mode {hunk.a_mode} -> {hunk.b_mode}"
 
 

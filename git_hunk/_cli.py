@@ -16,9 +16,12 @@ from ._git import apply_patch
 from ._git import commit
 from ._git import discard_files
 from ._git import get_diff
+from ._git import get_unmerged_files
+from ._git import get_unsupported_changes
 from ._git import get_untracked_files
 from ._git import get_worktree_root
 from ._git import stage_files
+from ._git import unstage_added_files
 from ._git import unstage_files
 from ._hunk import Hunk
 from ._hunk import is_submodule_hunk
@@ -124,6 +127,25 @@ def _echo_hunks_json(hunks: list[Hunk], *, include_lines: bool = False) -> None:
 
 def _get_hunks(*, worktree_root: str, staged: bool) -> tuple[list[Hunk], str]:
     try:
+        unmerged_files = get_unmerged_files(worktree_root=worktree_root)
+        if unmerged_files:
+            paths = ", ".join(repr(path) for path in unmerged_files)
+            raise CliError(
+                f"unmerged index entries are not supported: {paths}",
+                tip="resolve the unmerged index with Git, then retry",
+            )
+        unsupported_changes = get_unsupported_changes(
+            worktree_root=worktree_root, staged=staged
+        )
+        if unsupported_changes:
+            details = "; ".join(
+                f"{change.kind}: {change.source!r} -> {change.destination!r}"
+                for change in unsupported_changes
+            )
+            raise CliError(
+                f"unsupported file changes: {details}",
+                tip="use Git directly for rename and copy changes",
+            )
         diff_output = get_diff(worktree_root=worktree_root, staged=staged)
     except RuntimeError as exc:
         raise CliError(str(exc)) from exc
@@ -279,7 +301,8 @@ def _apply_line_filter(
         raise CliError("line selection requires exactly one hunk")
     if is_whole_file_hunk(hunks[0]):
         raise CliError(
-            "line selection is not supported for binary, mode, or type changes"
+            "line selection is not supported for binary, mode, or type changes, "
+            "or empty files"
         )
     if is_submodule_hunk(hunks[0]):
         raise CliError(
@@ -307,27 +330,74 @@ def _apply_selection(
     selected = _select_hunks(hunks, targets)
     selected = _apply_line_filter(selected, selection, reverse=reverse)
 
-    whole_file = [h for h in selected if is_whole_file_hunk(h)]
-    text = [h for h in selected if not is_whole_file_hunk(h)]
+    patch_hunks = [
+        hunk for hunk in selected if not hunk.binary and hunk.change_kind != "T"
+    ]
+    file_command_hunks = [
+        hunk for hunk in selected if hunk.binary or hunk.change_kind == "T"
+    ]
 
     try:
-        if text:
-            patch = build_patch(text, diff_output)
+        patch = build_patch(patch_hunks, diff_output) if patch_hunks else None
+        if patch is not None:
             apply_patch(
                 patch,
                 worktree_root=worktree_root,
                 cached=cached,
                 reverse=reverse,
-                dry_run=dry_run,
+                dry_run=True,
             )
-        if whole_file and not dry_run:
-            paths = [h.file for h in whole_file]
+        file_command_files = [hunk.file for hunk in file_command_hunks]
+        added_file_command_files = [
+            hunk.file for hunk in file_command_hunks if hunk.change_kind == "A"
+        ]
+        tracked_file_command_files = [
+            hunk.file for hunk in file_command_hunks if hunk.change_kind != "A"
+        ]
+        if file_command_files and not reverse:
+            stage_files(
+                file_command_files,
+                worktree_root=worktree_root,
+                dry_run=True,
+            )
+        if added_file_command_files and reverse and cached:
+            unstage_added_files(
+                added_file_command_files,
+                worktree_root=worktree_root,
+                dry_run=True,
+            )
+        if dry_run:
+            return selected
+
+        if patch is not None:
+            apply_patch(
+                patch,
+                worktree_root=worktree_root,
+                cached=cached,
+                reverse=reverse,
+                dry_run=False,
+            )
+        if file_command_files:
             if reverse and not cached:
-                discard_files(paths, worktree_root=worktree_root)
+                discard_files(file_command_files, worktree_root=worktree_root)
             elif reverse:
-                unstage_files(paths, worktree_root=worktree_root)
+                if added_file_command_files:
+                    unstage_added_files(
+                        added_file_command_files,
+                        worktree_root=worktree_root,
+                        dry_run=False,
+                    )
+                if tracked_file_command_files:
+                    unstage_files(
+                        tracked_file_command_files,
+                        worktree_root=worktree_root,
+                    )
             else:
-                stage_files(paths, worktree_root=worktree_root)
+                stage_files(
+                    file_command_files,
+                    worktree_root=worktree_root,
+                    dry_run=False,
+                )
     except RuntimeError as exc:
         raise CliError(str(exc)) from exc
 
@@ -689,11 +759,8 @@ def cmd_commit(
         command_name="commit",
         usage=USAGE_COMMIT,
     )
-    try:
-        already_staged = get_diff(worktree_root=worktree_root, staged=True).strip()
-    except RuntimeError as exc:
-        raise CliError(str(exc)) from exc
-    if already_staged:
+    _, staged_diff = _get_hunks(worktree_root=worktree_root, staged=True)
+    if staged_diff.strip():
         raise CliError(
             "cannot commit: changes are already staged",
             tip="commit them with 'git commit', or unstage with 'git-hunk unstage'",

@@ -75,3 +75,18 @@ def test_stage_with_one_unknown_path_stages_nothing(
     assert r.returncode != 0
     assert "no changed file matches 'nosuch.py'" in r.stderr
     assert cli.repo.git("diff", "--cached").strip() == ""
+
+
+def test_unstage_text_and_empty_additions_in_unborn_repository(
+    cli: GitHunkCLI,
+) -> None:
+    cli.repo.write_file("content.txt", "content\n")
+    cli.repo.write_file("empty.txt", "")
+    cli.repo.git("add", ".")
+    hunks = cli.run_list_json("list", "--staged", "--json")
+    targets = [str(hunk["id"]) for hunk in hunks]
+
+    cli.run_ok("unstage", *targets)
+
+    assert cli.repo.git("diff", "--cached") == ""
+    assert cli.repo.git("status", "--short") == "?? content.txt\n?? empty.txt\n"

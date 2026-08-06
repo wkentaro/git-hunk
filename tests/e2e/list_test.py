@@ -245,17 +245,19 @@ def test_list_untracked_executable_reports_executable_mode(cli: GitHunkCLI) -> N
     assert hunk["b_mode"] == "100755"
 
 
-def test_empty_new_file_is_not_a_bogus_mode_hunk(cli: GitHunkCLI) -> None:
-    # A staged empty new file has no @@ body and no mode change; it must not
-    # surface as a whole-file hunk (which would render "Mode None -> ...").
+def test_empty_new_file_is_whole_file_hunk(cli: GitHunkCLI) -> None:
     cli.repo.write_file("keep.txt", "x\n")
     cli.repo.git("add", ".")
     cli.repo.git("commit", "-m", "init")
     cli.repo.write_file("empty.txt", "")
     cli.repo.git("add", "empty.txt")
 
-    assert cli.run_list_json("list", "--staged", "--json") == []
-    assert "Mode None" not in cli.run_ok("list", "--staged")
+    [hunk] = cli.run_list_json("list", "--staged", "--json")
+    assert hunk["change_kind"] == "A"
+    assert hunk["a_mode"] is None
+    assert hunk["b_mode"] == "100644"
+    assert hunk["header"] is None
+    assert "Empty file (added)" in cli.run_ok("list", "--staged")
 
 
 def test_no_hunks_message_goes_to_stderr(cli: GitHunkCLI) -> None:

@@ -15,6 +15,11 @@ repository. You can run the suite from inside `git rebase --exec`, a hook,
 Keep this behavior. `tests/git_env_test.py` verifies that the suite does not
 change the outer repository.
 
+Pass Git plumbing protocols through binary subprocess input. Text-mode stdin
+converts LF to CRLF on Windows and can make commands such as
+`git update-index --index-info` silently ignore records. Mark only filename
+cases that Windows does not allow as skipped, not the full behavior test.
+
 ## Agent skills
 
 ### Issue tracker
