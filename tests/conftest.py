@@ -2,6 +2,7 @@ import os
 import subprocess
 import tempfile
 from collections.abc import Generator
+from typing import Final
 
 import pytest
 
@@ -41,10 +42,14 @@ def _scrubbed_git_env() -> Generator[None]:
     # every git subprocess the suite starts (the fixtures' own, and the ones
     # git_hunk spawns) would target the outer repository instead of the
     # temporary one, and the tests would commit into the repository under test.
-    # Nothing here wants an inherited git environment, so drop all of it.
+    # Drop all of it, except the config overrides a caller may set to shield
+    # the suite from the machine's gitconfig (e.g. GIT_CONFIG_GLOBAL=/dev/null
+    # in CI); those improve hermeticity rather than break it.
+    KEEP: Final = {"GIT_CONFIG_GLOBAL", "GIT_CONFIG_SYSTEM", "GIT_CONFIG_NOSYSTEM"}
     with pytest.MonkeyPatch.context() as monkeypatch:
-        for name in [n for n in os.environ if n.startswith("GIT_")]:
-            monkeypatch.delenv(name)
+        for name in list(os.environ):
+            if name.startswith("GIT_") and name not in KEEP:
+                monkeypatch.delenv(name)
         yield
 
 
