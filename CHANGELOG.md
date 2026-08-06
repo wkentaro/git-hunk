@@ -52,6 +52,13 @@ and this project adheres to
 
 ### Fixed
 
+- Make partial line selection safe and bounded: reject ambiguous grouped
+  replacements atomically; validate range endpoints before expansion; preserve
+  no-newline state by patch side; and reject submodule pointer line selection
+  cleanly (#195).
+- Partial line selection on an added or deleted text file no longer leaks a raw
+  `git apply` "depends on old contents" error; the patch header is rewritten to
+  describe both sides (#195).
 - `commit --help` no longer advertises `--include-matching`,
   `--exclude-matching`, and `--regex`, which the command never accepted; the
   help now lists only the options `commit` actually supports (#105).

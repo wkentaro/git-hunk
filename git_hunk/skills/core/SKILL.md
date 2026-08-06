@@ -99,6 +99,13 @@ default (`--regex` opts into regular expressions). Both flags are repeatable
 (OR'd), case-sensitive, error if nothing matches, and are mutually exclusive
 with `-l` and with each other.
 
+Line selection accepts any subset of a pure addition, pure deletion, or
+one-for-one replacement. A grouped replacement with multiple deleted or added
+lines must be selected as a whole or not selected. Numeric range endpoints are
+checked against the Hunk before expansion, and no-newline state is preserved for
+each patch side. Submodule pointer changes do not support line selection. Select
+the Hunk as a whole.
+
 ## Common workflows
 
 ### Dirty tree to focused commits

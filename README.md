@@ -121,6 +121,13 @@ instead of line number (literal substring by default, `--regex` for regular
 expressions). Both are repeatable and OR'd, case-sensitive, and error if nothing
 matches. They are mutually exclusive with `-l` and with each other.
 
+Line selection accepts any subset of a pure addition, pure deletion, or
+one-for-one replacement. A grouped replacement with multiple deleted or added
+lines must be selected as a whole or not selected. Numeric range endpoints are
+checked against the Hunk before expansion, and no-newline state is preserved for
+each patch side. Submodule pointer changes do not support line selection. Select
+the Hunk as a whole.
+
 ### Commit
 
 ```bash

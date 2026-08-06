@@ -71,6 +71,15 @@ def is_whole_file_hunk(hunk: Hunk) -> bool:
     return not hunk.diff
 
 
+def is_submodule_hunk(hunk: Hunk) -> bool:
+    # A gitlink bump has a real one-line text diff, so it is not a whole-file
+    # hunk, but its line is a commit pointer rather than selectable content.
+    # This check stays separate from whole-file routing so whole-hunk gitlink
+    # behavior is unchanged.
+    GITLINK_MODE: Final = "160000"
+    return GITLINK_MODE in (hunk.a_mode, hunk.b_mode)
+
+
 def _body_lines(diff: str) -> list[dict[str, Any]]:
     lines: list[dict[str, Any]] = []
     for line in split_diff_body(diff=diff):

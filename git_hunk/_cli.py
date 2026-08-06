@@ -21,9 +21,11 @@ from ._git import is_git_repo
 from ._git import stage_files
 from ._git import unstage_files
 from ._hunk import Hunk
+from ._hunk import is_submodule_hunk
 from ._hunk import is_whole_file_hunk
 from ._hunk import parse_diff
 from ._hunk import whole_file_hunk
+from ._lines import count_hunk_body_lines
 from ._lines import filter_hunk_lines
 from ._lines import parse_line_spec
 from ._lines import resolve_matching_lines
@@ -197,7 +199,7 @@ class _Selection:
 
     def resolve(self, hunk: Hunk) -> tuple[set[int], bool]:
         if self.line_spec is not None:
-            return parse_line_spec(self.line_spec)
+            return parse_line_spec(self.line_spec, total=count_hunk_body_lines(hunk))
         if self.include_matching:
             lines = resolve_matching_lines(
                 hunk, self.include_matching, regex=self.regex
@@ -244,6 +246,11 @@ def _apply_line_filter(
     if is_whole_file_hunk(hunks[0]):
         raise CliError(
             "line selection is not supported for binary, mode, or type changes"
+        )
+    if is_submodule_hunk(hunks[0]):
+        raise CliError(
+            "line selection is not supported for submodule changes",
+            tip="select the hunk as a whole",
         )
     try:
         lines, exclude = selection.resolve(hunks[0])

@@ -7,6 +7,11 @@
   binary, mode-only, or type changes it is a synthetic **whole-file hunk** (no `@@` range).
   The top-level object in `--json` (the tool is hunk-centric, not file-centric).
 
+- **Change group**: a maximal run of changed `-` and `+` lines with no context line
+  between them. Partial line selection is unrestricted for pure additions, pure
+  deletions, and one-for-one replacements. A larger grouped replacement is selected
+  as a whole or not selected.
+
 - **Whole-file hunk** — a hunk with no `@@` text range: a binary change, a mode-only
   (chmod) change, or a type change (e.g. file ↔ symlink). Has `header: null` and (in
   `show --json`) `lines: []`.

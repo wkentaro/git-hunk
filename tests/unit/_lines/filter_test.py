@@ -47,8 +47,10 @@ def test_no_changes_remain_errors(make_hunk: Callable[[str], Hunk]) -> None:
 def test_out_of_range_errors(make_hunk: Callable[[str], Hunk]) -> None:
     diff = "@@ -1,2 +1,3 @@ def foo():\n ctx1\n+add1\n ctx2"
     hunk = make_hunk(diff)
-    with pytest.raises(ValueError, match="out of range"):
-        filter_hunk_lines(hunk, {99}, exclude=False)
+    with pytest.raises(
+        ValueError, match=r"line number out of range \(hunk has 3 lines\): 99$"
+    ):
+        filter_hunk_lines(hunk, {99, 100}, exclude=False)
 
 
 def test_unparsable_header_errors(make_hunk: Callable[[str], Hunk]) -> None:
@@ -59,23 +61,22 @@ def test_unparsable_header_errors(make_hunk: Callable[[str], Hunk]) -> None:
 
 
 def test_header_recalculated(make_hunk: Callable[[str], Hunk]) -> None:
-    diff = "@@ -1,4 +1,5 @@ def foo():\n ctx1\n-del1\n+add1\n+add2\n ctx2"
+    diff = "@@ -1,2 +1,4 @@ def foo():\n ctx1\n+add1\n+add2\n ctx2"
     hunk = make_hunk(diff)
     result = filter_hunk_lines(hunk, {3}, exclude=False)
     assert result.additions == 1
     assert result.deletions == 0
-    assert result.header == "@@ -1,3 +1,4 @@"
+    assert result.header == "@@ -1,2 +1,3 @@"
 
 
-def test_mixed_changes(make_hunk: Callable[[str], Hunk]) -> None:
-    diff = "@@ -1,3 +1,4 @@ def foo():\n ctx\n-old\n+new1\n+new2"
+def test_one_for_one_addition(make_hunk: Callable[[str], Hunk]) -> None:
+    diff = "@@ -1,2 +1,2 @@ def foo():\n ctx\n-old\n+new"
     hunk = make_hunk(diff)
     result = filter_hunk_lines(hunk, {3}, exclude=False)
     assert result.additions == 1
     assert result.deletions == 0
-    assert "+new1" in result.diff
+    assert "+new" in result.diff
     assert " old" in result.diff
-    assert "new2" not in result.diff
 
 
 _TWO_GROUP = "@@ -1,4 +1,4 @@\n a\n-b\n+B\n c\n-d\n+D"
