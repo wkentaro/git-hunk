@@ -12,7 +12,7 @@ def test_large_range_fails_promptly_and_atomically(cli: GitHunkCLI, spec: str) -
     cli.repo.git("add", "f.txt")
     cli.repo.git("commit", "-m", "init")
     cli.repo.write_file("f.txt", "new\n")
-    hunk_id = cli.only_hunk_id("--unstaged")
+    hunk_id = cli.get_only_hunk_id("--unstaged")
     before = (
         cli.repo.git("rev-parse", "HEAD"),
         cli.repo.git("show", ":f.txt"),

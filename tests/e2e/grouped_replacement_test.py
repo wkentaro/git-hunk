@@ -34,7 +34,7 @@ def test_stage_rejection_is_atomic(grouped_replacement: GitHunkCLI, spec: str) -
     cli = grouped_replacement
     before = _capture_repo_state(cli)
 
-    result = cli.run("stage", cli.only_hunk_id("--unstaged"), "-l", spec)
+    result = cli.run("stage", cli.get_only_hunk_id("--unstaged"), "-l", spec)
 
     _assert_group_error(result.returncode, result.stderr)
     assert _capture_repo_state(cli) == before
@@ -42,10 +42,10 @@ def test_stage_rejection_is_atomic(grouped_replacement: GitHunkCLI, spec: str) -
 
 def test_unstage_rejection_is_atomic(grouped_replacement: GitHunkCLI) -> None:
     cli = grouped_replacement
-    cli.run_ok("stage", cli.only_hunk_id("--unstaged"))
+    cli.run_ok("stage", cli.get_only_hunk_id("--unstaged"))
     before = _capture_repo_state(cli)
 
-    result = cli.run("unstage", cli.only_hunk_id("--staged"), "-l", "3,5")
+    result = cli.run("unstage", cli.get_only_hunk_id("--staged"), "-l", "3,5")
 
     _assert_group_error(result.returncode, result.stderr)
     assert _capture_repo_state(cli) == before
@@ -55,7 +55,7 @@ def test_discard_rejection_is_atomic(grouped_replacement: GitHunkCLI) -> None:
     cli = grouped_replacement
     before = _capture_repo_state(cli)
 
-    result = cli.run("discard", cli.only_hunk_id("--unstaged"), "-l", "2,4")
+    result = cli.run("discard", cli.get_only_hunk_id("--unstaged"), "-l", "2,4")
 
     _assert_group_error(result.returncode, result.stderr)
     assert _capture_repo_state(cli) == before
@@ -67,7 +67,7 @@ def test_commit_rejection_is_atomic(grouped_replacement: GitHunkCLI) -> None:
 
     result = cli.run(
         "commit",
-        cli.only_hunk_id("--unstaged"),
+        cli.get_only_hunk_id("--unstaged"),
         "-l",
         "2,4",
         "-m",
@@ -91,7 +91,7 @@ def test_matching_selection_uses_group_validation(
     cli = grouped_replacement
     before = _capture_repo_state(cli)
 
-    result = cli.run("stage", cli.only_hunk_id("--unstaged"), *selector)
+    result = cli.run("stage", cli.get_only_hunk_id("--unstaged"), *selector)
 
     _assert_group_error(result.returncode, result.stderr)
     assert _capture_repo_state(cli) == before

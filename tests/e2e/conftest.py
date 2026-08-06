@@ -62,7 +62,7 @@ class GitHunkCLI:
         envelope = self.run_list_envelope(*args, subdir=subdir)
         return cast("list[dict[str, Any]]", envelope["hunks"])
 
-    def only_hunk_id(self, *args: str) -> str:
+    def get_only_hunk_id(self, *args: str) -> str:
         hunks = self.run_list_json("list", *args, "--json")
         assert len(hunks) == 1
         return hunks[0]["id"]

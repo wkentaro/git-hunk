@@ -110,7 +110,7 @@ def test_stage_rejects_gitlink_line_selection(
     cli = bumped_submodule
     before = _capture_gitlink_state(cli)
 
-    result = cli.run("stage", cli.only_hunk_id("--unstaged"), *selector)
+    result = cli.run("stage", cli.get_only_hunk_id("--unstaged"), *selector)
 
     _assert_submodule_line_error(result.returncode, result.stderr)
     assert _capture_gitlink_state(cli) == before
@@ -120,10 +120,10 @@ def test_unstage_rejects_gitlink_line_selection(
     bumped_submodule: GitHunkCLI,
 ) -> None:
     cli = bumped_submodule
-    cli.run_ok("stage", cli.only_hunk_id("--unstaged"))
+    cli.run_ok("stage", cli.get_only_hunk_id("--unstaged"))
     before = _capture_gitlink_state(cli)
 
-    result = cli.run("unstage", cli.only_hunk_id("--staged"), "-l", "1")
+    result = cli.run("unstage", cli.get_only_hunk_id("--staged"), "-l", "1")
 
     _assert_submodule_line_error(result.returncode, result.stderr)
     assert _capture_gitlink_state(cli) == before
@@ -135,7 +135,7 @@ def test_discard_rejects_gitlink_line_selection(
     cli = bumped_submodule
     before = _capture_gitlink_state(cli)
 
-    result = cli.run("discard", cli.only_hunk_id("--unstaged"), "-l", "1")
+    result = cli.run("discard", cli.get_only_hunk_id("--unstaged"), "-l", "1")
 
     _assert_submodule_line_error(result.returncode, result.stderr)
     assert _capture_gitlink_state(cli) == before
@@ -149,7 +149,7 @@ def test_commit_rejects_gitlink_line_selection(
 
     result = cli.run(
         "commit",
-        cli.only_hunk_id("--unstaged"),
+        cli.get_only_hunk_id("--unstaged"),
         "-l",
         "1",
         "-m",

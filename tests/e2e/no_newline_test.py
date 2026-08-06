@@ -26,7 +26,7 @@ def staged_newline_change(
     newline_change: tuple[GitHunkCLI, str, str],
 ) -> tuple[GitHunkCLI, str, str]:
     cli, old, new = newline_change
-    cli.run_ok("stage", cli.only_hunk_id("--unstaged"))
+    cli.run_ok("stage", cli.get_only_hunk_id("--unstaged"))
     return cli, old, new
 
 
@@ -34,7 +34,7 @@ def test_stage_edit_last_line_no_newline(cli: GitHunkCLI) -> None:
     _commit(cli, "a\nb\nc")
     cli.repo.write_file("f.txt", "a\nb\ncX")
 
-    cli.run_ok("stage", cli.only_hunk_id("--unstaged"))
+    cli.run_ok("stage", cli.get_only_hunk_id("--unstaged"))
 
     assert cli.repo.git("show", ":f.txt") == "a\nb\ncX"
 
@@ -43,7 +43,7 @@ def test_stage_newline_to_no_newline_removes_trailing_newline(cli: GitHunkCLI) -
     _commit(cli, "a\nb\nc\n")
     cli.repo.write_file("f.txt", "a\nb\nc")
 
-    cli.run_ok("stage", cli.only_hunk_id("--unstaged"))
+    cli.run_ok("stage", cli.get_only_hunk_id("--unstaged"))
 
     assert cli.repo.git("show", ":f.txt") == "a\nb\nc"
 
@@ -52,7 +52,7 @@ def test_stage_no_newline_to_newline_adds_trailing_newline(cli: GitHunkCLI) -> N
     _commit(cli, "a\nb\nc")
     cli.repo.write_file("f.txt", "a\nb\nc\n")
 
-    cli.run_ok("stage", cli.only_hunk_id("--unstaged"))
+    cli.run_ok("stage", cli.get_only_hunk_id("--unstaged"))
 
     assert cli.repo.git("show", ":f.txt") == "a\nb\nc\n"
 
@@ -61,7 +61,7 @@ def test_unstage_round_trips_no_newline(cli: GitHunkCLI) -> None:
     _commit(cli, "a\nb\nc")
     cli.repo.write_file("f.txt", "a\nb\ncX")
 
-    cli.run_ok("stage", cli.only_hunk_id("--unstaged"))
+    cli.run_ok("stage", cli.get_only_hunk_id("--unstaged"))
     staged = cli.run_list_json("list", "--staged", "--json")
     cli.run_ok("unstage", staged[0]["id"])
 
@@ -73,7 +73,7 @@ def test_discard_round_trips_no_newline(cli: GitHunkCLI) -> None:
     _commit(cli, "a\nb\nc")
     cli.repo.write_file("f.txt", "a\nb\ncX")
 
-    cli.run_ok("discard", cli.only_hunk_id("--unstaged"))
+    cli.run_ok("discard", cli.get_only_hunk_id("--unstaged"))
 
     assert (Path(cli.repo.path) / "f.txt").read_text() == "a\nb\nc"
 
@@ -84,7 +84,7 @@ def test_stage_line_selection_on_no_newline_hunk(cli: GitHunkCLI) -> None:
 
     # Body lines (markers unnumbered): 1=-a 2=+aX 3= b 4=-c 5=+cX.
     # Select the first change only; the no-newline tail must survive intact.
-    cli.run_ok("stage", cli.only_hunk_id("--unstaged"), "-l", "1,2")
+    cli.run_ok("stage", cli.get_only_hunk_id("--unstaged"), "-l", "1,2")
 
     assert cli.repo.git("show", ":f.txt") == "aX\nb\nc"
 
@@ -112,7 +112,7 @@ def test_stage_addition_of_no_newline_to_newline_keeps_lines_separate(
     cli.repo.write_file("f.txt", "a\nB\n")
 
     # Body lines: 1= a 2=-b 3=+B. Stage only the addition.
-    cli.run_ok("stage", cli.only_hunk_id("--unstaged"), "-l", "3")
+    cli.run_ok("stage", cli.get_only_hunk_id("--unstaged"), "-l", "3")
 
     assert cli.repo.git("show", ":f.txt") == "a\nb\nB\n"
 
@@ -121,7 +121,7 @@ def test_stage_addition_then_remainder_reaches_working_tree(cli: GitHunkCLI) -> 
     _commit(cli, "a\nb")
     cli.repo.write_file("f.txt", "a\nB\n")
 
-    cli.run_ok("stage", cli.only_hunk_id("--unstaged"), "-l", "3")
+    cli.run_ok("stage", cli.get_only_hunk_id("--unstaged"), "-l", "3")
     assert cli.repo.git("show", ":f.txt") == "a\nb\nB\n"
 
     remaining = cli.run_list_json("list", "--unstaged", "--json")
@@ -137,7 +137,7 @@ def test_stage_addition_both_sides_no_newline_keeps_lines_separate(
     cli.repo.write_file("f.txt", "a\nB")
 
     # Body lines: 1= a 2=-b 3=+B, both last lines lack a trailing newline.
-    cli.run_ok("stage", cli.only_hunk_id("--unstaged"), "-l", "3")
+    cli.run_ok("stage", cli.get_only_hunk_id("--unstaged"), "-l", "3")
 
     assert cli.repo.git("show", ":f.txt") == "a\nb\nB"
 
@@ -148,7 +148,7 @@ def test_discard_addition_of_no_newline_to_newline_keeps_lines_separate(
     _commit(cli, "a\nb")
     cli.repo.write_file("f.txt", "a\nB\n")
 
-    cli.run_ok("discard", cli.only_hunk_id("--unstaged"), "-l", "3")
+    cli.run_ok("discard", cli.get_only_hunk_id("--unstaged"), "-l", "3")
 
     # Discarding only the +B addition reverts it; the -b deletion stays.
     assert (Path(cli.repo.path) / "f.txt").read_text() == "a\n"
@@ -160,7 +160,7 @@ def test_unstage_addition_of_no_newline_to_newline_keeps_lines_separate(
     _commit(cli, "a\nb")
     cli.repo.write_file("f.txt", "a\nB\n")
 
-    cli.run_ok("stage", cli.only_hunk_id("--unstaged"))
+    cli.run_ok("stage", cli.get_only_hunk_id("--unstaged"))
     staged = cli.run_list_json("list", "--staged", "--json")
 
     # Body lines: 1= a 2=-b 3=+B. Unstage only the addition from the index.
@@ -175,7 +175,7 @@ def test_stage_deletion_preserves_each_side_newline_state(
 ) -> None:
     cli, _, _ = newline_change
 
-    cli.run_ok("stage", cli.only_hunk_id("--unstaged"), "-l", "2")
+    cli.run_ok("stage", cli.get_only_hunk_id("--unstaged"), "-l", "2")
 
     assert cli.repo.git("show", ":f.txt").encode() == b"a\n"
 
@@ -185,7 +185,7 @@ def test_stage_addition_preserves_each_side_newline_state(
 ) -> None:
     cli, _, new = newline_change
 
-    cli.run_ok("stage", cli.only_hunk_id("--unstaged"), "-l", "3")
+    cli.run_ok("stage", cli.get_only_hunk_id("--unstaged"), "-l", "3")
 
     assert cli.repo.git("show", ":f.txt").encode() == b"a\nb\n" + new.encode()
 
@@ -195,7 +195,7 @@ def test_stage_replacement_preserves_each_side_newline_state(
 ) -> None:
     cli, _, new = newline_change
 
-    cli.run_ok("stage", cli.only_hunk_id("--unstaged"), "-l", "2,3")
+    cli.run_ok("stage", cli.get_only_hunk_id("--unstaged"), "-l", "2,3")
 
     assert cli.repo.git("show", ":f.txt").encode() == b"a\n" + new.encode()
 
@@ -216,7 +216,7 @@ def test_discard_deletion_preserves_each_side_newline_state(
 ) -> None:
     cli, _, new = newline_change
 
-    cli.run_ok("discard", cli.only_hunk_id("--unstaged"), "-l", "2")
+    cli.run_ok("discard", cli.get_only_hunk_id("--unstaged"), "-l", "2")
 
     # read_text, not read_bytes: the working tree holds CRLF on Windows, and
     # universal newlines normalize it while still telling the two trailing
@@ -229,7 +229,7 @@ def test_commit_addition_preserves_each_side_newline_state(
 ) -> None:
     cli, _, new = newline_change
 
-    cli.run_ok("commit", cli.only_hunk_id("--unstaged"), "-l", "3", "-m", "partial")
+    cli.run_ok("commit", cli.get_only_hunk_id("--unstaged"), "-l", "3", "-m", "partial")
 
     assert cli.repo.git("show", "HEAD:f.txt").encode() == b"a\nb\n" + new.encode()
     assert (Path(cli.repo.path) / "f.txt").read_text() == "a\n" + new
