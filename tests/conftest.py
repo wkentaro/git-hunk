@@ -34,6 +34,20 @@ class GitRepo:
         return filepath
 
 
+@pytest.fixture(autouse=True, scope="session")
+def _scrubbed_git_env() -> Generator[None]:
+    # git exports GIT_DIR, GIT_INDEX_FILE, and friends to the commands it runs:
+    # `rebase --exec`, hooks, `filter-branch`, `bisect run`. Those beat cwd, so
+    # every git subprocess the suite starts (the fixtures' own, and the ones
+    # git_hunk spawns) would target the outer repository instead of the
+    # temporary one, and the tests would commit into the repository under test.
+    # Nothing here wants an inherited git environment, so drop all of it.
+    with pytest.MonkeyPatch.context() as monkeypatch:
+        for name in [n for n in os.environ if n.startswith("GIT_")]:
+            monkeypatch.delenv(name)
+        yield
+
+
 @pytest.fixture
 def git_repo() -> Generator[GitRepo]:
     with tempfile.TemporaryDirectory() as tmpdir:
