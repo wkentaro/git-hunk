@@ -47,8 +47,10 @@ def test_no_changes_remain_errors(make_hunk: Callable[[str], Hunk]) -> None:
 def test_out_of_range_errors(make_hunk: Callable[[str], Hunk]) -> None:
     diff = "@@ -1,2 +1,3 @@ def foo():\n ctx1\n+add1\n ctx2"
     hunk = make_hunk(diff)
-    with pytest.raises(ValueError, match="out of range"):
-        filter_hunk_lines(hunk, {99}, exclude=False)
+    with pytest.raises(
+        ValueError, match=r"line number out of range \(hunk has 3 lines\): 99$"
+    ):
+        filter_hunk_lines(hunk, {99, 100}, exclude=False)
 
 
 def test_unparsable_header_errors(make_hunk: Callable[[str], Hunk]) -> None:

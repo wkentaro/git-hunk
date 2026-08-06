@@ -252,10 +252,11 @@ def filter_hunk_lines(
     body = _parse_body_lines(split_diff_body(diff=hunk.diff))
     total = len(body)
 
-    out_of_range = {n for n in lines if n < 1 or n > total}
+    out_of_range = [n for n in lines if n < 1 or n > total]
     if out_of_range:
-        bad = ", ".join(str(n) for n in sorted(out_of_range))
-        raise ValueError(f"line numbers out of range (hunk has {total} lines): {bad}")
+        raise ValueError(
+            f"line number out of range (hunk has {total} lines): {min(out_of_range)}"
+        )
 
     if exclude:
         selected = {i for i in range(1, total + 1) if i not in lines}
