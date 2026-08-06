@@ -7,10 +7,9 @@ from pathlib import Path
 def test_suite_ignores_an_inherited_git_environment(tmp_path: Path) -> None:
     """The suite must not write to whatever repository GIT_DIR names.
 
-    `git rebase --exec`, hooks, `filter-branch`, and `bisect run` all export
-    GIT_DIR and GIT_INDEX_FILE to the command they run. Those beat cwd, so a
-    suite that inherited them would commit into the repository under test.
-    Point them at a decoy repository and assert it stays empty.
+    Point GIT_DIR and friends at a decoy repository, run a slice of the suite,
+    and assert the decoy stays empty. `_scrubbed_git_env` in conftest.py
+    explains why the scrub exists.
     """
     decoy = tmp_path / "decoy"
     decoy.mkdir()
