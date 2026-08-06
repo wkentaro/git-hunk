@@ -99,6 +99,14 @@ shell passes them unchanged. For example, from `sub/`, `same.txt` selects the
 file at the worktree root, while `sub/same.txt` selects the file inside `sub/`.
 `show` remains ID-only.
 
+### Unsupported repository states
+
+git-hunk rejects detected rename, copy, and unmerged index states before it
+writes inventory output or changes the repository. This prevents partial JSON,
+partial inventory, false clean results, and partial mutation. Resolve an
+unmerged index with Git before retrying. Full rename and copy support is not yet
+available; it remains tracked in [#53](https://github.com/wkentaro/git-hunk/issues/53).
+
 ### List hunks
 
 ```bash
@@ -142,8 +150,14 @@ Line selection accepts any subset of a pure addition, pure deletion, or
 one-for-one replacement. A grouped replacement with multiple deleted or added
 lines must be selected as a whole or not selected. Numeric range endpoints are
 checked against the Hunk before expansion, and no-newline state is preserved for
-each patch side. Submodule pointer changes do not support line selection. Select
-the Hunk as a whole.
+each patch side. Submodule pointer changes and whole-file Hunks do not support
+line selection. Select the Hunk as a whole.
+
+A binary, mode-only, type, or empty tracked file change is a whole-file Hunk.
+Plain output labels empty tracked changes as `Empty file (added)` or
+`Empty file (deleted)`. When one file has a mode change and text edits, the mode
+and each text range are separate Hunks. Selecting text does not apply the mode
+change, and selecting the mode Hunk does not apply text.
 
 ### Commit
 
@@ -199,11 +213,11 @@ body; `show --json` adds a structured `lines` array. A `show --json` hunk
 | `id`             | string         | Stable, content-based hunk id (7-char SHA-256 prefix); accepts prefixes; empty for an `untracked` entry, which no command can address. |
 | `file`           | union          | Repository path of the changed file, as a byte-safe `{text\|bytes}` union (see below).                                                 |
 | `status`         | string         | One of `staged`, `unstaged`, `untracked`.                                                                                              |
-| `change_kind`    | string         | Git status letter: `A` added, `D` deleted, `M` modified, `T` typechange (`R`/`C` reserved). Always present.                            |
+| `change_kind`    | string         | Git status letter: `A` added, `D` deleted, `M` modified, `T` typechange (`R`/`C` reserved and currently rejected). Always present.     |
 | `a_mode`         | string \| null | 6-digit octal git mode on the pre-image side; `null` when that side does not exist.                                                    |
 | `b_mode`         | string \| null | 6-digit octal git mode on the post-image side; `null` when that side does not exist.                                                   |
 | `binary`         | bool           | Whether the change is binary. Always present.                                                                                          |
-| `header`         | string \| null | The hunk's bare `@@ -a,b +c,d @@` range; `null` for a whole-file (binary, mode-only, or type) change.                                  |
+| `header`         | string \| null | The hunk's bare `@@ -a,b +c,d @@` range; `null` for a whole-file (binary, mode-only, type, or empty tracked file) change.              |
 | `context_before` | union \| null  | The function/section git names after the `@@` header, as a `{text\|bytes}` union; `null` when there is none.                           |
 | `additions`      | int            | Number of added lines.                                                                                                                 |
 | `deletions`      | int            | Number of removed lines.                                                                                                               |
@@ -237,10 +251,11 @@ renaming, removing, or changing the type of an existing field bumps it. (Before
 
 ## How it works
 
-1. Parses `git diff` output into individual hunks
-2. Assigns each hunk a stable, content-based ID (SHA-256 prefix)
-3. For staging: reconstructs a minimal patch and pipes it through `git apply --cached`
-4. For discarding: reconstructs a reverse patch and applies it to the working tree
+1. Rejects detected rename, copy, and unmerged states.
+2. Parses `git diff` output into individual hunks.
+3. Assigns each hunk a stable, content-based ID (SHA-256 prefix).
+4. For staging, reconstructs a minimal patch and pipes it through `git apply --cached`.
+5. For discarding, reconstructs a reverse patch and applies it to the working tree.
 
 IDs are derived from the changed lines, not the `@@` line numbers that shift as
 you stage other hunks -- so an unrelated hunk keeps its id, while staging only

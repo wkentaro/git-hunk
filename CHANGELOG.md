@@ -69,6 +69,13 @@ and this project adheres to
 
 ### Fixed
 
+- Reject detected renames, copies, and unmerged index entries before showing a
+  partial inventory or applying a selection. These states now fail without
+  changing the index or working tree (#199).
+- Treat file mode changes and text edits as independent Hunks, and list empty
+  tracked additions and deletions as whole-file Hunks. Each change can now be
+  selected independently, and mixed selections validate before mutation
+  (#199).
 - Make partial line selection safe and bounded: reject ambiguous grouped
   replacements atomically; validate range endpoints before expansion; preserve
   no-newline state by patch side; and reject submodule pointer line selection

@@ -7,23 +7,25 @@
   one exact Repository path. They do not expand directories, globs, or Git
   pathspec syntax.
 
-- **Hunk** — the atomic, addressable unit of git-hunk. A contiguous change a user can
-  `stage` / `show` / `discard` by `id`. Usually one `@@` section of a unified diff; for
-  binary, mode-only, or type changes it is a synthetic **whole-file hunk** (no `@@` range).
-  The top-level object in `--json` (the tool is hunk-centric, not file-centric).
+- **Hunk**: the atomic, addressable unit of git-hunk. A contiguous change a user can
+  `stage` / `show` / `discard` by `id`. Usually one `@@` section of a unified diff. A
+  binary, mode-only, type, or empty tracked file change is a synthetic **whole-file
+  hunk** with no `@@` range. It is the top-level object in `--json` because the tool is
+  hunk-centric, not file-centric.
 
 - **Change group**: a maximal run of changed `-` and `+` lines with no context line
   between them. Partial line selection is unrestricted for pure additions, pure
   deletions, and one-for-one replacements. A larger grouped replacement is selected
   as a whole or not selected.
 
-- **Whole-file hunk** — a hunk with no `@@` text range: a binary change, a mode-only
-  (chmod) change, or a type change (e.g. file ↔ symlink). Has `header: null` and (in
-  `show --json`) `lines: []`.
+- **Whole-file hunk**: a hunk with no `@@` text range: a binary change, a mode-only
+  (chmod) change, a type change (e.g. file to symlink), or an empty tracked addition
+  or deletion. Has `header: null` and, in `show --json`, `lines: []`.
 
-- **change_kind** — the git status letter for the hunk's file: `A` added, `D` deleted,
-  `M` modified, `T` typechange. Always present. `R` (rename) / `C` (copy) are reserved,
-  not yet produced (see #53). Mirrors `git diff --name-status`.
+- **change_kind**: the git status letter for the hunk's file: `A` added, `D` deleted,
+  `M` modified, `T` typechange. Always present. `R` (rename) and `C` (copy) are
+  reserved and currently rejected before inventory or mutation (see #53). Mirrors
+  `git diff --name-status`.
 
 - **a_mode / b_mode** — the file's git mode (6-digit octal *string*, e.g. `"100644"`) on
   the pre-image (`a`) and post-image (`b`) side; `null` when that side does not exist.
@@ -68,3 +70,6 @@
   free text.
 - The internal patch text fed to `git apply` preserves git's bytes verbatim; only the
   *JSON projection* is normalized (bared header, byte-safe union).
+- A mode change and text changes in one file are separate, independently selectable
+  Hunks.
+- Detected rename, copy, and unmerged states fail before inventory output or mutation.

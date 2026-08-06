@@ -111,8 +111,8 @@ no path operand.
 
 ## Out of scope
 
-- Mid-mutation atomicity. A selection is validated completely before the first
-  mutation, but a failure between the textual `git apply` leg and the whole-file leg
-  can still leave the first applied. That is decided with the other file-level
-  edge cases, not here.
-- Rename and copy states, which remain rejected (#53).
+- Cross-process rollback. Selection, patch, and forward whole-file validation finish
+  before the first mutation. An external race or I/O failure between the textual
+  `git apply` leg and the whole-file leg can still leave the first leg applied.
+- Rename and copy support. These states remain rejected before output or mutation
+  (#53).
