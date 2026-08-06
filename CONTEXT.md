@@ -50,6 +50,9 @@
 
 - **ADR 0001** — `--json` schema v2 (typed Hunk model). The authoritative spec for the
   `--json` shape; converges #28/#40/#44/#50/#56 under one `schema_version: 2` bump.
+- **ADR 0002** — Repository path. The authoritative spec for what a path means: one
+  root-relative coordinate system, root-anchored git calls, exact literal operands;
+  converges #127/#159.
 
 ## Invariants
 
