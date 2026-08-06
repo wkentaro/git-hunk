@@ -60,60 +60,132 @@ def parse_line_spec(spec: str) -> tuple[set[int], bool]:
 class _BodyLine(NamedTuple):
     prefix: str  # rendered side: ' ' context, '-' old, '+' new
     text: str
-    no_newline: bool  # the line it represents has no trailing newline
+    old_no_newline: bool
+    new_no_newline: bool
+
+
+def _parse_body_lines(body: list[str]) -> list[_BodyLine]:
+    parsed: list[_BodyLine] = []
+    for line in body:
+        if not is_no_newline_marker(line):
+            parsed.append(
+                _BodyLine(
+                    prefix=line[:1],
+                    text=line[1:],
+                    old_no_newline=False,
+                    new_no_newline=False,
+                )
+            )
+            continue
+
+        previous = parsed[-1]
+        parsed[-1] = previous._replace(
+            old_no_newline=previous.prefix in (" ", "-"),
+            new_no_newline=previous.prefix in (" ", "+"),
+        )
+    return parsed
+
+
+def count_hunk_body_lines(hunk: Hunk) -> int:
+    body = split_diff_body(diff=hunk.diff)
+    return len(_parse_body_lines(body))
 
 
 def _select_body_lines(
-    body: list[str],
+    body: list[_BodyLine],
     selected: set[int],
     *,
     keep_prefix: str,
 ) -> list[_BodyLine]:
-    """Apply the line selection, folding each no-newline marker onto its line."""
     kept: list[_BodyLine] = []
-    line_num = 0
-    dropped_last = False
-    for line in body:
-        if is_no_newline_marker(line):
-            if not dropped_last:
-                kept[-1] = kept[-1]._replace(no_newline=True)
+    for line_num, line in enumerate(body, start=1):
+        if line.prefix == " " or line_num in selected:
+            kept.append(line)
             continue
-        line_num += 1
-        prefix, text = line[:1], line[1:]
-        if prefix == " " or line_num in selected:
-            kept.append(_BodyLine(prefix=prefix, text=text, no_newline=False))
-        elif prefix == keep_prefix:  # unselected change survives as context
-            kept.append(_BodyLine(prefix=" ", text=text, no_newline=False))
-        else:
-            dropped_last = True
+        if line.prefix != keep_prefix:
             continue
-        dropped_last = False
+        # The line becomes context, so it now sits on both patch sides. A change
+        # line only ever carries a marker at its own side's EOF, so if it ends
+        # without a newline on one side it ends without one on both. Widen the
+        # flag; _render_body_lines drops it again on whichever side a later kept
+        # line extends past it.
+        no_newline = line.old_no_newline or line.new_no_newline
+        kept.append(
+            line._replace(
+                prefix=" ",
+                old_no_newline=no_newline,
+                new_no_newline=no_newline,
+            )
+        )
     return kept
 
 
 def _render_body_lines(kept: list[_BodyLine]) -> list[str]:
-    # A no-newline marker is valid only on the final line of the side it
-    # describes. A kept change line always sits at its side's EOF, and a context
-    # marker on the very last body line ends both sides. The remaining case is an
-    # old-side line kept as context that now has lines after it: it was the old
-    # EOF (no trailing newline) but the new side continues past it, so split it
-    # back into a '-'/'+' pair, keeping the marker on the old side while the new
-    # side gains a newline. The mirror (a new-side no-newline line kept as context
-    # under reverse) cannot reach here: a new-side EOF line never has kept lines
-    # after it, so it is always the last body line and takes the branch above.
-    last_index = len(kept) - 1
-    rendered = []
+    # A no-newline marker is valid only while its line is last on the side it
+    # belongs to: ' ' context on both, '-' on old, '+' on new. Filtering can
+    # leave a marked line with a later kept line on the same side, which makes
+    # the marker stale and would merge the two lines on apply. Recompute each
+    # side's final line and emit a marker only there.
+    last_old_index = max(
+        (index for index, line in enumerate(kept) if line.prefix in (" ", "-")),
+        default=-1,
+    )
+    last_new_index = max(
+        (index for index, line in enumerate(kept) if line.prefix in (" ", "+")),
+        default=-1,
+    )
+    rendered: list[str] = []
     for index, line in enumerate(kept):
-        if not line.no_newline:
-            rendered.append(line.prefix + line.text)
-        elif line.prefix != " " or index == last_index:
-            rendered.append(line.prefix + line.text)
-            rendered.append(NO_NEWLINE_MARKER)
-        else:
+        old_marker = line.old_no_newline and index == last_old_index
+        new_marker = line.new_no_newline and index == last_new_index
+        if line.prefix == " " and old_marker != new_marker:
+            # The sides disagree, which no single context line can express, so
+            # split it into the '-'/'+' pair that carries a marker per side.
             rendered.append("-" + line.text)
-            rendered.append(NO_NEWLINE_MARKER)
+            if old_marker:
+                rendered.append(NO_NEWLINE_MARKER)
             rendered.append("+" + line.text)
+            if new_marker:
+                rendered.append(NO_NEWLINE_MARKER)
+            continue
+        rendered.append(line.prefix + line.text)
+        if old_marker or new_marker:
+            rendered.append(NO_NEWLINE_MARKER)
     return rendered
+
+
+def _validate_group(group: list[tuple[int, str]], selected: set[int]) -> None:
+    """Reject a partial subset of a grouped replacement.
+
+    Git pairs no old line with any new line inside a run of changed lines, so a
+    subset of a replacement wider than one-for-one has no defined meaning. Pure
+    additions, pure deletions, and one-for-one replacements stay unrestricted.
+    """
+    deletions = sum(prefix == "-" for _, prefix in group)
+    additions = sum(prefix == "+" for _, prefix in group)
+    if not deletions or not additions:
+        return
+    if deletions == 1 and additions == 1:
+        return
+    selected_count = sum(number in selected for number, _ in group)
+    if selected_count in (0, len(group)):
+        return
+    raise ValueError(
+        f"cannot partially select lines {group[0][0]}-{group[-1][0]}: "
+        f"grouped replacement (deletions: {deletions}, additions: {additions}); "
+        "select all or none"
+    )
+
+
+def _validate_group_selection(body: list[_BodyLine], selected: set[int]) -> None:
+    group: list[tuple[int, str]] = []
+    for line_num, line in enumerate(body, start=1):
+        if line.prefix in ("+", "-"):
+            group.append((line_num, line.prefix))
+            continue
+        _validate_group(group, selected)
+        group = []
+    _validate_group(group, selected)
 
 
 def resolve_matching_lines(
@@ -140,18 +212,14 @@ def resolve_matching_lines(
             raise ValueError(f"invalid regex: {exc}") from exc
 
     selected: set[int] = set()
-    line_num = 0
-    for line in split_diff_body(diff=hunk.diff):
-        if is_no_newline_marker(line):
+    body = _parse_body_lines(split_diff_body(diff=hunk.diff))
+    for line_num, line in enumerate(body, start=1):
+        if line.prefix not in ("+", "-"):
             continue
-        line_num += 1
-        if not line.startswith(("+", "-")):
-            continue
-        content = line[1:]
         if compiled is not None:
-            matched = any(pattern.search(content) for pattern in compiled)
+            matched = any(pattern.search(line.text) for pattern in compiled)
         else:
-            matched = any(pattern in content for pattern in patterns)
+            matched = any(pattern in line.text for pattern in patterns)
         if matched:
             selected.add(line_num)
 
@@ -159,21 +227,6 @@ def resolve_matching_lines(
         joined = ", ".join(repr(p) for p in patterns)
         raise ValueError(f"no changed line matches {joined}")
     return selected
-
-
-def _filter_body_lines(
-    body: list[str],
-    selected: set[int],
-    *,
-    reverse: bool,
-) -> list[str]:
-    # Unselected changes must survive as context in the form the apply direction
-    # expects. A forward (stage) apply matches OLD content, so unselected '-'
-    # lines become context and unselected '+' lines drop; a reverse (unstage,
-    # discard) apply matches NEW content, so the two sides swap.
-    keep_prefix = "+" if reverse else "-"
-    kept = _select_body_lines(body, selected, keep_prefix=keep_prefix)
-    return _render_body_lines(kept)
 
 
 def filter_hunk_lines(
@@ -187,9 +240,8 @@ def filter_hunk_lines(
     NEW content the index or working tree already holds.
     """
     header = hunk.diff.split("\n", 1)[0]
-    body = split_diff_body(diff=hunk.diff)
-
-    total = sum(1 for line in body if not is_no_newline_marker(line))
+    body = _parse_body_lines(split_diff_body(diff=hunk.diff))
+    total = len(body)
 
     out_of_range = {n for n in lines if n < 1 or n > total}
     if out_of_range:
@@ -201,7 +253,13 @@ def filter_hunk_lines(
     else:
         selected = lines
 
-    new_body = _filter_body_lines(body, selected, reverse=reverse)
+    _validate_group_selection(body, selected)
+    # A forward apply matches OLD content, so unselected '-' lines become
+    # context and unselected '+' lines drop. A reverse apply matches NEW
+    # content, so the two sides swap.
+    keep_prefix = "+" if reverse else "-"
+    kept = _select_body_lines(body, selected, keep_prefix=keep_prefix)
+    new_body = _render_body_lines(kept)
 
     additions, deletions = count_changes(new_body)
     if additions == 0 and deletions == 0:
