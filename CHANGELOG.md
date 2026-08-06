@@ -31,6 +31,23 @@ and this project adheres to
 
 ### Changed
 
+- **Breaking:** Use the Repository path coordinate system defined in ADR 0002
+  for inventory, selection, and mutation, so
+  `list`, `show`, `stage`, `unstage`, `discard`, and `commit` have the same
+  behavior from the worktree root and every subdirectory. File operands are
+  exact paths relative to the worktree root. Absolute and escaping paths are
+  rejected. Directories, globs, and Git pathspec syntax are not expanded
+  (#194).
+- **Breaking:** Require Git 2.28 or later. Canonical diff paths need
+  `git diff --no-relative`, which earlier versions of Git reject (#194).
+- **Breaking:** Git pathspec magic such as `':(bogus)x'` is no longer forwarded
+  to git, so it no longer produces the clean git-failure error added in #107. A
+  file operand that matches no changed file now fails with
+  `no changed file matches` in `stage`, `unstage`, `discard`, and `commit`, and
+  yields an empty inventory in `list` (#194).
+- **Breaking:** A file operand is rejected only when it is empty, absolute, or
+  escapes the worktree. An all-whitespace operand is now a legal Repository
+  path, so a file literally named `"   "` is addressable (#194).
 - **Breaking:** `list --json` now wraps its output in a versioned envelope,
   `{"schema_version": 2, "hunks": [...]}`, instead of a bare array, so consumers
   can depend on a documented, versioned shape (#23).
@@ -59,6 +76,15 @@ and this project adheres to
 - Partial line selection on an added or deleted text file no longer leaks a raw
   `git apply` "depends on old contents" error; the patch header is rewritten to
   describe both sides (#195).
+- Stop `stage`, `unstage`, and `discard` from silently doing nothing when run
+  from a subdirectory on a text hunk whose file lives elsewhere in the
+  repository. `git apply` drops patched paths outside its working directory
+  without a word, so the command printed its success line and exited `0` while
+  the index was never touched. Every git call is now anchored to the worktree
+  root (#159).
+- Accept a file operand from a subdirectory in `stage`, `unstage`, `discard`,
+  and `commit`, which previously reported `no changed file matches` for a path
+  that `list` and `show` accepted (#127).
 - `commit --help` no longer advertises `--include-matching`,
   `--exclude-matching`, and `--regex`, which the command never accepted; the
   help now lists only the options `commit` actually supports (#105).
@@ -83,19 +109,15 @@ and this project adheres to
 - Reject an empty `--include-matching` / `--exclude-matching` pattern, which
   previously matched every line and silently selected the whole hunk, so an
   accidentally-empty pattern now errors like an empty `-l` spec (#87).
-- Normalize file-path arguments before matching, so `git-hunk list ./foo.py`
-  surfaces an untracked `foo.py` instead of silently dropping it, and path
-  arguments resolve consistently across `list`/`stage`/`unstage`/`discard`
-  regardless of the platform's path separator (#95).
+- Normalize a leading `./` and the platform's native path separator before
+  exact file matching, so `git-hunk list ./foo.py` surfaces an untracked
+  `foo.py` instead of silently dropping it (#95).
 - Stop the global `-h`/`--help` and `-V`/`--version` flags from falling through
   into a trailing subcommand, so `git-hunk -h stage src/foo.py` prints help
   without staging and `git-hunk -V list` prints the version without listing
   (#145).
 - Report a clean `error:` message instead of a raw `FileNotFoundError`
   traceback when the `git` executable is not found on `PATH` (#122).
-- Report a git failure on a bad path argument (e.g. `git-hunk list ':(bogus)x'`)
-  as a clean `error:` message instead of crashing with a raw Python traceback
-  (#107).
 - Show a `Usage:` hint on the `--staged`/`--unstaged` conflict error for `list`
   and `show`, matching every other conflicting-flags error (#117).
 - Match hunk ids case-insensitively, so an uppercased id like `git-hunk show 713B7B9` resolves like git's own object-id lookup instead of failing with a
@@ -111,7 +133,7 @@ and this project adheres to
   hunk as carrying a usable `id`: an `untracked` entry's `id` is empty, so no
   git-hunk command can address it, and plain `list` renders it as a bare path
   (#162).
-- Report untracked files with repo-root-relative paths, matching tracked hunks,
+- Report untracked files with Repository paths, matching tracked Hunks,
   so running `git-hunk` from a subdirectory no longer emits an untracked `file`
   on a different path basis than the staged/unstaged hunks beside it (#103).
 - Report a git failure while checking for already-staged changes in `commit`
