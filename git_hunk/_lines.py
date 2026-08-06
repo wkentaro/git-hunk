@@ -20,7 +20,7 @@ def _parse_line_number(token: str) -> int:
     return n
 
 
-def parse_line_spec(spec: str) -> tuple[set[int], bool]:
+def parse_line_spec(spec: str, *, total: int) -> tuple[set[int], bool]:
     """Parse "-l" value into (line_numbers, exclude_mode).
 
     "3,5-7"   -> ({3, 5, 6, 7}, False)
@@ -50,9 +50,18 @@ def parse_line_spec(spec: str) -> tuple[set[int], bool]:
             hi = _parse_line_number(bounds[1])
             if lo > hi:
                 raise ValueError(f"invalid range (start > end): {part}")
+            if lo > total or hi > total:
+                raise ValueError(
+                    f"line number out of range (hunk has {total} lines): {part}"
+                )
             lines.update(range(lo, hi + 1))
         else:
-            lines.add(_parse_line_number(raw))
+            line = _parse_line_number(raw)
+            if line > total:
+                raise ValueError(
+                    f"line number out of range (hunk has {total} lines): {part}"
+                )
+            lines.add(line)
 
     return lines, exclude
 
