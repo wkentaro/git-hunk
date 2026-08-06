@@ -95,3 +95,23 @@ def test_matching_selection_uses_group_validation(
 
     _assert_group_error(result.returncode, result.stderr)
     assert _capture_repo_state(cli) == before
+
+
+@pytest.mark.parametrize(
+    "selector",
+    [
+        ("--include-matching", "b", "--include-matching", "B"),
+        ("--exclude-matching", "c", "--exclude-matching", "C"),
+    ],
+)
+def test_unstage_matching_selection_uses_group_validation(
+    grouped_replacement: GitHunkCLI, selector: tuple[str, ...]
+) -> None:
+    cli = grouped_replacement
+    cli.run_ok("stage", cli.get_only_hunk_id("--unstaged"))
+    before = _capture_repo_state(cli)
+
+    result = cli.run("unstage", cli.get_only_hunk_id("--staged"), *selector)
+
+    _assert_group_error(result.returncode, result.stderr)
+    assert _capture_repo_state(cli) == before
