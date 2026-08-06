@@ -1,4 +1,5 @@
 from pathlib import Path
+from typing import NamedTuple
 
 import pytest
 
@@ -11,23 +12,25 @@ def _commit(cli: GitHunkCLI, content: str) -> None:
     cli.repo.git("commit", "-m", "init")
 
 
+class _NewlineChange(NamedTuple):
+    cli: GitHunkCLI
+    old_text: str
+    new_text: str
+
+
 @pytest.fixture(params=[("b", "B\n"), ("b\n", "B"), ("b", "B")])
-def newline_change(
-    cli: GitHunkCLI, request: pytest.FixtureRequest
-) -> tuple[GitHunkCLI, str, str]:
+def newline_change(cli: GitHunkCLI, request: pytest.FixtureRequest) -> _NewlineChange:
     old, new = request.param
     _commit(cli, "a\n" + old)
     cli.repo.write_file("f.txt", "a\n" + new)
-    return cli, old, new
+    return _NewlineChange(cli=cli, old_text=old, new_text=new)
 
 
 @pytest.fixture
-def staged_newline_change(
-    newline_change: tuple[GitHunkCLI, str, str],
-) -> tuple[GitHunkCLI, str, str]:
-    cli, old, new = newline_change
+def staged_newline_change(newline_change: _NewlineChange) -> _NewlineChange:
+    cli = newline_change.cli
     cli.run_ok("stage", cli.get_only_hunk_id("--unstaged"))
-    return cli, old, new
+    return newline_change
 
 
 def test_stage_edit_last_line_no_newline(cli: GitHunkCLI) -> None:
@@ -171,9 +174,9 @@ def test_unstage_addition_of_no_newline_to_newline_keeps_lines_separate(
 
 
 def test_stage_deletion_preserves_each_side_newline_state(
-    newline_change: tuple[GitHunkCLI, str, str],
+    newline_change: _NewlineChange,
 ) -> None:
-    cli, _, _ = newline_change
+    cli = newline_change.cli
 
     cli.run_ok("stage", cli.get_only_hunk_id("--unstaged"), "-l", "2")
 
@@ -181,64 +184,69 @@ def test_stage_deletion_preserves_each_side_newline_state(
 
 
 def test_stage_addition_preserves_each_side_newline_state(
-    newline_change: tuple[GitHunkCLI, str, str],
+    newline_change: _NewlineChange,
 ) -> None:
-    cli, _, new = newline_change
+    cli = newline_change.cli
 
     cli.run_ok("stage", cli.get_only_hunk_id("--unstaged"), "-l", "3")
 
+    new = newline_change.new_text
     assert cli.repo.git("show", ":f.txt").encode() == b"a\nb\n" + new.encode()
 
 
 def test_stage_replacement_preserves_each_side_newline_state(
-    newline_change: tuple[GitHunkCLI, str, str],
+    newline_change: _NewlineChange,
 ) -> None:
-    cli, _, new = newline_change
+    cli = newline_change.cli
 
     cli.run_ok("stage", cli.get_only_hunk_id("--unstaged"), "-l", "2,3")
 
+    new = newline_change.new_text
     assert cli.repo.git("show", ":f.txt").encode() == b"a\n" + new.encode()
 
 
 def test_unstage_deletion_preserves_each_side_newline_state(
-    staged_newline_change: tuple[GitHunkCLI, str, str],
+    staged_newline_change: _NewlineChange,
 ) -> None:
-    cli, _, new = staged_newline_change
+    cli = staged_newline_change.cli
     staged_id = cli.run_list_json("list", "--staged", "--json")[0]["id"]
 
     cli.run_ok("unstage", staged_id, "-l", "2")
 
+    new = staged_newline_change.new_text
     assert cli.repo.git("show", ":f.txt").encode() == b"a\nb\n" + new.encode()
 
 
 def test_discard_deletion_preserves_each_side_newline_state(
-    newline_change: tuple[GitHunkCLI, str, str],
+    newline_change: _NewlineChange,
 ) -> None:
-    cli, _, new = newline_change
+    cli = newline_change.cli
 
     cli.run_ok("discard", cli.get_only_hunk_id("--unstaged"), "-l", "2")
 
     # read_text, not read_bytes: the working tree holds CRLF on Windows, and
     # universal newlines normalize it while still telling the two trailing
     # newline states apart, which is what this asserts.
-    assert (Path(cli.repo.path) / "f.txt").read_text() == "a\nb\n" + new
+    expected = "a\nb\n" + newline_change.new_text
+    assert (Path(cli.repo.path) / "f.txt").read_text() == expected
 
 
 def test_commit_addition_preserves_each_side_newline_state(
-    newline_change: tuple[GitHunkCLI, str, str],
+    newline_change: _NewlineChange,
 ) -> None:
-    cli, _, new = newline_change
+    cli = newline_change.cli
 
     cli.run_ok("commit", cli.get_only_hunk_id("--unstaged"), "-l", "3", "-m", "partial")
 
+    new = newline_change.new_text
     assert cli.repo.git("show", "HEAD:f.txt").encode() == b"a\nb\n" + new.encode()
     assert (Path(cli.repo.path) / "f.txt").read_text() == "a\n" + new
 
 
 def test_unstage_addition_preserves_each_side_newline_state(
-    staged_newline_change: tuple[GitHunkCLI, str, str],
+    staged_newline_change: _NewlineChange,
 ) -> None:
-    cli, _, _ = staged_newline_change
+    cli = staged_newline_change.cli
     staged_id = cli.run_list_json("list", "--staged", "--json")[0]["id"]
 
     cli.run_ok("unstage", staged_id, "-l", "3")
@@ -247,11 +255,12 @@ def test_unstage_addition_preserves_each_side_newline_state(
 
 
 def test_unstage_replacement_preserves_each_side_newline_state(
-    staged_newline_change: tuple[GitHunkCLI, str, str],
+    staged_newline_change: _NewlineChange,
 ) -> None:
-    cli, old, _ = staged_newline_change
+    cli = staged_newline_change.cli
     staged_id = cli.run_list_json("list", "--staged", "--json")[0]["id"]
 
     cli.run_ok("unstage", staged_id, "-l", "2,3")
 
+    old = staged_newline_change.old_text
     assert cli.repo.git("show", ":f.txt").encode() == b"a\n" + old.encode()
