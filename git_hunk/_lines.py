@@ -283,7 +283,12 @@ def filter_hunk_lines(
     if not m:
         raise ValueError(f"cannot parse hunk header: {header}")
 
-    range_header = f"@@ -{m.group(1)},{old_count} +{m.group(2)},{new_count} @@"
+    # Git writes start 0 only for an empty side. Filtering can give an added
+    # file's old side (or a deleted file's new side) context lines, so the side
+    # is no longer empty and its start must become the first real line.
+    old_start = 1 if m.group(1) == "0" and old_count else int(m.group(1))
+    new_start = 1 if m.group(2) == "0" and new_count else int(m.group(2))
+    range_header = f"@@ -{old_start},{old_count} +{new_start},{new_count} @@"
     # diff keeps git's verbatim @@ line (heading included) for git apply / show;
     # the JSON header field is the bare range (heading lives in context_before).
     new_diff = range_header + m.group(3) + "\n" + "\n".join(new_body)

@@ -1,3 +1,5 @@
+import re
+
 from ._hunk import Hunk
 from ._hunk import extract_file_path
 from ._hunk import split_at_hunk_headers
@@ -14,6 +16,39 @@ def _extract_file_headers(diff_output: str) -> dict[str, str]:
     return headers
 
 
+def _needs_modification_header(hunk: Hunk) -> bool:
+    # Partial line selection turns unselected changes into context, so an added
+    # file's patch gains an old side and a deleted file's patch gains a new one.
+    # Its "/dev/null" header no longer describes the patch and git rejects it.
+    match = re.match(r"@@ -\d+(?:,(\d+))? \+\d+(?:,(\d+))? @@", hunk.diff)
+    if match is None:
+        return False
+    old_count = int(match.group(1) or 1)
+    new_count = int(match.group(2) or 1)
+    return (hunk.change_kind == "A" and old_count > 0) or (
+        hunk.change_kind == "D" and new_count > 0
+    )
+
+
+def _make_modification_header(header: str) -> str:
+    lines = header.rstrip("\n").split("\n")
+    diff_line = lines[0]
+    old_line = next(line for line in lines if line.startswith("--- "))
+    new_line = next(line for line in lines if line.startswith("+++ "))
+
+    if old_line == "--- /dev/null":
+        if new_line.startswith("+++ b/"):
+            old_line = "--- a/" + new_line.removeprefix("+++ b/")
+        else:
+            old_line = '--- "a/' + new_line.removeprefix('+++ "b/')
+    if new_line == "+++ /dev/null":
+        if old_line.startswith("--- a/"):
+            new_line = "+++ b/" + old_line.removeprefix("--- a/")
+        else:
+            new_line = '+++ "b/' + old_line.removeprefix('--- "a/')
+    return "\n".join((diff_line, old_line, new_line)) + "\n"
+
+
 def build_patch(hunks: list[Hunk], diff_output: str) -> str:
     files: dict[str, list[Hunk]] = {}
     for hunk in hunks:
@@ -25,7 +60,10 @@ def build_patch(hunks: list[Hunk], diff_output: str) -> str:
     for filepath, file_hunks in files.items():
         if filepath not in headers:
             raise ValueError(f"File header not found for {filepath}")
+        header = headers[filepath]
+        if any(_needs_modification_header(hunk) for hunk in file_hunks):
+            header = _make_modification_header(header)
         hunk_diffs = "\n".join(h.diff for h in file_hunks)
-        patches.append(headers[filepath] + hunk_diffs + "\n")
+        patches.append(header + hunk_diffs + "\n")
 
     return "".join(patches)

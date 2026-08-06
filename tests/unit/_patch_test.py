@@ -36,11 +36,11 @@ DIFF_TWO_FILES = (
 )
 
 
-def _make_hunk(*, file: str, diff: str) -> Hunk:
+def _make_hunk(*, file: str, diff: str, change_kind: str = "M") -> Hunk:
     return Hunk(
         id="abc",
         file=file,
-        change_kind="M",
+        change_kind=change_kind,
         a_mode="100644",
         b_mode="100644",
         binary=False,
@@ -112,3 +112,51 @@ def test_build_patch_joins_hunks_of_same_file() -> None:
     assert patch.count("diff --git a/f.py") == 1
     assert "+A" in patch
     assert "+C" in patch
+
+
+def test_build_patch_converts_partial_added_file_to_modification() -> None:
+    diff_output = (
+        "diff --git a/f.txt b/f.txt\n"
+        "new file mode 100644\n"
+        "index 0000000..1111111\n"
+        "--- /dev/null\n"
+        "+++ b/f.txt\n"
+        "@@ -0,0 +1,2 @@\n"
+        "+a\n"
+        "+b\n"
+    )
+    hunk = _make_hunk(
+        file="f.txt",
+        change_kind="A",
+        diff="@@ -1,1 +1,2 @@\n a\n+b",
+    )
+
+    patch = build_patch([hunk], diff_output)
+
+    assert patch.startswith("diff --git a/f.txt b/f.txt\n--- a/f.txt\n+++ b/f.txt\n")
+    assert "new file mode" not in patch
+    assert "/dev/null" not in patch
+
+
+def test_build_patch_converts_partial_deleted_file_to_modification() -> None:
+    diff_output = (
+        "diff --git a/f.txt b/f.txt\n"
+        "deleted file mode 100644\n"
+        "index 1111111..0000000\n"
+        "--- a/f.txt\n"
+        "+++ /dev/null\n"
+        "@@ -1,2 +0,0 @@\n"
+        "-a\n"
+        "-b\n"
+    )
+    hunk = _make_hunk(
+        file="f.txt",
+        change_kind="D",
+        diff="@@ -1,2 +1,1 @@\n a\n-b",
+    )
+
+    patch = build_patch([hunk], diff_output)
+
+    assert patch.startswith("diff --git a/f.txt b/f.txt\n--- a/f.txt\n+++ b/f.txt\n")
+    assert "deleted file mode" not in patch
+    assert "/dev/null" not in patch
