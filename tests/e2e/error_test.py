@@ -31,6 +31,40 @@ def test_not_a_git_repo(tmp_path: Path) -> None:
     assert "not a git repository" in r.stderr
 
 
+def test_not_a_git_repo_with_non_caller_locale(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    monkeypatch.setenv("LC_ALL", "fr_FR.UTF-8")
+    repo = GitRepo(str(tmp_path))
+    cli = GitHunkCLI(repo)
+    r = cli.run("list")
+    assert r.returncode != 0
+    assert "not a git repository" in r.stderr
+
+
+@pytest.mark.parametrize(
+    "args",
+    [
+        ("list", "/etc/hosts"),
+        ("stage", "/etc/hosts"),
+        ("unstage", "../escape.txt"),
+        ("discard", ""),
+        ("commit", "-m", "x", "/etc/hosts"),
+    ],
+)
+def test_not_a_git_repo_outranks_a_bad_repository_path(
+    tmp_path: Path, args: tuple[str, ...]
+) -> None:
+    # A Repository path only has meaning inside a worktree, so the missing
+    # repository is the error to report, not the shape of the operand.
+    repo = GitRepo(str(tmp_path))
+    cli = GitHunkCLI(repo)
+    r = cli.run(*args)
+    assert r.returncode != 0
+    assert "not a git repository" in r.stderr
+    assert "repository path" not in r.stderr
+
+
 def test_bare_repo(tmp_path: Path) -> None:
     repo = GitRepo(str(tmp_path))
     repo.run("git", "init", "--bare")
@@ -38,6 +72,9 @@ def test_bare_repo(tmp_path: Path) -> None:
     r = cli.run("list")
     assert r.returncode != 0
     assert "not a git repository" in r.stderr
+    # git's own message says which of the several causes this was, so it is
+    # passed through as the tip rather than classified and discarded.
+    assert "work tree" in r.stderr
 
 
 def test_version(cli: GitHunkCLI) -> None:
@@ -122,7 +159,7 @@ def test_stage_nonexistent_hunk(cli: GitHunkCLI) -> None:
     assert "not found" in r.stderr
 
 
-def test_empty_hunk_id_rejected(cli: GitHunkCLI) -> None:
+def test_empty_operand_rejected(cli: GitHunkCLI) -> None:
     cli.repo.write_file("f.py", "old\n")
     cli.repo.git("add", ".")
     cli.repo.git("commit", "-m", "init")
@@ -130,8 +167,8 @@ def test_empty_hunk_id_rejected(cli: GitHunkCLI) -> None:
 
     r = cli.run("discard", "")
     assert r.returncode != 0
-    assert "must not be empty" in r.stderr
-    # The empty id must never match a hunk: the change is left untouched.
+    assert "repository path must not be empty" in r.stderr
+    # The empty operand must never match a hunk: the change is untouched.
     assert cli.repo.git("diff").strip() != ""
 
 
@@ -144,28 +181,29 @@ def unstaged_change(cli: GitHunkCLI) -> GitHunkCLI:
     return cli
 
 
-# `stage`, `unstage`, `discard` and `commit` all resolve targets through the
-# same empty-argument guard, so each must refuse to touch its own state.
-def test_empty_hunk_id_rejected_on_stage(unstaged_change: GitHunkCLI) -> None:
+# `stage`, `unstage`, `discard` and `commit` route an operand through
+# _make_repository_path, so each must refuse to touch its own state.
+# `show` is ID-only and keeps the separate hunk-id guard below.
+def test_empty_operand_rejected_on_stage(unstaged_change: GitHunkCLI) -> None:
     r = unstaged_change.run("stage", "")
     assert r.returncode != 0
-    assert "must not be empty" in r.stderr
+    assert "repository path must not be empty" in r.stderr
     assert unstaged_change.repo.git("diff", "--cached").strip() == ""
 
 
-def test_empty_hunk_id_rejected_on_unstage(unstaged_change: GitHunkCLI) -> None:
+def test_empty_operand_rejected_on_unstage(unstaged_change: GitHunkCLI) -> None:
     unstaged_change.repo.git("add", ".")
     r = unstaged_change.run("unstage", "")
     assert r.returncode != 0
-    assert "must not be empty" in r.stderr
+    assert "repository path must not be empty" in r.stderr
     assert unstaged_change.repo.git("diff", "--cached").strip() != ""
 
 
-def test_empty_hunk_id_rejected_on_commit(unstaged_change: GitHunkCLI) -> None:
+def test_empty_operand_rejected_on_commit(unstaged_change: GitHunkCLI) -> None:
     head = unstaged_change.repo.git("rev-parse", "HEAD")
     r = unstaged_change.run("commit", "-m", "msg", "")
     assert r.returncode != 0
-    assert "must not be empty" in r.stderr
+    assert "repository path must not be empty" in r.stderr
     assert unstaged_change.repo.git("rev-parse", "HEAD") == head
 
 
@@ -177,7 +215,7 @@ def test_empty_hunk_id_rejected_on_show(cli: GitHunkCLI) -> None:
 
     r = cli.run("show", "")
     assert r.returncode != 0
-    assert "must not be empty" in r.stderr
+    assert "hunk id must not be empty" in r.stderr
 
 
 def test_ambiguous_hunk_id_rejected(cli: GitHunkCLI) -> None:
@@ -273,9 +311,7 @@ def test_line_spec_with_multiple_hunks_fails(cli: GitHunkCLI) -> None:
     assert "exactly one hunk" in r.stderr
 
 
-def test_bad_pathspec_reports_clean_error(cli: GitHunkCLI) -> None:
-    # A git failure on a user-supplied path argument must surface as a clean
-    # CLI error, not a raw Python traceback.
+def test_pathspec_magic_is_not_expanded(cli: GitHunkCLI) -> None:
     r = cli.run("list", ":(bogus)x")
-    assert r.returncode != 0
-    assert "pathspec" in r.stderr
+    assert r.returncode == 0
+    assert r.stderr == "No hunks.\n"

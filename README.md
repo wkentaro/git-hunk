@@ -25,6 +25,9 @@ stage/unstage/discard commands.
 
 ## Install
 
+Requires Git 2.28 or later. `git-hunk` forces canonical diff paths with
+`git diff --no-relative`, which earlier versions of Git do not accept.
+
 ```bash
 pip install git-hunk
 ```
@@ -81,6 +84,20 @@ git commit -m "fix: handle empty response in API client"
 ```
 
 ## Usage
+
+### Repository paths
+
+A Repository path is relative to the worktree root, uses `/`, and has the same
+meaning from every invocation directory. Every path in output and every file
+operand for `list`, `stage`, `unstage`, `discard`, and `commit` is a Repository
+path. A leading `./` and internal `..` components are normalized. Absolute paths
+and paths that escape the worktree are rejected.
+
+File operands select one exact changed file. Directories, globs, and Git pathspec
+syntax are not expanded. Quote operands that contain shell metacharacters so the
+shell passes them unchanged. For example, from `sub/`, `same.txt` selects the
+file at the worktree root, while `sub/same.txt` selects the file inside `sub/`.
+`show` remains ID-only.
 
 ### List hunks
 
@@ -180,7 +197,7 @@ body; `show --json` adds a structured `lines` array. A `show --json` hunk
 | `schema_version` | int            | Envelope version; bumped on any incompatible change to the shape below.                                                                |
 | `hunks`          | array          | The hunks (empty array when there are no changes).                                                                                     |
 | `id`             | string         | Stable, content-based hunk id (7-char SHA-256 prefix); accepts prefixes; empty for an `untracked` entry, which no command can address. |
-| `file`           | union          | Path of the changed file, as a byte-safe `{text\|bytes}` union (see below).                                                            |
+| `file`           | union          | Repository path of the changed file, as a byte-safe `{text\|bytes}` union (see below).                                                 |
 | `status`         | string         | One of `staged`, `unstaged`, `untracked`.                                                                                              |
 | `change_kind`    | string         | Git status letter: `A` added, `D` deleted, `M` modified, `T` typechange (`R`/`C` reserved). Always present.                            |
 | `a_mode`         | string \| null | 6-digit octal git mode on the pre-image side; `null` when that side does not exist.                                                    |

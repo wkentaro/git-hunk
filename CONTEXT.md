@@ -2,6 +2,11 @@
 
 ## Glossary
 
+- **Repository path** — a file path relative to the worktree root. It uses `/`
+  and has the same meaning from every invocation directory. File operands select
+  one exact Repository path. They do not expand directories, globs, or Git
+  pathspec syntax.
+
 - **Hunk** — the atomic, addressable unit of git-hunk. A contiguous change a user can
   `stage` / `show` / `discard` by `id`. Usually one `@@` section of a unified diff; for
   binary, mode-only, or type changes it is a synthetic **whole-file hunk** (no `@@` range).
@@ -50,9 +55,14 @@
 
 - **ADR 0001** — `--json` schema v2 (typed Hunk model). The authoritative spec for the
   `--json` shape; converges #28/#40/#44/#50/#56 under one `schema_version: 2` bump.
+- **ADR 0002** — Repository path. The authoritative spec for what a path means: one
+  root-relative coordinate system, root-anchored git calls, exact literal operands;
+  converges #127/#159.
 
 ## Invariants
 
+- `Hunk.file`, plain output, success output, file operands, internal patches, and
+  whole-file mutations all use Repository paths.
 - The hunk is the unit of addressing; `--json` is flat (`hunks: []`), not file-grouped.
 - Display labels are derived in the UI layer from typed fields, never parsed back out of
   free text.

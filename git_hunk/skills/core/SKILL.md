@@ -30,20 +30,32 @@ IDs are content-based hashes and support prefix matching, so a 7-char prefix lik
 `d161935` is enough. They stay stable as you stage other hunks in the file, but
 staging only part of a hunk gives the leftover a new id.
 
-`stage`, `unstage`, and `discard` also accept a file path as shorthand for every
-hunk in that file, so you don't have to enumerate IDs:
+A Repository path is relative to the worktree root, uses `/`, and has the same
+meaning from every invocation directory. Every path in output and every file
+operand for `list`, `stage`, `unstage`, `discard`, and `commit` is a Repository
+path. A leading `./` and internal `..` components are normalized. Absolute paths
+and paths that escape the worktree are rejected.
+
+File operands select one exact changed file. Directories, globs, and Git pathspec
+syntax are not expanded. Quote operands that contain shell metacharacters so the
+shell passes them unchanged. From `sub/`, `same.txt` selects the file at the
+worktree root, while `sub/same.txt` selects the file inside `sub/`. `show` remains
+ID-only.
+
+Mutation commands accept a Repository path as shorthand for every Hunk in that
+file, so you do not have to enumerate IDs:
 
 ```bash
 git-hunk stage src/foo.py     # stage all of src/foo.py's hunks
 ```
 
-An argument that exactly matches a changed file's path operates on that whole
-file; otherwise it's treated as a hunk ID. A path takes precedence if an
-argument could be both.
+An argument that exactly matches a changed file's Repository path operates on
+that whole file. Otherwise, git-hunk treats it as a Hunk ID. A Repository path
+takes precedence if an argument could be both.
 
-`git-hunk commit <id|file> ... -m "<message>"` collapses steps 3-4 (stage one
-group, then commit it) into a single call. It aborts if anything is already
-staged, so the commit holds exactly the selected hunks; use the separate
+`git-hunk commit <id|Repository-path> ... -m "<message>"` collapses steps 3-4
+(stage one group, then commit it) into a single call. It aborts if anything is
+already staged, so the commit holds exactly the selected hunks; use the separate
 `stage` + `git commit` when you want to inspect the staged diff in between.
 
 ## Quickstart
@@ -172,14 +184,19 @@ mode-only, or type change has no `@@` line; it shows a
 `Binary file (modified|added|deleted)`, `Mode <old> -> <new>`, or
 `Type change (<old> -> <new>)` label instead and is staged whole (no `-l`).
 
-The `untracked` group is inventory only: it lists bare paths, and an untracked
-file has no hunk id (`""` in `--json`), so no git-hunk command can address it.
-Stage those with `git add <file>`.
+The `untracked` group is inventory only: it lists bare Repository paths, and an
+untracked file has no Hunk ID (`""` in `--json`), so no git-hunk command can
+address it. Stage an untracked file from any directory with a root-anchored,
+literal Git command:
+
+```bash
+git --literal-pathspecs -C "$(git rev-parse --show-toplevel)" add -- path/to/file
+```
 
 ## Useful flags
 
 ```bash
-git-hunk list <file>...   # filter hunks to specific files
+git-hunk list <Repository-path>...  # filter to exact Repository paths
 git-hunk list --staged    # only staged hunks (also --unstaged; both work on show)
 git-hunk show             # show every hunk's diff (no args)
 git-hunk list --json      # machine-readable inventory; plain output is usually enough
