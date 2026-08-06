@@ -21,6 +21,7 @@ from ._git import is_git_repo
 from ._git import stage_files
 from ._git import unstage_files
 from ._hunk import Hunk
+from ._hunk import is_submodule_hunk
 from ._hunk import is_whole_file_hunk
 from ._hunk import parse_diff
 from ._hunk import whole_file_hunk
@@ -245,6 +246,11 @@ def _apply_line_filter(
     if is_whole_file_hunk(hunks[0]):
         raise CliError(
             "line selection is not supported for binary, mode, or type changes"
+        )
+    if is_submodule_hunk(hunks[0]):
+        raise CliError(
+            "line selection is not supported for submodule changes",
+            tip="select the hunk as a whole",
         )
     try:
         lines, exclude = selection.resolve(hunks[0])
