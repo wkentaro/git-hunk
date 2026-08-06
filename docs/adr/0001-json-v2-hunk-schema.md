@@ -124,9 +124,9 @@ UTF-8 it is `text`, else `bytes`.
 **Union-wrapped fields:** `file`, `context_before`, and `lines[].content`. `context_before`
 is `null` when the hunk has no section heading (parallel to `header: null` — absence is
 encoded uniformly as `null`, never as `{"text": ""}`), so its type is `{text | bytes} | null`.
-**Plain (never non-UTF-8):** `id` (hex), `status`, `change_kind`, `a_mode`, `b_mode`,
-`binary`, `header` (ASCII range or null), `additions`, `deletions`, `n`, `op`,
-`no_newline`.
+**Plain (never non-UTF-8):** `id` (hex), `id_stability`, `status`, `change_kind`,
+`a_mode`, `b_mode`, `binary`, `header` (ASCII range or null), `additions`,
+`deletions`, `n`, `op`, `no_newline`.
 
 ## Resulting shapes
 
@@ -134,7 +134,8 @@ encoded uniformly as `null`, never as `{"text": ""}`), so its type is `{text | b
 
 ```json
 {
-  "id": "abc1234",
+  "id": "d161935000000000000000000000000000000000000000000000000000000000",
+  "id_stability": "stable",
   "file": {"text": "app.py"},
   "status": "unstaged",
   "change_kind": "M",
@@ -152,7 +153,8 @@ encoded uniformly as `null`, never as `{"text": ""}`), so its type is `{text | b
 
 ```json
 {
-  "id": "abc1234",
+  "id": "d161935000000000000000000000000000000000000000000000000000000000",
+  "id_stability": "stable",
   "file": {"text": "app.py"},
   "status": "unstaged",
   "change_kind": "M",
@@ -175,7 +177,8 @@ Binary modify (whole-file hunk):
 
 ```json
 {
-  "id": "...", "file": {"text": "logo.png"}, "status": "unstaged",
+  "id": "d161935000000000000000000000000000000000000000000000000000000000",
+  "id_stability": "stable", "file": {"text": "logo.png"}, "status": "unstaged",
   "change_kind": "M", "a_mode": "100644", "b_mode": "100644",
   "binary": true, "header": null, "context_before": null,
   "additions": 0, "deletions": 0
@@ -191,12 +194,18 @@ Binary modify (whole-file hunk):
   new fields `change_kind`/`a_mode`/`b_mode`/`binary`.
 - The UI layer derives all human labels (`@@` heading, "Binary file (…)", "Mode X → Y")
   from typed fields; `_binary_file_header` and `_mode_change_header` leave the data layer.
-- `id` semantics are unchanged here (whole-file entries' id behavior is governed by
-  #13/#22, out of scope for this ADR).
+- ADR 0003 amends the Hunk ID fields. `id` is the full canonical SHA-256 value,
+  `id_stability` is required, and schema v2 remains at `2` because it has not shipped.
 
 ## Out of scope
 
 - Rename and copy support (#53). `R` and `C` are reserved in `change_kind`, not
   produced, and currently rejected before output or mutation.
-- Hunk-id stability and untracked/new-file staging (#13, #22).
+- Untracked/new-file staging (#22).
 - The schema-doc/versioning *process* (#23); this ADR is the schema, not the doc tooling.
+
+## Relationship to ADR 0003
+
+ADR 0003 defines durable Hunk identity. It amends this schema with full canonical
+SHA-256 IDs and the required `id_stability` field. Human output uses unique prefixes,
+but JSON always returns the full canonical value.

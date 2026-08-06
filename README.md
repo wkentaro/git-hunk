@@ -7,8 +7,9 @@
 
 Non-interactive, programmatic alternative to `git add -p`.
 
-Every hunk gets a stable, content-based ID so you can inspect, filter, and
-stage changes without interactive prompts.
+Every staged or unstaged Hunk gets a durable ID so you can inspect, filter, and
+stage changes without interactive prompts. Duplicate Hunks get unique
+Conditional IDs.
 
 <img src="assets/teaser.png" alt="git-hunk teaser" width="800">
 
@@ -20,8 +21,8 @@ stage changes without interactive prompts.
 - **Scripts & CI/CD** that automate commit organization
 - **Editor integrations** that want hunk-level staging without shelling out to a TUI
 
-`git-hunk` solves this by assigning each hunk a stable ID and exposing simple
-stage/unstage/discard commands.
+`git-hunk` solves this by assigning each staged or unstaged Hunk a durable ID
+and exposing simple stage/unstage/discard commands.
 
 ## Install
 
@@ -107,6 +108,24 @@ partial inventory, false clean results, and partial mutation. Resolve an
 unmerged index with Git before retrying. Full rename and copy support is not yet
 available; it remains tracked in [#53](https://github.com/wkentaro/git-hunk/issues/53).
 
+### Hunk IDs
+
+A canonical Hunk ID is a full SHA-256 value. JSON returns it in full. Human
+output shows the shortest unambiguous prefix of at least seven characters, and
+commands accept unambiguous prefixes without case sensitivity. IDs are
+calculated from the combined staged and unstaged inventory, including when a
+status filter shows only one side.
+
+An Unchanged Hunk keeps its ID when it moves completely between staged and
+unstaged state or when other complete Hunks move. A partial-line operation
+creates new Hunks with new IDs.
+
+Hunks with the same Repository path and patch content form a Duplicate Hunk
+group. Each member gets a unique Conditional Hunk ID, shown with a
+`conditional` label in human output and `"id_stability": "conditional"` in JSON.
+The ID can change when its Duplicate Hunk group changes. Run `git-hunk list`
+again after a partial operation or an operation on a Conditional Hunk ID.
+
 ### List hunks
 
 ```bash
@@ -186,7 +205,8 @@ body; `show --json` adds a structured `lines` array. A `show --json` hunk
   "schema_version": 2,
   "hunks": [
     {
-      "id": "d161935",
+      "id": "d161935000000000000000000000000000000000000000000000000000000000",
+      "id_stability": "stable",
       "file": { "text": "src/main.py" },
       "status": "unstaged",
       "change_kind": "M",
@@ -206,22 +226,23 @@ body; `show --json` adds a structured `lines` array. A `show --json` hunk
 }
 ```
 
-| Field            | Type           | Description                                                                                                                            |
-| ---------------- | -------------- | -------------------------------------------------------------------------------------------------------------------------------------- |
-| `schema_version` | int            | Envelope version; bumped on any incompatible change to the shape below.                                                                |
-| `hunks`          | array          | The hunks (empty array when there are no changes).                                                                                     |
-| `id`             | string         | Stable, content-based hunk id (7-char SHA-256 prefix); accepts prefixes; empty for an `untracked` entry, which no command can address. |
-| `file`           | union          | Repository path of the changed file, as a byte-safe `{text\|bytes}` union (see below).                                                 |
-| `status`         | string         | One of `staged`, `unstaged`, `untracked`.                                                                                              |
-| `change_kind`    | string         | Git status letter: `A` added, `D` deleted, `M` modified, `T` typechange (`R`/`C` reserved and currently rejected). Always present.     |
-| `a_mode`         | string \| null | 6-digit octal git mode on the pre-image side; `null` when that side does not exist.                                                    |
-| `b_mode`         | string \| null | 6-digit octal git mode on the post-image side; `null` when that side does not exist.                                                   |
-| `binary`         | bool           | Whether the change is binary. Always present.                                                                                          |
-| `header`         | string \| null | The hunk's bare `@@ -a,b +c,d @@` range; `null` for a whole-file (binary, mode-only, type, or empty tracked file) change.              |
-| `context_before` | union \| null  | The function/section git names after the `@@` header, as a `{text\|bytes}` union; `null` when there is none.                           |
-| `additions`      | int            | Number of added lines.                                                                                                                 |
-| `deletions`      | int            | Number of removed lines.                                                                                                               |
-| `lines`          | array          | `show --json` only. The structured body; `[]` for a whole-file hunk. See below.                                                        |
+| Field            | Type           | Description                                                                                                                                                   |
+| ---------------- | -------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `schema_version` | int            | Envelope version; bumped on any incompatible change to the shape below.                                                                                       |
+| `hunks`          | array          | The hunks (empty array when there are no changes).                                                                                                            |
+| `id`             | string         | Full canonical SHA-256 Hunk ID; empty for an `untracked` entry, which no command can address. Human output uses a unique prefix of at least seven characters. |
+| `id_stability`   | string         | `stable` or `conditional`. An untracked inventory entry reports `stable`, but its empty `id` remains unaddressable.                                           |
+| `file`           | union          | Repository path of the changed file, as a byte-safe `{text\|bytes}` union (see below).                                                                        |
+| `status`         | string         | One of `staged`, `unstaged`, `untracked`.                                                                                                                     |
+| `change_kind`    | string         | Git status letter: `A` added, `D` deleted, `M` modified, `T` typechange (`R`/`C` reserved and currently rejected). Always present.                            |
+| `a_mode`         | string \| null | 6-digit octal git mode on the pre-image side; `null` when that side does not exist.                                                                           |
+| `b_mode`         | string \| null | 6-digit octal git mode on the post-image side; `null` when that side does not exist.                                                                          |
+| `binary`         | bool           | Whether the change is binary. Always present.                                                                                                                 |
+| `header`         | string \| null | The hunk's bare `@@ -a,b +c,d @@` range; `null` for a whole-file (binary, mode-only, type, or empty tracked file) change.                                     |
+| `context_before` | union \| null  | The function/section git names after the `@@` header, as a `{text\|bytes}` union; `null` when there is none.                                                  |
+| `additions`      | int            | Number of added lines.                                                                                                                                        |
+| `deletions`      | int            | Number of removed lines.                                                                                                                                      |
+| `lines`          | array          | `show --json` only. The structured body; `[]` for a whole-file hunk. See below.                                                                               |
 
 A `lines` entry is `{ "n", "op", "content", "no_newline"? }`:
 
@@ -252,14 +273,17 @@ renaming, removing, or changing the type of an existing field bumps it. (Before
 ## How it works
 
 1. Rejects detected rename, copy, and unmerged states.
-2. Parses `git diff` output into individual hunks.
-3. Assigns each hunk a stable, content-based ID (SHA-256 prefix).
-4. For staging, reconstructs a minimal patch and pipes it through `git apply --cached`.
-5. For discarding, reconstructs a reverse patch and applies it to the working tree.
+2. Parses staged and unstaged `git diff` output into one combined Hunk inventory.
+3. Assigns each Hunk a full canonical SHA-256 ID and a unique human prefix.
+4. Gives members of a Duplicate Hunk group unique Conditional Hunk IDs.
+5. For staging, reconstructs a minimal patch and pipes it through `git apply --cached`.
+6. For discarding, reconstructs a reverse patch and applies it to the working tree.
 
-IDs are derived from the changed lines, not the `@@` line numbers that shift as
-you stage other hunks -- so an unrelated hunk keeps its id, while staging only
-part of a hunk gives the leftover a new one.
+Text IDs use the Repository path and patch body, including context and newline
+state. They exclude `@@` ranges, section headings, and staged state. Whole-file
+IDs include the actual binary, mode, or type change. This keeps an Unchanged
+Hunk stable while complete Hunks move. A partial operation changes the patch
+content and creates new IDs.
 
 ## Contributing
 

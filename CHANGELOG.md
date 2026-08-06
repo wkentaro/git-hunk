@@ -31,6 +31,11 @@ and this project adheres to
 
 ### Changed
 
+- **Breaking:** Use durable Hunk identity from ADR 0003. JSON returns full
+  SHA-256 IDs and `id_stability`; human output shows unique prefixes and marks
+  Conditional IDs; commands accept unambiguous case-insensitive prefixes from
+  the combined staged and unstaged inventory. Complete Hunk moves preserve
+  stable IDs, while partial operations create new IDs (#201).
 - **Breaking:** Use the Repository path coordinate system defined in ADR 0002
   for inventory, selection, and mutation, so
   `list`, `show`, `stage`, `unstage`, `discard`, and `commit` have the same

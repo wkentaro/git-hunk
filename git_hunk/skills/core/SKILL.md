@@ -1,15 +1,15 @@
 ---
 name: core
-description: Core git-hunk usage guide. Read this before splitting changes into commits. Covers the list/show/stage workflow, stable content-based hunk IDs, splitting a single hunk across commits by line, surgically dropping debug lines, re-splitting an already-committed branch, and fixing staging mistakes. Use when the user asks to split changes, split commits, organize commits, commit by hunk, separate a refactor from a feature, clean up a messy diff before committing, or untangle a working tree full of unrelated changes.
+description: Core git-hunk usage guide. Read this before splitting changes into commits. Covers the list/show/stage workflow, durable Hunk IDs, splitting a single hunk across commits by line, surgically dropping debug lines, re-splitting an already-committed branch, and fixing staging mistakes. Use when the user asks to split changes, split commits, organize commits, commit by hunk, separate a refactor from a feature, clean up a messy diff before committing, or untangle a working tree full of unrelated changes.
 allowed-tools: Bash(git-hunk:*), Bash(git:*)
 ---
 
 # git-hunk core
 
 Non-interactive, programmatic git hunk staging for AI agents. Instead of
-`git add -A && git commit -m "stuff"`, git-hunk lets you see every hunk, give
-each a stable ID, and stage them in deliberate groups so a pile of unrelated
-changes becomes a clean series of focused commits.
+`git add -A && git commit -m "stuff"`, git-hunk lets you see every staged or
+unstaged Hunk, give each a durable ID, and stage them in deliberate groups so a
+pile of unrelated changes becomes a clean series of focused commits.
 
 The hard part is judgment, not commands: deciding what belongs in which commit
 and in what order. If the project has no commit conventions of its own, load
@@ -26,9 +26,17 @@ git commit -m "<message>"     # 4. commit it
 git-hunk list                 # 5. repeat until nothing is left behind
 ```
 
-IDs are content-based hashes and support prefix matching, so a 7-char prefix like
-`d161935` is enough. They stay stable as you stage other hunks in the file, but
-staging only part of a hunk gives the leftover a new id.
+A canonical Hunk ID is a full SHA-256 value. JSON returns it in full. Human
+output shows the shortest unambiguous prefix of at least seven characters, such
+as `d161935`. Commands accept unambiguous prefixes without case sensitivity.
+Every command calculates IDs from the combined staged and unstaged inventory.
+
+An Unchanged Hunk keeps its ID when it moves completely between staged and
+unstaged state or when other complete Hunks move. A partial-line operation
+creates new Hunks with new IDs. Duplicate Hunks get unique Conditional IDs,
+marked `conditional` in human output. A Conditional ID can change when its
+Duplicate Hunk group changes. Re-run `git-hunk list` after any partial operation
+or operation on a Conditional Hunk ID before you use a remainder or related ID.
 
 A Repository path is relative to the worktree root, uses `/`, and has the same
 meaning from every invocation directory. Every path in output and every file
@@ -136,7 +144,8 @@ Stage a hunk but leave its debug lines behind, then discard them:
 ```bash
 git-hunk show d161935               # find the debug line numbers
 git-hunk stage d161935 -l ^4        # stage all but the debug line on line 4
-git-hunk discard d161935 -l 4       # restore that line from the index
+git-hunk list                        # get the remainder's new ID
+git-hunk discard b8e210a -l 4       # restore that line from the index
 ```
 
 ### Separate a refactor from a feature
@@ -146,7 +155,8 @@ symbol rename lines first, then the behavior lines:
 
 ```bash
 git-hunk stage d161935 -l 1-4 && git commit -m "rename handler"
-git-hunk stage d161935        && git commit -m "add retry to handler"
+git-hunk list                 # get the feature remainder's new ID
+git-hunk stage b8e210a        && git commit -m "add retry to handler"
 ```
 
 ### Re-split an already-committed branch
@@ -217,9 +227,10 @@ outputs are a versioned envelope, `{"schema_version": 2, "hunks": [...]}`; read
 the hunks from the `hunks` array. `list --json` is a lean inventory (no body);
 `show --json` adds a `lines: [{n, op, content, no_newline?}]` body where `n` is
 the same 1-based index that `-l` selects. Each hunk carries typed
-`change_kind`/`a_mode`/`b_mode`/`binary` fields, a bare `@@` `header` (`null` for
-whole-file changes), and byte-safe `{text|bytes}` unions for `file`,
-`context_before`, and `lines[].content`.
+`id_stability`/`change_kind`/`a_mode`/`b_mode`/`binary` fields, a bare `@@`
+`header` (`null` for whole-file changes), and byte-safe `{text|bytes}` unions
+for `file`, `context_before`, and `lines[].content`. JSON returns the full
+canonical ID. Plain output shows its unique human prefix.
 
 ## Working safely
 
