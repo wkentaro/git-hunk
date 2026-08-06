@@ -1,9 +1,13 @@
 import re
+from typing import Final
 
 from ._hunk import Hunk
 from ._hunk import extract_file_path
+from ._hunk import is_mode_hunk
 from ._hunk import split_at_hunk_headers
 from ._hunk import split_file_diffs
+
+_MODE_LINE_PREFIXES: Final = ("old mode ", "new mode ")
 
 
 def _extract_file_headers(diff_output: str) -> dict[str, str]:
@@ -14,6 +18,22 @@ def _extract_file_headers(diff_output: str) -> dict[str, str]:
             continue
         headers[filepath] = split_at_hunk_headers(file_diff, maxsplit=1)[0]
     return headers
+
+
+def _remove_mode_lines(header: str) -> str:
+    return "".join(
+        line
+        for line in header.splitlines(keepends=True)
+        if not line.startswith(_MODE_LINE_PREFIXES)
+    )
+
+
+def _make_mode_header(header: str) -> str:
+    lines = header.splitlines(keepends=True)
+    return "".join(
+        [lines[0]]
+        + [line for line in lines[1:] if line.startswith(_MODE_LINE_PREFIXES)]
+    )
 
 
 def _needs_modification_header(hunk: Hunk) -> bool:
@@ -60,10 +80,17 @@ def build_patch(hunks: list[Hunk], diff_output: str) -> str:
     for filepath, file_hunks in files.items():
         if filepath not in headers:
             raise ValueError(f"File header not found for {filepath}")
-        header = headers[filepath]
+        mode_selected = any(is_mode_hunk(hunk) for hunk in file_hunks)
+        text_selected = any(hunk.diff for hunk in file_hunks)
+        if mode_selected and not text_selected:
+            header = _make_mode_header(headers[filepath])
+        elif not mode_selected:
+            header = _remove_mode_lines(headers[filepath])
+        else:
+            header = headers[filepath]
         if any(_needs_modification_header(hunk) for hunk in file_hunks):
             header = _make_modification_header(header)
-        hunk_diffs = "\n".join(h.diff for h in file_hunks)
-        patches.append(header + hunk_diffs + "\n")
+        hunk_diffs = "\n".join(hunk.diff for hunk in file_hunks if hunk.diff)
+        patches.append(header + hunk_diffs + ("\n" if hunk_diffs else ""))
 
     return "".join(patches)

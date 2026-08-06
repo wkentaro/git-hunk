@@ -1,6 +1,7 @@
 import pytest
 
 from git_hunk._hunk import Hunk
+from git_hunk._hunk import whole_file_hunk
 from git_hunk._patch import _extract_file_headers
 from git_hunk._patch import build_patch
 
@@ -112,6 +113,79 @@ def test_build_patch_joins_hunks_of_same_file() -> None:
     assert patch.count("diff --git a/f.py") == 1
     assert "+A" in patch
     assert "+C" in patch
+
+
+def test_build_patch_text_hunk_omits_unselected_mode_change() -> None:
+    diff_output = (
+        "diff --git a/f.sh b/f.sh\n"
+        "old mode 100644\n"
+        "new mode 100755\n"
+        "index abc..def\n"
+        "--- a/f.sh\n"
+        "+++ b/f.sh\n"
+        "@@ -1 +1 @@\n"
+        "-old\n"
+        "+new\n"
+    )
+    text_hunk = _make_hunk(file="f.sh", diff="@@ -1 +1 @@\n-old\n+new")
+
+    patch = build_patch([text_hunk], diff_output)
+
+    assert "old mode" not in patch
+    assert "new mode" not in patch
+    assert "@@ -1 +1 @@\n-old\n+new" in patch
+
+
+def test_build_patch_mode_hunk_omits_unselected_text_change() -> None:
+    diff_output = (
+        "diff --git a/f.sh b/f.sh\n"
+        "old mode 100644\n"
+        "new mode 100755\n"
+        "index abc..def\n"
+        "--- a/f.sh\n"
+        "+++ b/f.sh\n"
+        "@@ -1 +1 @@\n"
+        "-old\n"
+        "+new\n"
+    )
+    mode_hunk = whole_file_hunk(
+        "f.sh",
+        change_kind="M",
+        a_mode="100644",
+        b_mode="100755",
+        binary=False,
+    )
+
+    patch = build_patch([mode_hunk], diff_output)
+
+    assert patch == ("diff --git a/f.sh b/f.sh\nold mode 100644\nnew mode 100755\n")
+
+
+def test_build_patch_combines_mode_and_text_without_blank_fragment() -> None:
+    diff_output = (
+        "diff --git a/f.sh b/f.sh\n"
+        "old mode 100644\n"
+        "new mode 100755\n"
+        "index abc..def\n"
+        "--- a/f.sh\n"
+        "+++ b/f.sh\n"
+        "@@ -1 +1 @@\n"
+        "-old\n"
+        "+new\n"
+    )
+    mode_hunk = whole_file_hunk(
+        "f.sh",
+        change_kind="M",
+        a_mode="100644",
+        b_mode="100755",
+        binary=False,
+    )
+    text_hunk = _make_hunk(file="f.sh", diff="@@ -1 +1 @@\n-old\n+new")
+
+    patch = build_patch([mode_hunk, text_hunk], diff_output)
+
+    assert "+++ b/f.sh\n@@ -1 +1 @@" in patch
+    assert "+++ b/f.sh\n\n@@ -1 +1 @@" not in patch
 
 
 def test_build_patch_converts_partial_added_file_to_modification() -> None:

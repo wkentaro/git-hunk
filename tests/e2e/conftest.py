@@ -35,14 +35,14 @@ class GitHunkCLI:
         return subprocess.CompletedProcess(
             args=["git-hunk", *args],
             returncode=result.exit_code,
-            stdout=result.output or "",
+            stdout=result.stdout or "",
             stderr=result.stderr or "",
         )
 
     def run_ok(self, *args: str, subdir: str | None = None) -> str:
         r = self.run(*args, subdir=subdir)
         assert r.returncode == 0, f"git-hunk {' '.join(args)} failed: {r.stderr}"
-        return r.stdout
+        return r.stdout or r.stderr
 
     def run_json(self, *args: str) -> list[dict[str, Any]]:
         # For commands whose --json output is a bare array (e.g. `skills`).

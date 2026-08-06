@@ -58,3 +58,13 @@ def test_mode_change_label() -> None:
         change_kind="M", a_mode="100644", b_mode="100755", binary=False
     )
     assert _whole_file_label(hunk) == "Mode 100644 -> 100755"
+
+
+def test_empty_added_file_label() -> None:
+    hunk = _whole_file_hunk(change_kind="A", a_mode=None, b_mode="100644", binary=False)
+    assert _whole_file_label(hunk) == "Empty file (added)"
+
+
+def test_empty_deleted_file_label() -> None:
+    hunk = _whole_file_hunk(change_kind="D", a_mode="100644", b_mode=None, binary=False)
+    assert _whole_file_label(hunk) == "Empty file (deleted)"

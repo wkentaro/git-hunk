@@ -30,7 +30,7 @@ Order so that **each commit is independently valid**: the build/tests would
 pass at every commit, not just at the end.
 
 - Refactors and groundwork that a feature depends on come **before** the feature.
-- A rename or signature change comes before the code that uses the new form.
+- A symbol rename or signature change comes before the code that uses the new form.
 - Pure formatting goes in its own commit (first or last), never mixed into a
   logic commit where it hides the real change.
 

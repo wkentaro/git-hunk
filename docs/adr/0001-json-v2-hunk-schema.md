@@ -42,8 +42,9 @@ values derive from one source and cannot diverge.
 
 `change_kind`: one of `"A"` (added), `"D"` (deleted), `"M"` (modified), `"T"` (typechange).
 **Always present, non-null.** `"R"` (rename) and `"C"` (copy) are **reserved** for when
-renames land (#53). Single letters match `git diff --name-status` and are consistent with
-the per-line `op` field's git-native single chars (see §6).
+rename and copy support lands (#53). These states are currently rejected before
+inventory output or mutation. Single letters match `git diff --name-status` and are
+consistent with the per-line `op` field's git-native single chars (see §6).
 
 ### 3. `a_mode` / `b_mode` — octal strings, always present
 
@@ -73,7 +74,8 @@ mode-only one (both have empty bodies). Do not infer binary-ness from an empty b
 
 `header`: for a text hunk, the **bare** `@@ -a,b +c,d @@` range with git's trailing
 section heading stripped (#50). The section heading lives only in `context_before`.
-For a whole-file hunk (binary, mode-only, or type change — no `@@` range), `header` is `null`.
+For a whole-file hunk (binary, mode-only, type, or empty tracked file change with no
+`@@` range), `header` is `null`.
 
 The internal `Hunk.diff` attribute used to build patches for `git apply` keeps git's
 original `@@` line **verbatim** (including the section heading); only the JSON `header`
@@ -194,6 +196,7 @@ Binary modify (whole-file hunk):
 
 ## Out of scope
 
-- Renames/copies (#53) — `R`/`C` are reserved in `change_kind` but not produced.
+- Rename and copy support (#53). `R` and `C` are reserved in `change_kind`, not
+  produced, and currently rejected before output or mutation.
 - Hunk-id stability and untracked/new-file staging (#13, #22).
 - The schema-doc/versioning *process* (#23); this ADR is the schema, not the doc tooling.

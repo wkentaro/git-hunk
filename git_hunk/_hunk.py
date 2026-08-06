@@ -66,9 +66,18 @@ class Hunk:
 
 
 def is_whole_file_hunk(hunk: Hunk) -> bool:
-    # Binary and mode-only changes carry no text diff and are applied by staging
-    # the whole file rather than by a patch.
     return not hunk.diff
+
+
+def is_mode_hunk(hunk: Hunk) -> bool:
+    return (
+        hunk.change_kind == "M"
+        and not hunk.binary
+        and hunk.header is None
+        and hunk.a_mode is not None
+        and hunk.b_mode is not None
+        and hunk.a_mode != hunk.b_mode
+    )
 
 
 def is_submodule_hunk(hunk: Hunk) -> bool:
@@ -220,7 +229,6 @@ def whole_file_hunk(
     binary: bool,
     status: str = "unstaged",
 ) -> Hunk:
-    """A change applied by staging the whole file (binary, mode-only, type, new)."""
     return Hunk(
         id="",
         file=filepath,
@@ -314,11 +322,19 @@ def parse_diff(diff_output: str) -> list[Hunk]:
 
         parts = split_at_hunk_headers(file_diff)
 
+        if change_kind == "M" and a_mode != b_mode:
+            hunks.append(
+                whole_file_hunk(
+                    filepath,
+                    change_kind=change_kind,
+                    a_mode=a_mode,
+                    b_mode=b_mode,
+                    binary=False,
+                )
+            )
+
         if len(parts) == 1:
-            # No text hunks: surface a pure mode change (chmod) that would
-            # otherwise be dropped silently. An empty new/deleted file (A/D with
-            # no @@ body) is left out, matching git-hunk's prior behavior.
-            if change_kind == "M" and a_mode != b_mode:
+            if change_kind in ("A", "D"):
                 hunks.append(
                     whole_file_hunk(
                         filepath,

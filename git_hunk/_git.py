@@ -1,4 +1,5 @@
 import subprocess
+from dataclasses import dataclass
 from typing import Final
 
 
@@ -6,6 +7,13 @@ class GitCommandError(RuntimeError):
     def __init__(self, command: tuple[str, ...], stderr: str) -> None:
         self.stderr = stderr
         super().__init__(f"git {' '.join(command)} failed: {stderr}")
+
+
+@dataclass(frozen=True)
+class UnsupportedChange:
+    kind: str
+    source: str
+    destination: str
 
 
 def run_git(*args: str, worktree_root: str | None, input: str | None = None) -> str:
@@ -61,6 +69,58 @@ def get_untracked_files(*, worktree_root: str) -> list[str]:
     return [f for f in output.split("\0") if f]
 
 
+def get_unsupported_changes(
+    *, worktree_root: str, staged: bool
+) -> list[UnsupportedChange]:
+    args = [
+        "diff",
+        "--no-relative",
+        "--name-status",
+        "-z",
+        "--find-renames=50%",
+        "--find-copies=50%",
+        "--find-copies-harder",
+        "-l0",
+        "--diff-filter=RC",
+    ]
+    if staged:
+        args.append("--cached")
+    output = run_git(*args, worktree_root=worktree_root)
+    fields = output.removesuffix("\0").split("\0") if output else []
+    if len(fields) % 3 != 0:
+        raise RuntimeError("cannot parse git rename/copy status")
+    return [
+        UnsupportedChange(
+            kind="rename" if fields[i].startswith("R") else "copy",
+            source=fields[i + 1],
+            destination=fields[i + 2],
+        )
+        for i in range(0, len(fields), 3)
+    ]
+
+
+def get_unmerged_files(*, worktree_root: str) -> list[str]:
+    output = run_git(
+        "ls-files",
+        "--unmerged",
+        "--full-name",
+        "-z",
+        worktree_root=worktree_root,
+    )
+    paths: list[str] = []
+    seen: set[str] = set()
+    for record in output.split("\0"):
+        if not record:
+            continue
+        _, separator, path = record.partition("\t")
+        if not separator:
+            raise RuntimeError("cannot parse git unmerged index")
+        if path not in seen:
+            seen.add(path)
+            paths.append(path)
+    return paths
+
+
 def apply_patch(
     patch: str,
     *,
@@ -79,17 +139,30 @@ def apply_patch(
     run_git(*args, worktree_root=worktree_root, input=patch)
 
 
-# These three are the only calls that hand git a path as a pathspec, so they are
-# the only ones that ask for literal ones. Setting it globally would also export
-# GIT_LITERAL_PATHSPECS=1 to every child process, which silently changes how a
-# commit hook's own pathspecs behave.
+# These file-level commands hand git paths as pathspecs, so they ask for literal
+# ones. Setting this globally would also change how a commit hook interprets its
+# own pathspecs.
 _LITERAL_PATHSPECS: Final = "--literal-pathspecs"
 
 
-def stage_files(files: list[str], *, worktree_root: str) -> None:
+def stage_files(files: list[str], *, worktree_root: str, dry_run: bool) -> None:
+    args = [_LITERAL_PATHSPECS, "add"]
+    if dry_run:
+        args.append("--dry-run")
     run_git(
-        _LITERAL_PATHSPECS,
-        "add",
+        *args,
+        "--",
+        *files,
+        worktree_root=worktree_root,
+    )
+
+
+def unstage_added_files(files: list[str], *, worktree_root: str, dry_run: bool) -> None:
+    args = [_LITERAL_PATHSPECS, "rm", "--cached", "--force"]
+    if dry_run:
+        args.append("--dry-run")
+    run_git(
+        *args,
         "--",
         *files,
         worktree_root=worktree_root,

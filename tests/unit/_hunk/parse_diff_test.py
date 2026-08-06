@@ -111,6 +111,46 @@ def test_added_binary_distinguished() -> None:
     assert hunks[0].b_mode == "100644"
 
 
+def test_empty_added_file_is_whole_file_hunk() -> None:
+    diff = (
+        "diff --git a/empty.txt b/empty.txt\n"
+        "new file mode 100644\n"
+        "index 0000000..e69de29\n"
+    )
+
+    [hunk] = parse_diff(diff)
+
+    assert hunk.file == "empty.txt"
+    assert hunk.change_kind == "A"
+    assert hunk.a_mode is None
+    assert hunk.b_mode == "100644"
+    assert hunk.binary is False
+    assert hunk.header is None
+    assert hunk.additions == 0
+    assert hunk.deletions == 0
+    assert hunk.diff == ""
+
+
+def test_empty_deleted_file_is_whole_file_hunk() -> None:
+    diff = (
+        "diff --git a/empty.txt b/empty.txt\n"
+        "deleted file mode 100644\n"
+        "index e69de29..0000000\n"
+    )
+
+    [hunk] = parse_diff(diff)
+
+    assert hunk.file == "empty.txt"
+    assert hunk.change_kind == "D"
+    assert hunk.a_mode == "100644"
+    assert hunk.b_mode is None
+    assert hunk.binary is False
+    assert hunk.header is None
+    assert hunk.additions == 0
+    assert hunk.deletions == 0
+    assert hunk.diff == ""
+
+
 def test_mode_only_change_surfaced() -> None:
     diff = "diff --git a/m.sh b/m.sh\nold mode 100644\nnew mode 100755\n"
     hunks = parse_diff(diff)
@@ -127,9 +167,6 @@ def test_mode_only_change_surfaced() -> None:
 
 
 def test_mode_and_content_change_together() -> None:
-    # A chmod plus an edit to the same file is one diff block carrying both the
-    # old/new mode headers and an @@ body. The content hunk must carry the mode
-    # metadata, not collapse to the whole-file mode-only path.
     diff = (
         "diff --git a/m.sh b/m.sh\n"
         "old mode 100644\n"
@@ -142,16 +179,29 @@ def test_mode_and_content_change_together() -> None:
         "+line one changed\n"
     )
     hunks = parse_diff(diff)
-    assert len(hunks) == 1
-    assert hunks[0].file == "m.sh"
-    assert hunks[0].change_kind == "M"
-    assert hunks[0].a_mode == "100644"
-    assert hunks[0].b_mode == "100755"
-    assert hunks[0].binary is False
-    assert hunks[0].header == "@@ -1 +1 @@"
-    assert hunks[0].additions == 1
-    assert hunks[0].deletions == 1
-    assert hunks[0].diff == "@@ -1 +1 @@\n-line one\n+line one changed"
+    assert len(hunks) == 2
+
+    mode_hunk, text_hunk = hunks
+    assert mode_hunk.file == "m.sh"
+    assert mode_hunk.change_kind == "M"
+    assert mode_hunk.a_mode == "100644"
+    assert mode_hunk.b_mode == "100755"
+    assert mode_hunk.binary is False
+    assert mode_hunk.header is None
+    assert mode_hunk.additions == 0
+    assert mode_hunk.deletions == 0
+    assert mode_hunk.diff == ""
+
+    assert text_hunk.file == "m.sh"
+    assert text_hunk.change_kind == "M"
+    assert text_hunk.a_mode == "100644"
+    assert text_hunk.b_mode == "100755"
+    assert text_hunk.binary is False
+    assert text_hunk.header == "@@ -1 +1 @@"
+    assert text_hunk.additions == 1
+    assert text_hunk.deletions == 1
+    assert text_hunk.diff == "@@ -1 +1 @@\n-line one\n+line one changed"
+    assert mode_hunk.id != text_hunk.id
 
 
 def test_typechange_is_single_whole_file_hunk() -> None:
