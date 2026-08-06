@@ -241,13 +241,22 @@ _LINE_OPTS = f"""\
 {_LINE_OPT_ROW}
   [bold cyan]--dry-run[/bold cyan]   Report what would change without touching the index or working tree"""  # noqa: E501
 
+_EXACT_PATH_HELP: Final = """\
+Directories, globs, and Git pathspec syntax are not expanded. Quote shell
+metacharacters so the shell passes them unchanged."""
+
+_TARGET_HELP: Final = f"""\
+A file operand is an exact Repository path relative to the worktree root; the
+other kind of operand is a Hunk ID.
+{_EXACT_PATH_HELP}"""
+
 USAGE = "[bold green]Usage:[/bold green] [bold cyan]git-hunk[/bold cyan] [cyan]<COMMAND>[/cyan]"  # noqa: E501
-USAGE_LIST = "[bold green]Usage:[/bold green] [bold cyan]git-hunk list[/bold cyan] [cyan][OPTIONS][/cyan] [cyan][<file>...][/cyan]"  # noqa: E501
+USAGE_LIST = "[bold green]Usage:[/bold green] [bold cyan]git-hunk list[/bold cyan] [cyan][OPTIONS][/cyan] [cyan][<Repository-path>...][/cyan]"  # noqa: E501
 USAGE_SHOW = "[bold green]Usage:[/bold green] [bold cyan]git-hunk show[/bold cyan] [cyan][<id>...][/cyan] [cyan][OPTIONS][/cyan]"  # noqa: E501
-USAGE_STAGE = "[bold green]Usage:[/bold green] [bold cyan]git-hunk stage[/bold cyan] [cyan]<id|file>[/cyan] [cyan][<id|file>...][/cyan] [cyan][OPTIONS][/cyan]"  # noqa: E501
-USAGE_UNSTAGE = "[bold green]Usage:[/bold green] [bold cyan]git-hunk unstage[/bold cyan] [cyan]<id|file>[/cyan] [cyan][<id|file>...][/cyan] [cyan][OPTIONS][/cyan]"  # noqa: E501
-USAGE_DISCARD = "[bold green]Usage:[/bold green] [bold cyan]git-hunk discard[/bold cyan] [cyan]<id|file>[/cyan] [cyan][<id|file>...][/cyan] [cyan][OPTIONS][/cyan]"  # noqa: E501
-USAGE_COMMIT = "[bold green]Usage:[/bold green] [bold cyan]git-hunk commit[/bold cyan] [cyan]<id|file>[/cyan] [cyan][<id|file>...][/cyan] [bold cyan]-m[/bold cyan] [cyan]<msg>[/cyan] [cyan][OPTIONS][/cyan]"  # noqa: E501
+USAGE_STAGE = "[bold green]Usage:[/bold green] [bold cyan]git-hunk stage[/bold cyan] [cyan]<id|Repository-path>[/cyan] [cyan][<id|Repository-path>...][/cyan] [cyan][OPTIONS][/cyan]"  # noqa: E501
+USAGE_UNSTAGE = "[bold green]Usage:[/bold green] [bold cyan]git-hunk unstage[/bold cyan] [cyan]<id|Repository-path>[/cyan] [cyan][<id|Repository-path>...][/cyan] [cyan][OPTIONS][/cyan]"  # noqa: E501
+USAGE_DISCARD = "[bold green]Usage:[/bold green] [bold cyan]git-hunk discard[/bold cyan] [cyan]<id|Repository-path>[/cyan] [cyan][<id|Repository-path>...][/cyan] [cyan][OPTIONS][/cyan]"  # noqa: E501
+USAGE_COMMIT = "[bold green]Usage:[/bold green] [bold cyan]git-hunk commit[/bold cyan] [cyan]<id|Repository-path>[/cyan] [cyan][<id|Repository-path>...][/cyan] [bold cyan]-m[/bold cyan] [cyan]<msg>[/cyan] [cyan][OPTIONS][/cyan]"  # noqa: E501
 USAGE_SKILLS = "[bold green]Usage:[/bold green] [bold cyan]git-hunk skills[/bold cyan] [cyan][SUBCOMMAND][/cyan] [cyan][<name>...][/cyan]"  # noqa: E501
 
 
@@ -264,7 +273,7 @@ _EXAMPLES_LIST: Final = [
     ("git-hunk list", "Unstaged, staged, and untracked"),
     ("git-hunk list --unstaged", "Unstaged hunks only"),
     ("git-hunk list --staged", "Staged hunks only"),
-    ("git-hunk list src/foo.py", "Specific files only"),
+    ("git-hunk list src/foo.py", "Every hunk in one exact Repository path"),
     ("git-hunk list --json", "JSON output for scripting"),
 ]
 _EXAMPLES_SHOW: Final = [
@@ -276,7 +285,7 @@ _EXAMPLES_SHOW: Final = [
 _EXAMPLES_STAGE: Final = [
     ("git-hunk stage d161935", "Stage a hunk"),
     ("git-hunk stage d161935 a3f82c1", "Stage multiple hunks"),
-    ("git-hunk stage src/foo.py", "Stage every hunk in a file"),
+    ("git-hunk stage src/foo.py", "Stage every hunk in one Repository path"),
     ("git-hunk stage d161935 -l 3,5-7", "Stage specific lines only"),
     ("git-hunk stage d161935 --include-matching xfail", "Stage only matching lines"),
     ("git-hunk stage d161935 --exclude-matching debug", "Stage all but matching lines"),
@@ -284,19 +293,19 @@ _EXAMPLES_STAGE: Final = [
 ]
 _EXAMPLES_UNSTAGE: Final = [
     ("git-hunk unstage d161935", "Move a hunk back to working tree"),
-    ("git-hunk unstage src/foo.py", "Unstage every hunk in a file"),
+    ("git-hunk unstage src/foo.py", "Unstage every hunk in one Repository path"),
     ("git-hunk unstage d161935 -l 3,5-7", "Unstage specific lines only"),
     ("git-hunk unstage d161935 --dry-run", "Preview without changing anything"),
 ]
 _EXAMPLES_DISCARD: Final = [
     ("git-hunk discard d161935", "Restore a hunk from the index"),
-    ("git-hunk discard src/foo.py", "Discard every hunk in a file"),
+    ("git-hunk discard src/foo.py", "Discard every hunk in one Repository path"),
     ("git-hunk discard d161935 -l ^3,^5-7", "Discard excluding specific lines"),
     ("git-hunk discard d161935 --dry-run", "Preview without changing anything"),
 ]
 _EXAMPLES_COMMIT: Final = [
     ('git-hunk commit d161935 -m "fix: ..."', "Stage a hunk and commit it"),
-    ('git-hunk commit src/foo.py -m "..."', "Stage a whole file and commit"),
+    ('git-hunk commit src/foo.py -m "..."', "Commit every hunk in one Repository path"),
 ]
 _EXAMPLES_SKILLS: Final = [
     ("git-hunk skills", "List available skills"),
@@ -342,6 +351,8 @@ Non-interactive git hunk staging for AI agents.
 
 HELP_LIST = f"""\
 List hunks (unstaged, staged, and untracked by default).
+File operands are exact Repository paths relative to the worktree root.
+{_EXACT_PATH_HELP}
 
 {USAGE_LIST}
 
@@ -367,6 +378,7 @@ IDs support prefix matching.
 
 HELP_STAGE = f"""\
 Stage one or more specific hunks. IDs support prefix matching.
+{_TARGET_HELP}
 
 {USAGE_STAGE}
 
@@ -377,6 +389,7 @@ Stage one or more specific hunks. IDs support prefix matching.
 HELP_DISCARD = f"""\
 Discard unstaged changes for one or more specific hunks (restore from the index).
 IDs support prefix matching.
+{_TARGET_HELP}
 
 {USAGE_DISCARD}
 
@@ -387,6 +400,7 @@ IDs support prefix matching.
 HELP_UNSTAGE = f"""\
 Unstage one or more specific hunks (move from index back to working tree).
 IDs support prefix matching.
+{_TARGET_HELP}
 
 {USAGE_UNSTAGE}
 
@@ -395,10 +409,11 @@ IDs support prefix matching.
 {_format_examples(_EXAMPLES_UNSTAGE)}"""
 
 HELP_COMMIT = f"""\
-Stage one or more specific hunks and commit them in one step. IDs support
-prefix matching. Aborts if anything is already staged, so the commit contains
-exactly the selected hunks. If the commit is rejected (e.g. by a pre-commit
-hook) the hunks are left staged so you can retry with [bold cyan]git commit[/bold cyan].
+Stage one or more specific hunks and commit them in one step. IDs support prefix
+matching. Aborts if anything is already staged, so the commit contains exactly
+the selected hunks. If the commit is rejected (e.g. by a pre-commit hook) the
+hunks are left staged so you can retry with [bold cyan]git commit[/bold cyan].
+{_TARGET_HELP}
 
 {USAGE_COMMIT}
 

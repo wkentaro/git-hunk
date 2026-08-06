@@ -18,7 +18,7 @@ def test_untracked_file_path_matches_tracked_basis_from_subdirectory(
     assert by_status["untracked"]["b_mode"] == "100644"
 
 
-def test_untracked_file_filtered_by_relative_arg_from_subdirectory(
+def test_untracked_file_filtered_by_repository_path_from_subdirectory(
     cli: GitHunkCLI,
 ) -> None:
     cli.repo.write_file("sub/keep.py", "init\n")
@@ -28,6 +28,6 @@ def test_untracked_file_filtered_by_relative_arg_from_subdirectory(
     cli.repo.write_file("sub/wanted.py", "new\n")
     cli.repo.write_file("sub/other.py", "new\n")
 
-    hunks = cli.run_list_json("list", "--json", "wanted.py", subdir="sub")
+    hunks = cli.run_list_json("list", "--json", "sub/wanted.py", subdir="sub")
     assert [h["file"]["text"] for h in hunks] == ["sub/wanted.py"]
     assert hunks[0]["status"] == "untracked"

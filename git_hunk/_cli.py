@@ -11,13 +11,13 @@ from typing import Final
 import click
 
 from . import __version__
+from ._git import GitCommandError
 from ._git import apply_patch
 from ._git import commit
 from ._git import discard_files
 from ._git import get_diff
-from ._git import get_repo_root
 from ._git import get_untracked_files
-from ._git import is_git_repo
+from ._git import get_worktree_root
 from ._git import stage_files
 from ._git import unstage_files
 from ._hunk import Hunk
@@ -97,10 +97,14 @@ class CliGroup(click.Group):
             ctx.exit(130)
 
 
-def _require_git_repo() -> None:
+def _require_worktree_root() -> str:
     try:
-        if not is_git_repo():
-            raise CliError("not a git repository")
+        return get_worktree_root()
+    # Usually there is no worktree to anchor to, but rev-parse also refuses on
+    # dubious ownership or a bad config value, and those say how to fix them.
+    # Classifying git's English is what this avoids; passing it on is not.
+    except GitCommandError as exc:
+        raise CliError("not a git repository", tip=exc.stderr) from exc
     except RuntimeError as exc:
         raise CliError(str(exc)) from exc
 
@@ -118,10 +122,9 @@ def _echo_hunks_json(hunks: list[Hunk], *, include_lines: bool = False) -> None:
     )
 
 
-def _get_hunks(staged: bool, files: list[str] | None = None) -> tuple[list[Hunk], str]:
-    _require_git_repo()
+def _get_hunks(*, worktree_root: str, staged: bool) -> tuple[list[Hunk], str]:
     try:
-        diff_output = get_diff(staged=staged, files=files)
+        diff_output = get_diff(worktree_root=worktree_root, staged=staged)
     except RuntimeError as exc:
         raise CliError(str(exc)) from exc
     hunks = parse_diff(diff_output)
@@ -150,30 +153,61 @@ def _find_hunks_by_ids(hunks: list[Hunk], ids: list[str]) -> list[Hunk]:
     return found
 
 
-def _normalize_path_arg(arg: str) -> str:
+def _make_repository_path(arg: str, *, worktree_root: str) -> str:
+    tip = f"repository paths are relative to the worktree root ({worktree_root})"
+    if not arg:
+        raise CliError("repository path must not be empty", tip=tip)
     # git reports forward-slash paths on every platform, so translate the
     # OS-native separator and collapse ./ before comparing a CLI path argument
     # against them (os.path would rewrite separators the wrong way on Windows).
-    return posixpath.normpath(arg.replace(os.sep, "/"))
+    drive, _ = os.path.splitdrive(arg)
+    path = posixpath.normpath(arg.replace(os.sep, "/"))
+    if drive or os.path.isabs(arg) or posixpath.isabs(path):
+        raise CliError(f"repository path must be relative: '{arg}'", tip=tip)
+    if path == ".." or path.startswith("../"):
+        raise CliError(f"repository path escapes the worktree: '{arg}'", tip=tip)
+    return path
 
 
-def _select_hunks(hunks: list[Hunk], args: list[str]) -> list[Hunk]:
+@dataclass(frozen=True)
+class _Target:
+    # The argument as the user typed it, kept for the hex-id test and for
+    # quoting the user's own spelling back in errors.
+    arg: str
+    path: str
+
+
+def _make_targets(
+    args: list[str], *, worktree_root: str, command_name: str, usage: str
+) -> list[_Target]:
+    if not args:
+        raise CliError(
+            f"{command_name} requires at least one hunk id or repository path",
+            usage=usage,
+        )
+    return [
+        _Target(
+            arg=arg,
+            path=_make_repository_path(arg, worktree_root=worktree_root),
+        )
+        for arg in args
+    ]
+
+
+def _select_hunks(hunks: list[Hunk], targets: list[_Target]) -> list[Hunk]:
     files = {h.file for h in hunks}
     selected: list[Hunk] = []
     seen: set[str] = set()
-    for arg in args:
-        if not arg.strip():
-            raise CliError("hunk id or file path must not be empty or whitespace")
+    for target in targets:
         # A path that matches a changed file wins; otherwise hunk ids are hex,
         # so a non-hex argument can only have been meant as a (missing) path.
-        path = _normalize_path_arg(arg)
-        if path in files:
-            matches = [h for h in hunks if h.file == path]
-        elif re.fullmatch(r"[0-9a-fA-F]+", arg):
-            matches = _find_hunks_by_ids(hunks, [arg])
+        if target.path in files:
+            matches = [h for h in hunks if h.file == target.path]
+        elif re.fullmatch(r"[0-9a-fA-F]+", target.arg):
+            matches = _find_hunks_by_ids(hunks, [target.arg])
         else:
             raise CliError(
-                f"no changed file matches '{arg}'",
+                f"no changed file matches '{target.arg}'",
                 tip="run 'git-hunk list' to see changed files and hunk ids",
             )
         for hunk in matches:
@@ -260,24 +294,17 @@ def _apply_line_filter(
 
 
 def _apply_selection(
-    args: list[str],
+    targets: list[_Target],
     selection: _Selection,
     *,
-    usage: str,
-    command_name: str,
+    worktree_root: str,
     staged: bool,
     cached: bool,
     reverse: bool,
     dry_run: bool,
 ) -> list[Hunk]:
-    if not args:
-        raise CliError(
-            f"{command_name} requires at least one hunk id or file path",
-            usage=usage,
-        )
-
-    hunks, diff_output = _get_hunks(staged=staged)
-    selected = _select_hunks(hunks, args)
+    hunks, diff_output = _get_hunks(worktree_root=worktree_root, staged=staged)
+    selected = _select_hunks(hunks, targets)
     selected = _apply_line_filter(selected, selection, reverse=reverse)
 
     whole_file = [h for h in selected if is_whole_file_hunk(h)]
@@ -286,15 +313,21 @@ def _apply_selection(
     try:
         if text:
             patch = build_patch(text, diff_output)
-            apply_patch(patch, cached=cached, reverse=reverse, dry_run=dry_run)
+            apply_patch(
+                patch,
+                worktree_root=worktree_root,
+                cached=cached,
+                reverse=reverse,
+                dry_run=dry_run,
+            )
         if whole_file and not dry_run:
             paths = [h.file for h in whole_file]
             if reverse and not cached:
-                discard_files(paths)
+                discard_files(paths, worktree_root=worktree_root)
             elif reverse:
-                unstage_files(paths)
+                unstage_files(paths, worktree_root=worktree_root)
             else:
-                stage_files(paths)
+                stage_files(paths, worktree_root=worktree_root)
     except RuntimeError as exc:
         raise CliError(str(exc)) from exc
 
@@ -313,11 +346,17 @@ def _run_patch_command(
     verb: str,
     dry_run: bool,
 ) -> None:
-    selected = _apply_selection(
+    worktree_root = _require_worktree_root()
+    targets = _make_targets(
         args,
-        selection,
-        usage=usage,
+        worktree_root=worktree_root,
         command_name=command_name,
+        usage=usage,
+    )
+    selected = _apply_selection(
+        targets,
+        selection,
+        worktree_root=worktree_root,
         staged=staged,
         cached=cached,
         reverse=reverse,
@@ -346,18 +385,16 @@ def _working_tree_mode(path: str) -> str:
     return "100755" if mode & 0o100 else "100644"
 
 
-def _get_untracked_entries(files: list[str] | None = None) -> list[Hunk]:
-    _require_git_repo()
-    paths = get_untracked_files(files=files)
+def _get_untracked_entries(*, worktree_root: str) -> list[Hunk]:
+    paths = get_untracked_files(worktree_root=worktree_root)
     if not paths:
         return []
-    root = get_repo_root()
     return [
         whole_file_hunk(
             p,
             change_kind="A",
             a_mode=None,
-            b_mode=_working_tree_mode(posixpath.join(root, p)),
+            b_mode=_working_tree_mode(posixpath.join(worktree_root, p)),
             binary=False,
             status="untracked",
         )
@@ -367,27 +404,23 @@ def _get_untracked_entries(files: list[str] | None = None) -> list[Hunk]:
 
 def _collect_hunks(
     *,
+    worktree_root: str,
     staged: bool,
     unstaged: bool,
-    files: list[str] | None,
     include_untracked: bool,
     usage: str,
 ) -> list[Hunk]:
     if staged and unstaged:
         raise CliError("cannot use --staged and --unstaged together", usage=usage)
 
-    if staged:
-        hunks, _ = _get_hunks(staged=True, files=files)
+    if staged or unstaged:
+        hunks, _ = _get_hunks(worktree_root=worktree_root, staged=staged)
         return hunks
-    if unstaged:
-        hunks, _ = _get_hunks(staged=False, files=files)
-        return hunks
-
-    hunks_staged, _ = _get_hunks(staged=True, files=files)
-    hunks_unstaged, _ = _get_hunks(staged=False, files=files)
+    hunks_staged, _ = _get_hunks(worktree_root=worktree_root, staged=True)
+    hunks_unstaged, _ = _get_hunks(worktree_root=worktree_root, staged=False)
     hunks = hunks_staged + hunks_unstaged
     if include_untracked:
-        hunks += _get_untracked_entries(files=files)
+        hunks += _get_untracked_entries(worktree_root=worktree_root)
     return hunks
 
 
@@ -408,15 +441,20 @@ def cmd_list(
         print_help(HELP_LIST)
         return
 
-    file_list = list(files) if files else None
+    worktree_root = _require_worktree_root()
+    selected_paths = {
+        _make_repository_path(path, worktree_root=worktree_root) for path in files
+    }
 
     hunks = _collect_hunks(
+        worktree_root=worktree_root,
         staged=staged,
         unstaged=unstaged,
-        files=file_list,
         include_untracked=True,
         usage=USAGE_LIST,
     )
+    if selected_paths:
+        hunks = [hunk for hunk in hunks if hunk.file in selected_paths]
 
     if force_json:
         _echo_hunks_json(hunks)
@@ -441,10 +479,11 @@ def cmd_show(
         print_help(HELP_SHOW)
         return
 
+    worktree_root = _require_worktree_root()
     hunks = _collect_hunks(
+        worktree_root=worktree_root,
         staged=staged,
         unstaged=unstaged,
-        files=None,
         include_untracked=False,
         usage=USAGE_SHOW,
     )
@@ -643,9 +682,15 @@ def cmd_commit(
     if message is None or not message.strip():
         raise CliError("commit requires a message (-m)", usage=USAGE_COMMIT)
 
-    _require_git_repo()
+    worktree_root = _require_worktree_root()
+    commit_targets = _make_targets(
+        list(targets),
+        worktree_root=worktree_root,
+        command_name="commit",
+        usage=USAGE_COMMIT,
+    )
     try:
-        already_staged = get_diff(staged=True).strip()
+        already_staged = get_diff(worktree_root=worktree_root, staged=True).strip()
     except RuntimeError as exc:
         raise CliError(str(exc)) from exc
     if already_staged:
@@ -658,17 +703,16 @@ def cmd_commit(
         line_spec=line_spec, include_matching=(), exclude_matching=(), regex=False
     )
     selected = _apply_selection(
-        list(targets),
+        commit_targets,
         selection,
-        usage=USAGE_COMMIT,
-        command_name="commit",
+        worktree_root=worktree_root,
         staged=False,
         cached=True,
         reverse=False,
         dry_run=False,
     )
     try:
-        commit(message)
+        commit(message, worktree_root=worktree_root)
     except RuntimeError as exc:
         raise CliError(str(exc)) from exc
 
