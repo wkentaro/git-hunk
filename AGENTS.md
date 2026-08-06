@@ -6,6 +6,13 @@ User-facing changes go in `CHANGELOG.md` under `## [Unreleased]`
 ([Keep a Changelog](https://keepachangelog.com/) format), with the PR number.
 At release, that section is promoted to the new version.
 
+## Tests
+
+The suite scrubs the inherited `GIT_*` environment for the session, so it is
+safe to run from inside `git rebase --exec`, a hook, `filter-branch`, or
+`bisect run`. `_scrubbed_git_env` in `tests/conftest.py` explains why; keep the
+suite hermetic, `tests/git_env_test.py` pins it.
+
 ## Agent skills
 
 ### Issue tracker
