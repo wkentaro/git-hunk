@@ -8,10 +8,12 @@ At release, that section is promoted to the new version.
 
 ## Tests
 
-The suite scrubs the inherited `GIT_*` environment for the session, so it is
-safe to run from inside `git rebase --exec`, a hook, `filter-branch`, or
-`bisect run`. `_scrubbed_git_env` in `tests/conftest.py` explains why; keep the
-suite hermetic, `tests/git_env_test.py` pins it.
+The suite removes inherited `GIT_*` variables that can make Git use the outer
+repository. You can run the suite from inside `git rebase --exec`, a hook,
+`filter-branch`, or `bisect run`. The `_scrubbed_git_env` fixture in
+`tests/conftest.py` removes these variables and explains why this is necessary.
+Keep this behavior. `tests/git_env_test.py` verifies that the suite does not
+change the outer repository.
 
 ## Agent skills
 
