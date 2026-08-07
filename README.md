@@ -270,10 +270,17 @@ renaming, removing, or changing the type of an existing field bumps it. (Before
 | `git add <file>` | No          | Yes          | No       | No                 | No          |
 | **`git-hunk`**   | **No**      | **Yes**      | **Yes**  | **Yes**            | **Yes**     |
 
-### Agent demonstration
+### Agent demonstrations
 
-One pinned Claude Opus 4.8 run organized the same dirty Repository under two
-conditions. This was one small, one-file task, not a statistical benchmark.
+The same pinned Claude Opus 4.8 agent organized the same dirty Repository
+under two conditions: bare Git only, and the `git-hunk` toolchain. Each
+demonstration is one run per condition, not a statistical benchmark. Both
+scenarios are published, including the one bare Git wins, because together
+they bound where `git-hunk` pays off.
+
+#### Small change: bare Git is cheaper
+
+One 12-line, one-file diff with three concerns and a debug line to drop.
 
 | Result                 |                              Bare Git |        `git-hunk` with bundled skills |
 | ---------------------- | ------------------------------------: | ------------------------------------: |
@@ -285,13 +292,45 @@ conditions. This was one small, one-file task, not a statistical benchmark.
 | Output tokens          |                                 2,489 |                                 3,084 |
 | Tool calls             |                                     6 |                                    15 |
 
-This run does not show that `git-hunk` is better than bare Git. Both conditions
-produced the same final state and equivalent commit grouping. Bare Git used less
-time, cost, and tool calls. The workflow differed: the bare Git agent restored
-the file and rebuilt the intended edits, while the `git-hunk` agent split the
-existing Hunk and discarded only the debug output.
+Both conditions produced the same final state and equivalent commit grouping,
+and bare Git used less time, cost, and tool calls. The bare Git agent never
+needed `git add -p`: it discarded the dirty file and re-typed the intended
+edits, which is cheap and safe at this size. On a diff like this, `git-hunk`
+only adds overhead.
 
 [Inspect the prompt, commands, traces, commit patches, and full environment](docs/eval/demonstrations/20260807T062735Z-2e58044-b5b3e85e/README.md).
+
+#### Large interleaved change: git-hunk is cheaper and safer
+
+Four consecutive real commits from
+[wkentaro/osam](https://github.com/wkentaro/osam) squashed into one dirty
+worktree: 402 changed lines across 7 files, with three of the four concerns
+interleaved inside one natural hunk of `_types.py`. The real commit series is
+the ground truth ([scenario provenance](eval/scenarios/osam/README.md)).
+
+| Result                 |                                   Bare Git | `git-hunk` with bundled skills |
+| ---------------------- | -----------------------------------------: | -----------------------------: |
+| Exact Repository state | Fail (untracked `__pycache__` left behind) |                           Pass |
+| Commit structure       |                                  4 commits |                      4 commits |
+| Duration               |                                     391.5s |                         271.3s |
+| Cost                   |                                    $1.7693 |                        $1.3132 |
+| Output tokens          |                                     29,056 |                         19,238 |
+| Tool calls             |                                         17 |                             21 |
+
+At this size the same re-type workaround inverts. The bare Git agent backed
+the dirty files up to `/tmp`, reset the worktree, and rebuilt every
+intermediate state by copying files back and editing them. It reached the
+correct final content, but it spent 44% more time and 35% more cost, and its
+own verification step left untracked bytecode caches behind, so the
+Repository was not clean. The `git-hunk` agent staged Hunks by ID, split the
+two mixed hunks by line, produced four focused commits matching the ground
+truth concerns, and left the Repository clean.
+
+[Inspect the prompt, commands, traces, commit patches, and full environment](docs/eval/demonstrations/20260807T090159Z-a1589c9-19534e48/README.md).
+
+Bare Git cost grows with the content the agent must re-type exactly.
+`git-hunk` cost grows with the number of Hunks it must address. Small diffs
+sit below the crossover; large interleaved diffs sit above it.
 
 ## How it works
 
