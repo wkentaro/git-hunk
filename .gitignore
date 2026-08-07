@@ -4,6 +4,7 @@
 /*.egg-info/
 
 # Test / lint caches
+__pycache__/
 /.coverage
 /.mypy_cache/
 /.pytest_cache/
