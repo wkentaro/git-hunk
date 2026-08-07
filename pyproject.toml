@@ -72,6 +72,11 @@ dev = [
   "yamlfix>=1.17",
 ]
 
+[tool.ruff]
+# Vendored scenario fixtures keep their historical bytes; see
+# eval/scenarios/osam/README.md.
+extend-exclude = ["eval/scenarios/osam/base", "eval/scenarios/osam/dirty"]
+
 [tool.ruff.lint]
 select = [
   "ANN", # flake8-annotations
@@ -87,5 +92,14 @@ force-single-line = true
 [tool.ruff.lint.per-file-ignores]
 "__init__.py" = ["F401"]
 
+[tool.ty.src]
+exclude = ["eval/scenarios/osam/base/**", "eval/scenarios/osam/dirty/**"]
+
 [tool.typos.files]
-extend-exclude = ["docs/eval/**/*.jsonl", "docs/eval/**/run.json"]
+extend-exclude = [
+  "docs/eval/**/*.jsonl",
+  "docs/eval/**/run.json",
+  "eval/scenarios/osam/base/**",
+  "eval/scenarios/osam/dirty/**",
+  "eval/scenarios/osam/ground-truth/**",
+]

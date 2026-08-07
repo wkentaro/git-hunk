@@ -1,0 +1,71 @@
+diff --git a/samuel/_models/_efficient_sam.py b/samuel/_models/_efficient_sam.py
+index 07ba0d2..a84896e 100644
+--- a/samuel/_models/_efficient_sam.py
++++ b/samuel/_models/_efficient_sam.py
+@@ -17,7 +17,7 @@ class EfficientSam(ModelBase):
+         image_embedding = self._inference_sessions["encoder"].run(
+             output_names=None,
+             input_feed={"batched_images": batched_images},
+-        )[0]
++        )[0][0]  # (embedding_dim, height, width)
+ 
+         return ImageEmbedding(
+             original_height=image.shape[0],
+@@ -33,13 +33,15 @@ class EfficientSam(ModelBase):
+         input_point = np.array(prompt.points, dtype=np.float32)
+         input_label = np.array(prompt.point_labels, dtype=np.float32)
+ 
++        # batch_size, embedding_dim, height, width
++        batched_image_embedding = image_embedding.embedding[None, :, :, :]
+         # batch_size, num_queries, num_points, 2
+         batched_point_coords = input_point[None, None, :, :]
+         # batch_size, num_queries, num_points
+         batched_point_labels = input_label[None, None, :]
+ 
+         decoder_inputs = {
+-            "image_embeddings": image_embedding.embedding,
++            "image_embeddings": batched_image_embedding,
+             "batched_point_coords": batched_point_coords,
+             "batched_point_labels": batched_point_labels,
+             "orig_im_size": np.array(
+diff --git a/samuel/_models/_sam.py b/samuel/_models/_sam.py
+index 51e9c6d..d3d7ce8 100644
+--- a/samuel/_models/_sam.py
++++ b/samuel/_models/_sam.py
+@@ -88,7 +88,7 @@ def _compute_image_embedding(
+     x = x.transpose(2, 0, 1)[None, :, :, :]
+ 
+     output = encoder_session.run(output_names=None, input_feed={"x": x})
+-    image_embedding = output[0]
++    image_embedding = output[0][0]  # (embedding_dim, height, width)
+     return image_embedding
+ 
+ 
+@@ -122,7 +122,7 @@ def _generate_mask(
+     onnx_has_mask_input = np.array([-1], dtype=np.float32)
+ 
+     decoder_inputs = {
+-        "image_embeddings": image_embedding.embedding,
++        "image_embeddings": image_embedding.embedding[None, :, :, :],
+         "point_coords": onnx_coord,
+         "point_labels": onnx_label,
+         "mask_input": onnx_mask_input,
+diff --git a/samuel/_types.py b/samuel/_types.py
+index 7087ac4..488ac7c 100644
+--- a/samuel/_types.py
++++ b/samuel/_types.py
+@@ -16,6 +16,14 @@ class ImageEmbedding(pydantic.BaseModel):
+     original_width: int
+     embedding: np.ndarray
+ 
++    @pydantic.validator("embedding")
++    def validate_embedding(cls, embedding):
++        if embedding.ndim != 3:
++            raise ValueError(
++                "embedding must be 3-dimensional: (embedding_dim, height, width)"
++            )
++        return embedding
++
+ 
+ class Prompt(pydantic.BaseModel):
+     model_config = pydantic.ConfigDict(arbitrary_types_allowed=True)
