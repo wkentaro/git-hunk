@@ -13,6 +13,20 @@
   hunk** with no `@@` range. It is the top-level object in `--json` because the tool is
   hunk-centric, not file-centric.
 
+- **Hunk ID**: The deterministic address of one Hunk in the combined staged and
+  unstaged inventory.
+
+- **Unchanged Hunk**: A Hunk with the same Repository path and patch content. Text
+  patch content includes context and newline state, but not range positions, section
+  headings, or staged state. Whole-file patch content includes the binary, mode, or
+  type change.
+
+- **Duplicate Hunk group**: Two or more Hunks that have the same Repository path and
+  patch content.
+
+- **Conditional Hunk ID**: A unique Hunk ID that distinguishes members of a Duplicate
+  Hunk group. It can change when the group changes.
+
 - **Change group**: a maximal run of changed `-` and `+` lines with no context line
   between them. Partial line selection is unrestricted for pure additions, pure
   deletions, and one-for-one replacements. A larger grouped replacement is selected
@@ -56,10 +70,13 @@
 ## Key decisions
 
 - **ADR 0001** — `--json` schema v2 (typed Hunk model). The authoritative spec for the
-  `--json` shape; converges #28/#40/#44/#50/#56 under one `schema_version: 2` bump.
+  `--json` shape, except for the Hunk ID amendment in ADR 0003; converges
+  #28/#40/#44/#50/#56 under one `schema_version: 2` bump.
 - **ADR 0002** — Repository path. The authoritative spec for what a path means: one
   root-relative coordinate system, root-anchored git calls, exact literal operands;
   converges #127/#159.
+- **ADR 0003**: Hunk IDs are durable for unchanged Hunks, unique in the combined
+  staged and unstaged inventory, and conditional for Duplicate Hunk groups.
 
 ## Invariants
 
@@ -73,3 +90,9 @@
 - A mode change and text changes in one file are separate, independently selectable
   Hunks.
 - Detected rename, copy, and unmerged states fail before inventory output or mutation.
+- An Unchanged Hunk keeps its Hunk ID when other complete Hunks move between staged
+  and unstaged state.
+- Moving a complete Hunk between staged and unstaged state does not change its Hunk ID.
+- A partial-line operation creates new Hunks with new Hunk IDs.
+- A Conditional Hunk ID can change when its Duplicate Hunk group changes.
+- Each Hunk ID in an inventory addresses exactly one Hunk.

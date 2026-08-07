@@ -52,6 +52,7 @@ def test_empty_addition_inventory_has_whole_file_shape(
 
     assert hunk == {
         "id": hunk["id"],
+        "id_stability": "stable",
         "file": {"text": "empty.txt"},
         "status": "staged",
         "change_kind": "A",
@@ -75,6 +76,7 @@ def test_empty_deletion_inventory_has_whole_file_shape(
 
     assert hunk == {
         "id": hunk["id"],
+        "id_stability": "stable",
         "file": {"text": "empty.txt"},
         "status": "staged",
         "change_kind": "D",

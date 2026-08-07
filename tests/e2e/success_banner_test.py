@@ -49,7 +49,7 @@ def test_banner_reports_verb_id_file_header_and_stats(
     r = cli.run(command, hunk_id)
     assert r.returncode == 0
     assert r.stderr.splitlines() == [
-        f"  {verb} {hunk_id}  f.txt  @@ -1,3 +1,3 @@  +1 -1"
+        f"  {verb} {hunk_id[:7]}  f.txt  @@ -1,3 +1,3 @@  +1 -1"
     ]
 
 
@@ -59,8 +59,8 @@ def test_banner_reports_one_line_per_selected_hunk(cli: GitHunkCLI) -> None:
     r = cli.run("stage", *ids)
     assert r.returncode == 0
     assert r.stderr.splitlines() == [
-        f"  staged {ids[0]}  a.txt  @@ -1 +1 @@  +1 -1",
-        f"  staged {ids[1]}  b.txt  @@ -1 +1 @@  +1 -1",
+        f"  staged {ids[0][:7]}  a.txt  @@ -1 +1 @@  +1 -1",
+        f"  staged {ids[1][:7]}  b.txt  @@ -1 +1 @@  +1 -1",
     ]
 
 

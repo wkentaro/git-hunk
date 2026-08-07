@@ -24,6 +24,8 @@ from ._git import stage_files
 from ._git import unstage_added_files
 from ._git import unstage_files
 from ._hunk import Hunk
+from ._hunk import assign_hunk_ids
+from ._hunk import format_hunk_id
 from ._hunk import is_submodule_hunk
 from ._hunk import is_whole_file_hunk
 from ._hunk import parse_diff
@@ -155,18 +157,41 @@ def _get_hunks(*, worktree_root: str, staged: bool) -> tuple[list[Hunk], str]:
     return hunks, diff_output
 
 
+@dataclass(frozen=True)
+class _Inventory:
+    hunks: list[Hunk]
+    staged_diff: str
+    unstaged_diff: str
+
+
+def _get_inventory(*, worktree_root: str) -> _Inventory:
+    staged_hunks, staged_diff = _get_hunks(worktree_root=worktree_root, staged=True)
+    unstaged_hunks, unstaged_diff = _get_hunks(
+        worktree_root=worktree_root, staged=False
+    )
+    return _Inventory(
+        hunks=assign_hunk_ids(staged_hunks + unstaged_hunks),
+        staged_diff=staged_diff,
+        unstaged_diff=unstaged_diff,
+    )
+
+
 def _find_hunks_by_ids(hunks: list[Hunk], ids: list[str]) -> list[Hunk]:
+    def format_candidate(hunk: Hunk) -> str:
+        marker = " (conditional)" if hunk.id_stability == "conditional" else ""
+        return format_hunk_id(hunk) + marker
+
     found = []
     for hunk_id in ids:
         if not hunk_id.strip():
             raise CliError("hunk id must not be empty or whitespace")
         matches = [h for h in hunks if h.id.startswith(hunk_id.lower())]
         if len(matches) == 0:
-            available = [h.id for h in hunks]
+            available = [format_candidate(h) for h in hunks]
             tip = f"available hunk ids: {', '.join(available)}" if available else None
             raise CliError(f"hunk '{hunk_id}' not found", tip=tip)
         if len(matches) > 1:
-            candidates = ", ".join(m.id for m in matches)
+            candidates = ", ".join(format_candidate(m) for m in matches)
             raise CliError(
                 f"ambiguous hunk id '{hunk_id}'",
                 tip=f"matches: {candidates}",
@@ -216,8 +241,11 @@ def _make_targets(
     ]
 
 
-def _select_hunks(hunks: list[Hunk], targets: list[_Target]) -> list[Hunk]:
+def _select_hunks(
+    hunks: list[Hunk], targets: list[_Target], *, inventory_hunks: list[Hunk]
+) -> list[Hunk]:
     files = {h.file for h in hunks}
+    eligible_ids = {hunk.id for hunk in hunks}
     selected: list[Hunk] = []
     seen: set[str] = set()
     for target in targets:
@@ -226,7 +254,9 @@ def _select_hunks(hunks: list[Hunk], targets: list[_Target]) -> list[Hunk]:
         if target.path in files:
             matches = [h for h in hunks if h.file == target.path]
         elif re.fullmatch(r"[0-9a-fA-F]+", target.arg):
-            matches = _find_hunks_by_ids(hunks, [target.arg])
+            matches = _find_hunks_by_ids(inventory_hunks, [target.arg])
+            if matches[0].id not in eligible_ids:
+                raise CliError(f"hunk '{target.arg}' is not eligible for this command")
         else:
             raise CliError(
                 f"no changed file matches '{target.arg}'",
@@ -325,9 +355,13 @@ def _apply_selection(
     cached: bool,
     reverse: bool,
     dry_run: bool,
+    inventory: _Inventory | None = None,
 ) -> list[Hunk]:
-    hunks, diff_output = _get_hunks(worktree_root=worktree_root, staged=staged)
-    selected = _select_hunks(hunks, targets)
+    inventory = inventory or _get_inventory(worktree_root=worktree_root)
+    status = "staged" if staged else "unstaged"
+    hunks = [hunk for hunk in inventory.hunks if hunk.status == status]
+    diff_output = inventory.staged_diff if staged else inventory.unstaged_diff
+    selected = _select_hunks(hunks, targets, inventory_hunks=inventory.hunks)
     selected = _apply_line_filter(selected, selection, reverse=reverse)
 
     patch_hunks = [
@@ -338,7 +372,11 @@ def _apply_selection(
     ]
 
     try:
-        patch = build_patch(patch_hunks, diff_output) if patch_hunks else None
+        patch = (
+            build_patch(patch_hunks, diff_output, reverse=reverse)
+            if patch_hunks
+            else None
+        )
         if patch is not None:
             apply_patch(
                 patch,
@@ -466,13 +504,16 @@ def _get_untracked_entries(*, worktree_root: str) -> list[Hunk]:
             a_mode=None,
             b_mode=_working_tree_mode(posixpath.join(worktree_root, p)),
             binary=False,
+            a_object_id=None,
+            b_object_id=None,
             status="untracked",
         )
         for p in paths
     ]
 
 
-def _collect_hunks(
+def _filter_inventory_hunks(
+    inventory: _Inventory,
     *,
     worktree_root: str,
     staged: bool,
@@ -484,11 +525,9 @@ def _collect_hunks(
         raise CliError("cannot use --staged and --unstaged together", usage=usage)
 
     if staged or unstaged:
-        hunks, _ = _get_hunks(worktree_root=worktree_root, staged=staged)
-        return hunks
-    hunks_staged, _ = _get_hunks(worktree_root=worktree_root, staged=True)
-    hunks_unstaged, _ = _get_hunks(worktree_root=worktree_root, staged=False)
-    hunks = hunks_staged + hunks_unstaged
+        status = "staged" if staged else "unstaged"
+        return [hunk for hunk in inventory.hunks if hunk.status == status]
+    hunks = inventory.hunks[:]
     if include_untracked:
         hunks += _get_untracked_entries(worktree_root=worktree_root)
     return hunks
@@ -516,7 +555,9 @@ def cmd_list(
         _make_repository_path(path, worktree_root=worktree_root) for path in files
     }
 
-    hunks = _collect_hunks(
+    inventory = _get_inventory(worktree_root=worktree_root)
+    hunks = _filter_inventory_hunks(
+        inventory,
         worktree_root=worktree_root,
         staged=staged,
         unstaged=unstaged,
@@ -550,7 +591,9 @@ def cmd_show(
         return
 
     worktree_root = _require_worktree_root()
-    hunks = _collect_hunks(
+    inventory = _get_inventory(worktree_root=worktree_root)
+    hunks = _filter_inventory_hunks(
+        inventory,
         worktree_root=worktree_root,
         staged=staged,
         unstaged=unstaged,
@@ -559,7 +602,10 @@ def cmd_show(
     )
 
     if ids:
-        matched = _find_hunks_by_ids(hunks, list(ids))
+        matched = _find_hunks_by_ids(inventory.hunks, list(ids))
+        visible_ids = {hunk.id for hunk in hunks}
+        if any(hunk.id not in visible_ids for hunk in matched):
+            raise CliError("requested hunk is outside the selected status")
     else:
         matched = hunks
 
@@ -759,8 +805,8 @@ def cmd_commit(
         command_name="commit",
         usage=USAGE_COMMIT,
     )
-    _, staged_diff = _get_hunks(worktree_root=worktree_root, staged=True)
-    if staged_diff.strip():
+    inventory = _get_inventory(worktree_root=worktree_root)
+    if inventory.staged_diff.strip():
         raise CliError(
             "cannot commit: changes are already staged",
             tip="commit them with 'git commit', or unstage with 'git-hunk unstage'",
@@ -777,6 +823,7 @@ def cmd_commit(
         cached=True,
         reverse=False,
         dry_run=False,
+        inventory=inventory,
     )
     try:
         commit(message, worktree_root=worktree_root)

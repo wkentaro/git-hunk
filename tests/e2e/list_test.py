@@ -12,6 +12,7 @@ from .conftest import GitHunkCLI
 
 _REQUIRED_HUNK_KEYS = {
     "id",
+    "id_stability",
     "file",
     "status",
     "change_kind",
@@ -192,6 +193,8 @@ def test_list_default_shows_untracked(cli: GitHunkCLI) -> None:
     assert untracked[0]["change_kind"] == "A"
     assert untracked[0]["a_mode"] is None
     assert untracked[0]["b_mode"] == "100644"
+    assert untracked[0]["id"] == ""
+    assert untracked[0]["id_stability"] == "stable"
 
 
 def test_status_filters_exclude_untracked(cli: GitHunkCLI) -> None:

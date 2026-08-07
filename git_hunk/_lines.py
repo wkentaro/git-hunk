@@ -6,7 +6,9 @@ from typing import NamedTuple
 from ._hunk import NO_NEWLINE_MARKER
 from ._hunk import Hunk
 from ._hunk import count_changes
+from ._hunk import format_hunk_range
 from ._hunk import is_no_newline_marker
+from ._hunk import parse_hunk_range
 from ._hunk import split_diff_body
 
 
@@ -280,19 +282,27 @@ def filter_hunk_lines(
     old_count = context_count + deletions
     new_count = context_count + additions
 
-    m = re.match(r"@@ -(\d+)(?:,\d+)? \+(\d+)(?:,\d+)? @@(.*)", header)
-    if not m:
-        raise ValueError(f"cannot parse hunk header: {header}")
+    hunk_range = parse_hunk_range(header)
 
     # Git writes start 0 only for an empty side. Filtering can give an added
     # file's old side (or a deleted file's new side) context lines, so the side
     # is no longer empty and its start must become the first real line.
-    old_start = 1 if m.group(1) == "0" and old_count else int(m.group(1))
-    new_start = 1 if m.group(2) == "0" and new_count else int(m.group(2))
-    range_header = f"@@ -{old_start},{old_count} +{new_start},{new_count} @@"
+    old_start = 1 if hunk_range.old_start == 0 and old_count else hunk_range.old_start
+    new_start = 1 if hunk_range.new_start == 0 and new_count else hunk_range.new_start
+    range_header = format_hunk_range(
+        replace(
+            hunk_range,
+            old_start=old_start,
+            old_count=old_count,
+            new_start=new_start,
+            new_count=new_count,
+            suffix="",
+        ),
+        include_single_counts=True,
+    )
     # diff keeps git's verbatim @@ line (heading included) for git apply / show;
     # the JSON header field is the bare range (heading lives in context_before).
-    new_diff = range_header + m.group(3) + "\n" + "\n".join(new_body)
+    new_diff = range_header + hunk_range.suffix + "\n" + "\n".join(new_body)
 
     return replace(
         hunk,

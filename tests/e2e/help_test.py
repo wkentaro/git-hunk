@@ -31,3 +31,13 @@ def test_subcommand_help(
 
 def test_subcommand_help_covers_every_command() -> None:
     assert {command for command, _ in SUBCOMMAND_HELP} == set(cli_group.commands)
+
+
+@pytest.mark.parametrize("command", ["show", "stage", "unstage", "discard", "commit"])
+def test_hunk_command_help_describes_prefix_lookup(
+    cli: GitHunkCLI, command: str
+) -> None:
+    output = cli.run_ok(command, "--help")
+
+    assert "unambiguous" in output
+    assert "case-insensitive" in output

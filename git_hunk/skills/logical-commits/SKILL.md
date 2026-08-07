@@ -13,7 +13,9 @@ what belongs in which commit, in what order, and how its message reads.
 ## Grouping hunks into commits
 
 Plan the commits *before* you stage anything. For each planned commit, write
-down the hunk IDs it contains.
+down the current Hunk IDs it contains. Refresh the inventory and recorded IDs
+after a partial operation or an operation on a Conditional Hunk ID. Use the
+`core` skill for ID and command behavior.
 
 - **One logical change per commit.** A bug fix, a refactor, a feature, a
   formatting pass, a test: each is its own commit, even when they touch the

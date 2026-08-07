@@ -19,7 +19,7 @@ classifiers = [
   "Topic :: Software Development :: Version Control :: Git",
 ]
 dependencies = ["click>=8", "rich>=13"]
-description = "Non-interactive, programmatic git hunk staging with stable IDs."
+description = "Non-interactive, programmatic git hunk staging with durable Hunk IDs."
 dynamic = ["readme", "version"]
 keywords = ["automation", "diff", "git", "hunk", "staging", "version-control"]
 license = "MIT"
