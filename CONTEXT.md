@@ -71,6 +71,14 @@
   `{"text": s}` when the bytes are valid UTF-8, else `{"bytes": base64}`. Always an object
   (even for valid UTF-8) so consumers have one code path. The ripgrep `--json` idiom.
 
+- **git-hunk toolchain**: the git-hunk CLI together with the bundled `core` and
+  `logical-commits` skills as presented to an agent.
+
+- **Agent demonstration**: one side-by-side scenario run by the same pinned agent
+  from the same Repository state with bare Git and with the git-hunk toolchain. It
+  illustrates the difference between the resulting commit series but is not a
+  statistical benchmark.
+
 ## Key decisions
 
 - **ADR 0001** — `--json` schema v2 (typed Hunk model). The authoritative spec for the
