@@ -207,9 +207,10 @@ def test_both_conditions_receive_the_same_task_prompt() -> None:
     ]
 
     assert [command[2] for command in commands] == [TASK_PROMPT, TASK_PROMPT]
-    assert commands[0][commands[0].index("--allowedTools") + 1] == "Bash(git:*)"
-    assert "Bash(git-hunk:*)" not in commands[0]
-    assert "Bash(git-hunk:*)" in commands[1]
+    assert [command[command.index("--allowedTools") + 1] for command in commands] == [
+        "Bash",
+        "Bash",
+    ]
 
 
 def test_bare_git_condition_rejects_git_hunk_commands() -> None:
@@ -220,12 +221,11 @@ def test_bare_git_condition_rejects_git_hunk_commands() -> None:
         )
 
 
-def test_conditions_reject_commands_outside_their_tool_sets() -> None:
-    with pytest.raises(RuntimeError, match="outside its tool set: ls"):
-        require_condition_commands(
-            condition="bare-git",
-            commands=("git status && ls",),
-        )
+def test_bare_git_condition_allows_shell_commands() -> None:
+    require_condition_commands(
+        condition="bare-git",
+        commands=("sed -i.bak '/DEBUG/d' pricing.py", "git commit -am done"),
+    )
 
 
 @pytest.mark.parametrize(

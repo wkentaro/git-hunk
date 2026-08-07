@@ -5,7 +5,6 @@ import hashlib
 import json
 import platform
 import re
-import shlex
 import shutil
 import sys
 import tempfile
@@ -36,13 +35,15 @@ TASK_PROMPT: Final = (
     "order, and leave the repository clean."
 )
 _BARE_GIT_SYSTEM_PROMPT: Final = (
-    "Use Git for all repository inspection and changes. Do not invoke git-hunk or "
-    "load its bundled skills."
+    "Use normal shell commands to inspect and edit repository files. Use Git, not "
+    "git-hunk, for version-control operations. Do not invoke git-hunk or load its "
+    "bundled skills."
 )
 _GIT_HUNK_SYSTEM_PROMPT: Final = (
-    "Use the git-hunk toolchain for repository inspection and changes. First run "
-    "`git-hunk skills get core logical-commits`, follow both skills, and use "
-    "git-hunk to organize the commits."
+    "Use normal shell commands to inspect and edit repository files. Use the "
+    "git-hunk toolchain for version-control operations. First run `git-hunk skills "
+    "get core logical-commits`, follow both skills, and use git-hunk to organize "
+    "the commits."
 )
 _BASE_PRICING: Final = (
     "def normalize_price(price):\n"
@@ -141,12 +142,12 @@ class StartingState:
 CONDITIONS: Final = (
     Condition(
         name="bare-git",
-        allowed_tools=("Bash(git:*)",),
+        allowed_tools=("Bash",),
         system_prompt=_BARE_GIT_SYSTEM_PROMPT,
     ),
     Condition(
         name="git-hunk",
-        allowed_tools=("Bash(git-hunk:*)", "Bash(git:*)"),
+        allowed_tools=("Bash",),
         system_prompt=_GIT_HUNK_SYSTEM_PROMPT,
     ),
 )
@@ -356,14 +357,6 @@ def read_bash_commands(*, events: list[dict[str, Any]]) -> tuple[str, ...]:
 def require_condition_commands(
     *, condition: ConditionName, commands: tuple[str, ...]
 ) -> None:
-    allowed_commands = {"git"} if condition == "bare-git" else {"git", "git-hunk"}
-    for command in commands:
-        require_allowed_shell_commands(
-            command=command,
-            allowed_commands=allowed_commands,
-            condition=condition,
-        )
-
     git_hunk_pattern = re.compile(r"\bgit(?:-|\s+)hunk\b")
     git_hunk_commands = [
         command for command in commands if git_hunk_pattern.search(command)
@@ -390,26 +383,6 @@ def require_condition_commands(
     )
     if not used_git_hunk:
         raise RuntimeError("the git-hunk condition did not use git-hunk")
-
-
-def require_allowed_shell_commands(
-    *, command: str, allowed_commands: set[str], condition: ConditionName
-) -> None:
-    lexer = shlex.shlex(command, posix=True, punctuation_chars=";&|")
-    lexer.whitespace_split = True
-    needs_command = True
-    for token in lexer:
-        if token and set(token) <= {";", "&", "|"}:
-            needs_command = True
-            continue
-        if not needs_command:
-            continue
-        if token not in allowed_commands:
-            raise RuntimeError(
-                f"the {condition} condition invoked a command outside its tool set: "
-                f"{token}"
-            )
-        needs_command = False
 
 
 def summarize_trace(*, events: list[dict[str, Any]]) -> TraceSummary:

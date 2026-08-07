@@ -122,8 +122,9 @@ can help diagnosis, but it cannot qualify.
 
 `python -m eval.demonstration` runs one pricing scenario under two conditions.
 The same pinned agent receives the same task prompt from byte-identical
-Repository states. The bare Git condition exposes Git only. The git-hunk
-condition requires both bundled skills and a git-hunk mutation command.
+Repository states. Both conditions expose the same Bash tool so that the agent
+can inspect and edit files. The bare Git condition prohibits git-hunk. The
+git-hunk condition requires both bundled skills and a git-hunk mutation command.
 
 The objective checks cover the exact final `HEAD`, debug-line removal, a clean
 index and worktree, and basic commit validity. They do not grade commit purpose,
