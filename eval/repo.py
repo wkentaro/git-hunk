@@ -11,7 +11,6 @@ class GitRepo:
     def run(
         self,
         *args: str,
-        input: str | None = None,
         timeout_seconds: float | None = None,
     ) -> subprocess.CompletedProcess[str]:
         return subprocess.run(
@@ -19,20 +18,16 @@ class GitRepo:
             capture_output=True,
             cwd=self.path,
             env=make_subprocess_env(),
-            input=input,
             text=True,
             timeout=timeout_seconds,
         )
 
-    def run_bytes(
-        self, *args: str, input: bytes | None = None
-    ) -> subprocess.CompletedProcess[bytes]:
+    def run_bytes(self, *args: str) -> subprocess.CompletedProcess[bytes]:
         return subprocess.run(
             list(args),
             capture_output=True,
             cwd=self.path,
             env=make_subprocess_env(),
-            input=input,
         )
 
     def git(self, *args: str) -> str:
@@ -41,8 +36,8 @@ class GitRepo:
             raise RuntimeError(f"git {' '.join(args)} failed: {result.stderr}")
         return result.stdout
 
-    def git_bytes(self, *args: str, input: bytes | None = None) -> bytes:
-        result = self.run_bytes("git", *args, input=input)
+    def git_bytes(self, *args: str) -> bytes:
+        result = self.run_bytes("git", *args)
         if result.returncode != 0:
             detail = result.stderr.decode(errors="surrogateescape")
             raise RuntimeError(f"git {' '.join(args)} failed: {detail}")
