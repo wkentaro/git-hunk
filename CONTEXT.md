@@ -74,10 +74,15 @@
 - **git-hunk toolchain**: the git-hunk CLI together with the bundled `core` and
   `logical-commits` skills as presented to an agent.
 
-- **Agent demonstration**: one side-by-side scenario run by the same pinned agent
-  from the same Repository state with bare Git and with the git-hunk toolchain. It
-  illustrates the difference between the resulting commit series but is not a
-  statistical benchmark.
+- **Agent demonstration**: one side-by-side run of a Demonstration scenario by the
+  same pinned agent from the same Repository state with bare Git and with the
+  git-hunk toolchain. It illustrates the difference between the resulting commit
+  series but is not a statistical benchmark.
+
+- **Demonstration scenario**: a named starting Repository state, task prompt,
+  expected final state, and optional ground truth commit series for an Agent
+  demonstration. A hard scenario vendors the touched files and per-commit diffs
+  of a real commit range.
 
 ## Key decisions
 
@@ -89,6 +94,9 @@
   converges #127/#159.
 - **ADR 0003**: Hunk IDs are durable for unchanged Hunks, unique in the combined
   staged and unstaged inventory, and conditional for Duplicate Hunk groups.
+- **ADR 0005** — Demonstration scenarios: the demonstration runner takes a named
+  scenario; hard scenarios are extracted from real commit series with the real
+  commits as the ground truth for human review, not for the objective score.
 
 ## Invariants
 
