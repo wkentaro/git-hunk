@@ -13,6 +13,9 @@
   hunk** with no `@@` range. It is the top-level object in `--json` because the tool is
   hunk-centric, not file-centric.
 
+- **Untracked inventory entry**: a record for an untracked file in `list` output. It
+  is not a Hunk and has no Hunk ID, so no git-hunk command can address it.
+
 - **Hunk ID**: The deterministic address of one Hunk in the combined staged and
   unstaged inventory.
 
@@ -32,7 +35,7 @@
   deletions, and one-for-one replacements. A larger grouped replacement is selected
   as a whole or not selected.
 
-- **Whole-file hunk**: a hunk with no `@@` text range: a binary change, a mode-only
+- **Whole-file hunk**: a tracked Hunk with no `@@` text range: a binary change, a mode-only
   (chmod) change, a type change (e.g. file to symlink), or an empty tracked addition
   or deletion. Has `header: null` and, in `show --json`, `lines: []`.
 
@@ -46,13 +49,14 @@
   A mode change is `a_mode != b_mode`.
 
 - **header** — for a text hunk, the **bare** `@@ -a,b +c,d @@` range, with git's trailing
-  section heading stripped. `null` for a whole-file hunk. Distinct from the internal
-  patch text, which keeps git's full `@@` line verbatim.
+  section heading stripped. `null` for a whole-file hunk or an untracked inventory
+  entry. Distinct from the internal patch text, which keeps git's full `@@` line
+  verbatim.
 
 - **context_before** — the function/section heading git appends after the `@@` range
   (e.g. `def foo():`). The single source of that heading (it is *not* duplicated into
-  `header`). `null` when the hunk has no heading (absence is uniformly `null`, like
-  `header`).
+  `header`). `null` for a text hunk without a heading, a whole-file hunk, or an
+  untracked inventory entry (absence is uniformly `null`, like `header`).
 
 - **lines[]** (`show --json` only) — the structured per-line hunk body. Each entry is
   `{n, op, content, no_newline?}`. `list --json` carries no body (it is an inventory view).
