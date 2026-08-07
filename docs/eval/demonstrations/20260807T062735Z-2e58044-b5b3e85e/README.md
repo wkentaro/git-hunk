@@ -13,10 +13,10 @@ benchmark.
 
 ## Objective results
 
-| Condition | Repository state | Commits | Duration | Cost | Tool calls |
-| --- | --- | ---: | ---: | ---: | ---: |
-| bare-git | pass | 3 | 42.4s | $0.1447 | 6 |
-| git-hunk | pass | 3 | 65.8s | $0.2503 | 15 |
+| Condition | Repository state | Commits | Duration |    Cost | Tool calls |
+| --------- | ---------------- | ------: | -------: | ------: | ---------: |
+| bare-git  | pass             |       3 |    42.4s | $0.1447 |          6 |
+| git-hunk  | pass             |       3 |    65.8s | $0.2503 |         15 |
 
 The objective checks cover the exact final `HEAD`, debug-line removal,
 a clean index and worktree, and basic commit validity.

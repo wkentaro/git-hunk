@@ -5,6 +5,7 @@ import shutil
 from pathlib import Path
 from typing import Any
 
+import mdformat
 import pytest
 
 from eval.config import CLAUDE_CODE_VERSION
@@ -310,5 +311,7 @@ def test_evidence_is_complete_and_redacts_repository_paths(
     assert str(repo.path) not in evidence_text
     assert "<REPOSITORY>" in evidence_text
     assert "one side-by-side Agent demonstration" in evidence_text
+    evidence_readme = (evidence_dir / "README.md").read_text(encoding="utf-8")
+    assert mdformat.text(evidence_readme, extensions={"gfm"}) == evidence_readme
     manifest = json.loads((evidence_dir / "run.json").read_text(encoding="utf-8"))
     assert manifest["environment"]["git_hunk_version"].startswith("git-hunk ")

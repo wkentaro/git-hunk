@@ -16,6 +16,8 @@ from typing import Final
 from typing import Literal
 from typing import cast
 
+import mdformat
+
 from eval.config import MODEL
 from eval.environment import EvalEnvironment
 from eval.environment import resolve_environment
@@ -606,7 +608,7 @@ def make_evidence_readme(
             ]
         )
     lines.append("")
-    return "\n".join(lines)
+    return mdformat.text("\n".join(lines), extensions={"gfm"})
 
 
 def redact_value(*, value: object, replacements: dict[str, str]) -> object:
