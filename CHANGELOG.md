@@ -24,6 +24,9 @@ and this project adheres to
   (literal substring by default, `--regex` for regular expressions; repeatable
   and OR'd), so an agent can drop a line by what it contains without a
   `show` round trip (#55).
+- `--include-matching` / `--exclude-matching` and `--regex` for `commit`, so an
+  agent can commit a content-selected part of one Hunk without a separate
+  staging command (#214).
 - `logical-commits` skill (`git-hunk skills get logical-commits`) covering how
   to group hunks into logical commits and order them so each is independently
   valid, kept separate from `core` so a project that already defines its own

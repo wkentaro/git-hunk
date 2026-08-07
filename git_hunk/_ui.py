@@ -235,12 +235,6 @@ def print_version(version: str) -> None:
 _LINE_SELECT_EXAMPLE = """\
              e.g.: -l 3,5-7  (include)   -l ^3,^5-7  (exclude)"""
 
-# `commit` accepts -l as its only line-selection option, so the constraint rides
-# on the -l row itself; the multi-option block below states it once for the group.
-_LINE_SELECT_ROW = f"""\
-  [bold cyan]-l[/bold cyan] [cyan]<lines>[/cyan]  Select specific lines within a hunk (requires exactly one hunk)
-{_LINE_SELECT_EXAMPLE}"""  # noqa: E501
-
 _LINE_OPT_ROW = f"""\
   [bold cyan]-l[/bold cyan] [cyan]<lines>[/cyan]  Select specific lines within a hunk
 {_LINE_SELECT_EXAMPLE}
@@ -322,6 +316,10 @@ _EXAMPLES_DISCARD: Final = [
 _EXAMPLES_COMMIT: Final = [
     ('git-hunk commit d161935 -m "fix: ..."', "Stage a hunk and commit it"),
     ('git-hunk commit src/foo.py -m "..."', "Commit every hunk in one Repository path"),
+    (
+        'git-hunk commit d161935 --exclude-matching debug -m "fix: ..."',
+        "Commit all but matching lines",
+    ),
 ]
 _EXAMPLES_SKILLS: Final = [
     ("git-hunk skills", "List available skills"),
@@ -433,7 +431,7 @@ can retry with [bold cyan]git commit[/bold cyan].
 
 [bold green]Options:[/bold green]
   [bold cyan]-m[/bold cyan] [cyan]<msg>[/cyan]    Commit message (required)
-{_LINE_SELECT_ROW}
+{_LINE_OPT_ROW}
 
 {_format_examples(_EXAMPLES_COMMIT)}"""  # noqa: E501
 

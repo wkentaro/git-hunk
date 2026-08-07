@@ -139,13 +139,12 @@ The default case. `list` to see everything, plan groups, `stage` + `commit` each
 
 ### Surgically drop debug lines
 
-Stage a hunk but leave its debug lines behind, then discard them:
+Commit a hunk but leave its debug lines behind, then discard them:
 
 ```bash
-git-hunk show d161935               # find the debug line numbers
-git-hunk stage d161935 -l ^4        # stage all but the debug line on line 4
-git-hunk list                        # get the remainder's new ID
-git-hunk discard b8e210a -l 4       # restore that line from the index
+git-hunk commit d161935 --exclude-matching 'print("DEBUG"' -m "fix total"
+git-hunk list                  # get the remainder's new ID
+git-hunk discard b8e210a       # restore that line from the index
 ```
 
 ### Separate a refactor from a feature
