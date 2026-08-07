@@ -20,6 +20,10 @@ converts LF to CRLF on Windows and can make commands such as
 `git update-index --index-info` silently ignore records. Mark only filename
 cases that Windows does not allow as skipped, not the full behavior test.
 
+Temporary repositories that compare exact worktree bytes must set
+`core.autocrlf=false`. Otherwise, Git can convert LF to CRLF on Windows and
+make platform-independent expected bytes fail.
+
 ## Agent skills
 
 ### Issue tracker
