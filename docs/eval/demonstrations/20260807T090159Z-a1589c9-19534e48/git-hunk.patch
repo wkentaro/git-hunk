@@ -1,0 +1,690 @@
+commit b453ce5123b8e225e6367b6169013420ca80c09a
+Author: Test <test@test.com>
+Date:   2026-08-07T18:12:21+09:00
+
+    Keep image embeddings in shape (embedding_dim, height, width)
+
+---
+ samuel/_models/_efficient_sam.py | 6 ++++--
+ samuel/_models/_sam.py           | 4 ++--
+ 2 files changed, 6 insertions(+), 4 deletions(-)
+
+diff --git a/samuel/_models/_efficient_sam.py b/samuel/_models/_efficient_sam.py
+index e0a978e..91bee34 100644
+--- a/samuel/_models/_efficient_sam.py
++++ b/samuel/_models/_efficient_sam.py
+@@ -18,7 +18,7 @@ class EfficientSam(ModelBase):
+         image_embedding = self._encoder_session.run(
+             output_names=None,
+             input_feed={"batched_images": batched_images},
+-        )[0]
++        )[0][0]  # (embedding_dim, height, width)
+ 
+         return ImageEmbedding(
+             original_height=image.shape[0],
+@@ -34,13 +34,15 @@ class EfficientSam(ModelBase):
+         input_point = np.array(prompt.points, dtype=np.float32)
+         input_label = np.array(prompt.point_labels, dtype=np.float32)
+ 
++        # batch_size, embedding_dim, height, width
++        batched_image_embedding = image_embedding.embedding[None, :, :, :]
+         # batch_size, num_queries, num_points, 2
+         batched_point_coords = input_point[None, None, :, :]
+         # batch_size, num_queries, num_points
+         batched_point_labels = input_label[None, None, :]
+ 
+         decoder_inputs = {
+-            "image_embeddings": image_embedding.embedding,
++            "image_embeddings": batched_image_embedding,
+             "batched_point_coords": batched_point_coords,
+             "batched_point_labels": batched_point_labels,
+             "orig_im_size": np.array(
+diff --git a/samuel/_models/_sam.py b/samuel/_models/_sam.py
+index de43673..6b7c3b7 100644
+--- a/samuel/_models/_sam.py
++++ b/samuel/_models/_sam.py
+@@ -89,7 +89,7 @@ def _compute_image_embedding(
+     x = x.transpose(2, 0, 1)[None, :, :, :]
+ 
+     output = encoder_session.run(output_names=None, input_feed={"x": x})
+-    image_embedding = output[0]
++    image_embedding = output[0][0]  # (embedding_dim, height, width)
+     return image_embedding
+ 
+ 
+@@ -123,7 +123,7 @@ def _generate_mask(
+     onnx_has_mask_input = np.array([-1], dtype=np.float32)
+ 
+     decoder_inputs = {
+-        "image_embeddings": image_embedding.embedding,
++        "image_embeddings": image_embedding.embedding[None, :, :, :],
+         "point_coords": onnx_coord,
+         "point_labels": onnx_label,
+         "mask_input": onnx_mask_input,
+commit c1247b2f6d6af180c3da3c6680533bba25c6fa82
+Author: Test <test@test.com>
+Date:   2026-08-07T18:12:26+09:00
+
+    Introduce ModelBlob to replace per-model URL, MD5, and path attributes
+
+---
+ samuel/_models/_base.py          | 92 +++++++++++++++++++++++++---------------
+ samuel/_models/_efficient_sam.py | 49 ++++++++++-----------
+ samuel/_models/_sam.py           | 58 ++++++++++++++-----------
+ 3 files changed, 114 insertions(+), 85 deletions(-)
+
+diff --git a/samuel/_models/_base.py b/samuel/_models/_base.py
+index 4df26b9..cf6cdb5 100644
+--- a/samuel/_models/_base.py
++++ b/samuel/_models/_base.py
+@@ -1,5 +1,7 @@
++import dataclasses
+ import hashlib
+ import os
++from typing import Dict
+ from typing import Optional
+ 
+ import gdown
+@@ -9,60 +11,82 @@ import onnxruntime
+ from .. import _types
+ 
+ 
+-class ModelBase:
+-    name: str
++@dataclasses.dataclass
++class ModelBlob:
++    url: str
++    hash: str
++
++    @property
++    def path(self):
++        return os.path.expanduser(f"~/.cache/samuel/models/blobs/{self.hash}")
++
++    @property
++    def size(self):
++        if os.path.exists(self.path):
++            return os.stat(self.path).st_size
++        else:
++            return None
++
++    @property
++    def modified_at(self):
++        if os.path.exists(self.path):
++            return os.stat(self.path).st_mtime
++        else:
++            return None
+ 
+-    _encoder_path: str
+-    _encoder_md5: str
+-    _encoder_url: Optional[str]
++    def pull(self):
++        gdown.cached_download(url=self.url, path=self.path, hash=self.hash)
+ 
+-    _decoder_path: str
+-    _decoder_md5: str
+-    _decoder_url: Optional[str]
++    def remove(self):
++        os.remove(self.path)
+ 
+-    _encoder_session: onnxruntime.InferenceSession
+-    _decoder_session: onnxruntime.InferenceSession
++
++class ModelBase:
++    name: str
++
++    _blobs: Dict[str, ModelBlob]
++    _inference_sessions: Dict[str, onnxruntime.InferenceSession]
+ 
+     def __init__(self):
+         self.pull()
+-        self._encoder_session = onnxruntime.InferenceSession(self._encoder_path)
+-        self._decoder_session = onnxruntime.InferenceSession(self._decoder_path)
++        self._inference_sessions = {
++            key: onnxruntime.InferenceSession(blob.path)
++            for key, blob in self._blobs.items()
++        }
+ 
+     @classmethod
+     def pull(cls):
+-        gdown.cached_download(
+-            url=cls._encoder_url, md5=cls._encoder_md5, path=cls._encoder_path
+-        )
+-        gdown.cached_download(
+-            url=cls._decoder_url, md5=cls._decoder_md5, path=cls._decoder_path
+-        )
++        for blob in cls._blobs.values():
++            blob.pull()
+ 
+     @classmethod
+     def remove(cls):
+-        os.remove(cls._encoder_path)
+-        os.remove(cls._decoder_path)
++        for blob in cls._blobs.values():
++            blob.remove()
+ 
+     @classmethod
+-    def get_id(cls):
+-        return hashlib.md5((cls._encoder_md5 + cls._decoder_md5).encode()).hexdigest()[
+-            :12
+-        ]
++    def get_id(cls) -> str:
++        return hashlib.md5(
++            "+".join(blob.hash for blob in cls._blobs.values()).encode()
++        ).hexdigest()[:12]
+ 
+     @classmethod
+     def get_size(cls) -> Optional[int]:
+-        if not os.path.exists(cls._encoder_path) or not os.path.exists(
+-            cls._decoder_path
+-        ):
+-            return None
+-        return os.stat(cls._encoder_path).st_size + os.stat(cls._decoder_path).st_size
++        size = 0
++        for blob in cls._blobs.values():
++            if blob.size is None:
++                return None
++            size += blob.size
++        return size
+ 
+     @classmethod
+     def get_modified_at(cls) -> Optional[float]:
+-        if not os.path.exists(cls._encoder_path) or not os.path.exists(
+-            cls._decoder_path
+-        ):
+-            return None
+-        return os.stat(cls._encoder_path).st_mtime
++        modified_at = 0
++        for blob in cls._blobs.values():
++            if blob.modified_at is None:
++                return None
++            modified_at = max(modified_at, blob.modified_at)
++        return modified_at
+ 
+     def encode_image(self, image: np.ndarray) -> _types.ImageEmbedding:
+         raise NotImplementedError
+diff --git a/samuel/_models/_efficient_sam.py b/samuel/_models/_efficient_sam.py
+index 91bee34..a84896e 100644
+--- a/samuel/_models/_efficient_sam.py
++++ b/samuel/_models/_efficient_sam.py
+@@ -1,8 +1,7 @@
+-import os
+-
+ import numpy as np
+ 
+ from samuel._models._base import ModelBase
++from samuel._models._base import ModelBlob
+ from samuel._types import ImageEmbedding
+ from samuel._types import Prompt
+ 
+@@ -15,7 +14,7 @@ class EfficientSam(ModelBase):
+             raise ValueError("RGBA images are not supported")
+ 
+         batched_images = image.transpose(2, 0, 1)[None].astype(np.float32) / 255
+-        image_embedding = self._encoder_session.run(
++        image_embedding = self._inference_sessions["encoder"].run(
+             output_names=None,
+             input_feed={"batched_images": batched_images},
+         )[0][0]  # (embedding_dim, height, width)
+@@ -51,7 +50,7 @@ class EfficientSam(ModelBase):
+             ),
+         }
+ 
+-        masks, _, _ = self._decoder_session.run(None, decoder_inputs)
++        masks, _, _ = self._inference_sessions["decoder"].run(None, decoder_inputs)
+         mask = masks[0, 0, 0, :, :]  # (1, 1, 3, H, W) -> (H, W)
+         mask = mask > 0.0
+ 
+@@ -61,30 +60,28 @@ class EfficientSam(ModelBase):
+ class EfficientSam10m(EfficientSam):
+     name = "efficient-sam:10m"
+ 
+-    _encoder_url: str = "https://github.com/labelmeai/efficient-sam/releases/download/onnx-models-20231225/efficient_sam_vitt_encoder.onnx"  # NOQA: E501
+-    _encoder_md5: str = "2d4a1303ff0e19fe4a8b8ede69c2f5c7"
+-    _encoder_path: str = os.path.expanduser(
+-        f"~/.cache/samuel/models/{name}/encoder.onnx"
+-    )
+-
+-    _decoder_url: str = "https://github.com/labelmeai/efficient-sam/releases/download/onnx-models-20231225/efficient_sam_vitt_decoder.onnx"  # NOQA: E501
+-    _decoder_md5: str = "be3575ca4ed9b35821ac30991ab01843"
+-    _decoder_path: str = os.path.expanduser(
+-        f"~/.cache/samuel/models/{name}/decoder.onnx"
+-    )
++    _blobs = {
++        "encoder": ModelBlob(
++            url="https://github.com/labelmeai/efficient-sam/releases/download/onnx-models-20231225/efficient_sam_vitt_encoder.onnx",
++            hash="sha256:7a73ee65aa2c37237c89b4b18e73082f757ffb173899609c5d97a2bbd4ebb02d",
++        ),
++        "decoder": ModelBlob(
++            url="https://github.com/labelmeai/efficient-sam/releases/download/onnx-models-20231225/efficient_sam_vitt_decoder.onnx",
++            hash="sha256:e1afe46232c3bfa3470a6a81c7d3181836a94ea89528aff4e0f2d2c611989efd",
++        ),
++    }
+ 
+ 
+ class EfficientSam25m(EfficientSam):
+     name = "efficient-sam:25m"
+ 
+-    _encoder_url: str = "https://github.com/labelmeai/efficient-sam/releases/download/onnx-models-20231225/efficient_sam_vits_encoder.onnx"  # NOQA: E501
+-    _encoder_md5: str = "7d97d23e8e0847d4475ca7c9f80da96d"
+-    _encoder_path: str = os.path.expanduser(
+-        f"~/.cache/samuel/models/{name}/encoder.onnx"
+-    )
+-
+-    _decoder_url: str = "https://github.com/labelmeai/efficient-sam/releases/download/onnx-models-20231225/efficient_sam_vits_decoder.onnx"  # NOQA: E501
+-    _decoder_md5: str = "d9372f4a7bbb1a01d236b0508300b994"
+-    _decoder_path: str = os.path.expanduser(
+-        f"~/.cache/samuel/models/{name}/decoder.onnx"
+-    )
++    _blobs = {
++        "encoder": ModelBlob(
++            url="https://github.com/labelmeai/efficient-sam/releases/download/onnx-models-20231225/efficient_sam_vits_encoder.onnx",
++            hash="sha256:4cacbb23c6903b1acf87f1d77ed806b840800c5fcd4ac8f650cbffed474b8896",
++        ),
++        "decoder": ModelBlob(
++            url="https://github.com/labelmeai/efficient-sam/releases/download/onnx-models-20231225/efficient_sam_vits_decoder.onnx",
++            hash="sha256:4727baf23dacfb51d4c16795b2ac382c403505556d0284e84c6ff3d4e8e36f22",
++        ),
++    }
+diff --git a/samuel/_models/_sam.py b/samuel/_models/_sam.py
+index 6b7c3b7..d3d7ce8 100644
+--- a/samuel/_models/_sam.py
++++ b/samuel/_models/_sam.py
+@@ -1,10 +1,9 @@
+-import os
+-
+ import numpy as np
+ import onnxruntime
+ import PIL.Image
+ 
+ from samuel._models._base import ModelBase
++from samuel._models._base import ModelBlob
+ from samuel._types import ImageEmbedding
+ from samuel._types import Prompt
+ 
+@@ -19,7 +18,7 @@ class Sam(ModelBase):
+             raise ValueError("RGBA images are not supported")
+ 
+         image_embedding = _compute_image_embedding(
+-            encoder_session=self._encoder_session,
++            encoder_session=self._inference_sessions["encoder"],
+             image=image,
+             image_size=self._image_size,
+         )
+@@ -36,7 +35,7 @@ class Sam(ModelBase):
+         prompt: Prompt,
+     ) -> np.ndarray:
+         return _generate_mask(
+-            decoder_session=self._decoder_session,
++            decoder_session=self._inference_sessions["decoder"],
+             image_embedding=image_embedding,
+             prompt=prompt,
+             image_size=self._image_size,
+@@ -143,34 +142,43 @@ def _generate_mask(
+ class Sam91m(Sam):
+     name = "sam:91m"
+ 
+-    _encoder_url: str = "https://github.com/wkentaro/labelme/releases/download/sam-20230416/sam_vit_b_01ec64.quantized.encoder.onnx"  # NOQA: E501
+-    _encoder_md5: str = "80fd8d0ab6c6ae8cb7b3bd5f368a752c"
+-    _encoder_path: str = os.path.expanduser(f"~/.cache/samuel/{name}/encoder.onnx")
+-
+-    _decoder_url: str = "https://github.com/wkentaro/labelme/releases/download/sam-20230416/sam_vit_b_01ec64.quantized.decoder.onnx"  # NOQA: E501
+-    _decoder_md5: str = "4253558be238c15fc265a7a876aaec82"
+-    _decoder_path: str = os.path.expanduser(f"~/.cache/samuel/{name}/decoder.onnx")
++    _blobs = {
++        "encoder": ModelBlob(
++            url="https://github.com/wkentaro/labelme/releases/download/sam-20230416/sam_vit_b_01ec64.quantized.encoder.onnx",
++            hash="sha256:3346b9cc551c9902fbf3b203935e933592b22e042365f58321c17fc12641fd6a",
++        ),
++        "decoder": ModelBlob(
++            url="https://github.com/wkentaro/labelme/releases/download/sam-20230416/sam_vit_b_01ec64.quantized.decoder.onnx",
++            hash="sha256:edbcf1a0afaa55621fb0abe6b3db1516818b609ea9368f309746a3afc68f7613",
++        ),
++    }
+ 
+ 
+ class Sam308m(Sam):
+     name = "sam:308m"
+ 
+-    _encoder_url: str = "https://github.com/wkentaro/labelme/releases/download/sam-20230416/sam_vit_l_0b3195.quantized.encoder.onnx"  # NOQA: E501
+-    _encoder_md5: str = "080004dc9992724d360a49399d1ee24b"
+-    _encoder_path: str = os.path.expanduser(f"~/.cache/samuel/{name}/encoder.onnx")
+-
+-    _decoder_url: str = "https://github.com/wkentaro/labelme/releases/download/sam-20230416/sam_vit_l_0b3195.quantized.decoder.onnx"  # NOQA: E501
+-    _decoder_md5: str = "851b7faac91e8e23940ee1294231d5c7"
+-    _decoder_path: str = os.path.expanduser(f"~/.cache/samuel/{name}/decoder.onnx")
++    _blobs = {
++        "encoder": ModelBlob(
++            url="https://github.com/wkentaro/labelme/releases/download/sam-20230416/sam_vit_l_0b3195.quantized.encoder.onnx",
++            hash="sha256:f7158a4a1fe7f670ef47ea2f7f852685425c1ed6caa40f5df86cbe2b0502034f",
++        ),
++        "decoder": ModelBlob(
++            url="https://github.com/wkentaro/labelme/releases/download/sam-20230416/sam_vit_l_0b3195.quantized.decoder.onnx",
++            hash="sha256:552ebb23bf52c5e5b971ac710d1eb8dccfd88b36cc6aff881d1536d1662e6d7b",
++        ),
++    }
+ 
+ 
+ class Sam636m(Sam):
+     name = "sam:636m"
+ 
+-    _encoder_url: str = "https://github.com/wkentaro/labelme/releases/download/sam-20230416/sam_vit_h_4b8939.quantized.encoder.onnx"  # NOQA: E501
+-    _encoder_md5: str = "958b5710d25b198d765fb6b94798f49e"
+-    _encoder_path: str = os.path.expanduser(f"~/.cache/samuel/{name}/encoder.onnx")
+-
+-    _decoder_url: str = "https://github.com/wkentaro/labelme/releases/download/sam-20230416/sam_vit_h_4b8939.quantized.decoder.onnx"  # NOQA: E501
+-    _decoder_md5: str = "a997a408347aa081b17a3ffff9f42a80"
+-    _decoder_path: str = os.path.expanduser(f"~/.cache/samuel/{name}/decoder.onnx")
++    _blobs = {
++        "encoder": ModelBlob(
++            url="https://github.com/wkentaro/labelme/releases/download/sam-20230416/sam_vit_h_4b8939.quantized.encoder.onnx",
++            hash="sha256:a5c745fd4279efc5e5436b412200e983dafc2249ce172af6cc0002a71bb5f485",
++        ),
++        "decoder": ModelBlob(
++            url="https://github.com/wkentaro/labelme/releases/download/sam-20230416/sam_vit_h_4b8939.quantized.decoder.onnx",
++            hash="sha256:020b385a45ffe51097e1acd10cd791075a86171153505f789a793bc382eef210",
++        ),
++    }
+commit 3816259c727860ab2fbc79dd607aebd47ca5bc0d
+Author: Test <test@test.com>
+Date:   2026-08-07T18:12:42+09:00
+
+    Add unified generate_mask request/response API for Python and HTTP
+
+---
+ samuel/__main__.py | 47 +++++++++++-------------------------------
+ samuel/_server.py  | 44 +++++++--------------------------------
+ samuel/_types.py   | 60 +++++++++++++++++++++++++++++++++++++++---------------
+ samuel/apis.py     | 41 +++++++++++++++++++++++++++++++++++++
+ 4 files changed, 104 insertions(+), 88 deletions(-)
+
+diff --git a/samuel/__main__.py b/samuel/__main__.py
+index 2efc3c3..eef735a 100644
+--- a/samuel/__main__.py
++++ b/samuel/__main__.py
+@@ -11,7 +11,8 @@ from samuel import _humanize
+ from samuel import _json
+ from samuel import _models
+ from samuel import _tabulate
+-from samuel._types import Prompt
++from samuel import _types
++from samuel import apis
+ 
+ 
+ @click.group(context_settings=dict(help_option_names=["-h", "--help"]))
+@@ -104,42 +105,18 @@ def serve(reload):
+ )
+ @click.option("--prompt", type=json.loads, help="prompt")
+ def run(model_name, image_path, prompt):
+-    for cls in _models.MODELS:
+-        if cls.name == model_name:
+-            break
+-    else:
+-        click.echo(f"Model {model_name} not found.", err=True)
+-        sys.exit(1)
+-
+-    if prompt is None:
+-        width, height = PIL.Image.open(image_path).size
+-        prompt = {"points": [[width / 2, height / 2]], "point_labels": [1]}
+-        click.echo(
+-            f"Prompt is not given, so using the center point as prompt: {prompt!r}",
+-            err=True,
++    try:
++        response = apis.generate_mask(
++            request=_types.GenerateMaskRequest(
++                model=model_name,
++                image=np.asarray(PIL.Image.open(image_path)),
++                prompt=prompt,
++            )
+         )
+-    if len(prompt.get("points", [])) != len(prompt.get("point_labels", [])):
+-        click.echo("Length of 'points' and 'point_labels' must be same", err=True)
++    except ValueError as e:
++        click.echo(e, err=True)
+         sys.exit(1)
+-
+-    model = cls()
+-    click.echo(f"Loaded {model_name!r}: {model}", err=True)
+-
+-    image = np.asarray(PIL.Image.open(image_path))
+-    click.echo(f"Loaded {image_path!r}: {image.shape}, {image.dtype}", err=True)
+-
+-    image_embedding = model.encode_image(image)
+-    click.echo(
+-        f"Encoded image: {image_embedding.embedding.shape}, "
+-        f"{image_embedding.embedding.dtype}",
+-        err=True,
+-    )
+-
+-    mask = model.generate_mask(
+-        image_embedding=image_embedding,
+-        prompt=Prompt(points=prompt["points"], point_labels=prompt["point_labels"]),
+-    )
+-    click.echo(_json.image_ndarray_to_b64data(mask.astype(np.uint8) * 255), nl=False)
++    click.echo(response.model_dump_json())
+ 
+ 
+ if __name__ == "__main__":
+diff --git a/samuel/_server.py b/samuel/_server.py
+index 6398af1..5e33c62 100644
+--- a/samuel/_server.py
++++ b/samuel/_server.py
+@@ -1,49 +1,19 @@
+-from typing import Optional
+-
+ import fastapi
+-import numpy as np
+-import pydantic
+ 
+-from samuel import _json
+-from samuel import _models
+ from samuel import _types
++from samuel import apis
+ 
+ app: fastapi.FastAPI = fastapi.FastAPI()
+ 
+-model: Optional[_models.ModelBase] = None
+-
+ 
+ @app.get("/")
+ def index():
+     return fastapi.Response("Samuel is running")
+ 
+ 
+-class GenerateRequest(pydantic.BaseModel):
+-    model: str
+-    image: str
+-    prompt: _types.Prompt
+-
+-
+-class GenerateResponse(pydantic.BaseModel):
+-    mask: str
+-
+-
+-@app.post("/api/generate")
+-def generate(request: GenerateRequest) -> GenerateResponse:
+-    global model
+-
+-    if model is None or model.name != request.model:
+-        for model_cls in _models.MODELS:
+-            if model_cls.name == request.model:
+-                model = model_cls()
+-                break
+-        else:
+-            raise fastapi.HTTPException(404, "Model not found")
+-
+-    image: np.ndarray = _json.image_b64data_to_ndarray(request.image)
+-    image_embedding: _types.ImageEmbedding = model.encode_image(image=image)
+-    mask: np.ndarray = model.generate_mask(
+-        image_embedding=image_embedding, prompt=request.prompt
+-    )
+-
+-    return GenerateResponse(mask=_json.image_ndarray_to_b64data(mask))
++@app.post("/api/generate_mask")
++def generate(request: _types.GenerateMaskRequest) -> _types.GenerateMaskResponse:
++    try:
++        return apis.generate_mask(request=request)
++    except ValueError as e:
++        raise fastapi.HTTPException(400, str(e))
+diff --git a/samuel/_types.py b/samuel/_types.py
+index 8b9050d..6e6da19 100644
+--- a/samuel/_types.py
++++ b/samuel/_types.py
+@@ -1,31 +1,34 @@
+-import dataclasses
+ from typing import List
++from typing import Optional
++from typing import Union
+ 
+ import numpy as np
+ import pydantic
+-from typing_extensions import Annotated
+ 
++from samuel import _json
++
++
++class ImageEmbedding(pydantic.BaseModel):
++    model_config = pydantic.ConfigDict(arbitrary_types_allowed=True)
+ 
+-@dataclasses.dataclass
+-class ImageEmbedding:
+     original_height: int
+     original_width: int
+     embedding: np.ndarray
+ 
++    @pydantic.validator("embedding")
++    def validate_embedding(cls, embedding):
++        if embedding.ndim != 3:
++            raise ValueError(
++                "embedding must be 3-dimensional: (embedding_dim, height, width)"
++            )
++        return embedding
++
+ 
+ class Prompt(pydantic.BaseModel):
+     model_config = pydantic.ConfigDict(arbitrary_types_allowed=True)
+ 
+-    points: Annotated[
+-        np.ndarray,
+-        pydantic.BeforeValidator(lambda x: np.asarray(x, dtype=np.float32)),
+-        pydantic.PlainSerializer(lambda x: x.tolist()),
+-    ]
+-    point_labels: Annotated[
+-        np.ndarray,
+-        pydantic.BeforeValidator(lambda x: np.asarray(x, dtype=np.int32)),
+-        pydantic.PlainSerializer(lambda x: x.tolist()),
+-    ]
++    points: np.ndarray
++    point_labels: np.ndarray
+ 
+     @pydantic.validator("points")
+     def validate_points(cls, points):
+@@ -36,7 +39,7 @@ class Prompt(pydantic.BaseModel):
+         return points
+ 
+     @pydantic.field_serializer("points")
+-    def serialize_points(cls, points: np.ndarray) -> List[List[float]]:
++    def serialize_points(self, points: np.ndarray) -> List[List[float]]:
+         return points.tolist()
+ 
+     @pydantic.validator("point_labels")
+@@ -50,5 +53,30 @@ class Prompt(pydantic.BaseModel):
+         return point_labels
+ 
+     @pydantic.field_serializer("point_labels")
+-    def serialize_point_labels(cls, point_labels: np.ndarray) -> List[int]:
++    def serialize_point_labels(self, point_labels: np.ndarray) -> List[int]:
+         return point_labels.tolist()
++
++
++class GenerateMaskRequest(pydantic.BaseModel):
++    model_config = pydantic.ConfigDict(arbitrary_types_allowed=True)
++
++    model: str
++    image: np.ndarray
++    prompt: Optional[Prompt] = pydantic.Field(default=None)
++
++    @pydantic.validator("image", pre=True)
++    def pre_validate_image(cls, image: Union[str, np.ndarray]) -> np.ndarray:
++        if isinstance(image, str):
++            return _json.image_b64data_to_ndarray(b64data=image)
++        return image
++
++
++class GenerateMaskResponse(pydantic.BaseModel):
++    model_config = pydantic.ConfigDict(arbitrary_types_allowed=True)
++
++    model: str
++    mask: np.ndarray
++
++    @pydantic.field_serializer("mask")
++    def serialize_mask(self, mask: np.ndarray) -> str:
++        return _json.image_ndarray_to_b64data(ndarray=mask)
+diff --git a/samuel/apis.py b/samuel/apis.py
+new file mode 100644
+index 0000000..aef3822
+--- /dev/null
++++ b/samuel/apis.py
+@@ -0,0 +1,41 @@
++import sys
++from typing import Optional
++
++import numpy as np
++
++from samuel import _models
++from samuel import _types
++
++model: Optional[_models.ModelBase] = None
++
++
++def generate_mask(request: _types.GenerateMaskRequest) -> _types.GenerateMaskResponse:
++    global model
++
++    if model is None or model.name != request.model:
++        for model_cls in _models.MODELS:
++            if model_cls.name == request.model:
++                model = model_cls()
++                break
++        else:
++            raise ValueError(f"Model not found: {request.model!r}")
++
++    image: np.ndarray = request.image
++
++    if request.prompt is None:
++        height, width = image.shape[:2]
++        request.prompt = _types.Prompt(
++            points=np.array([[width / 2, height / 2]], dtype=np.float32),
++            point_labels=np.array([1], dtype=np.int32),
++        )
++        print(
++            "Prompt is not given, so using the center point as prompt: "
++            f"{request.prompt!r}",
++            file=sys.stderr,
++        )
++
++    image_embedding: _types.ImageEmbedding = model.encode_image(image=image)
++    mask: np.ndarray = model.generate_mask(
++        image_embedding=image_embedding, prompt=request.prompt
++    )
++    return _types.GenerateMaskResponse(model=request.model, mask=mask)
+commit bffba812db08a664f763fbd2ae9301fb2f40c07c
+Author: Test <test@test.com>
+Date:   2026-08-07T18:12:51+09:00
+
+    Remove now-unused _json import from __main__
+
+---
+ samuel/__main__.py | 1 -
+ 1 file changed, 1 deletion(-)
+
+diff --git a/samuel/__main__.py b/samuel/__main__.py
+index eef735a..73dbd36 100644
+--- a/samuel/__main__.py
++++ b/samuel/__main__.py
+@@ -8,7 +8,6 @@ import PIL.Image
+ import uvicorn
+ 
+ from samuel import _humanize
+-from samuel import _json
+ from samuel import _models
+ from samuel import _tabulate
+ from samuel import _types

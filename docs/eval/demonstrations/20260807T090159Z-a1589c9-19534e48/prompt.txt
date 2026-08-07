@@ -1,0 +1,11 @@
+Task prompt
+
+The working tree contains four finished pieces of work: a ModelBlob class that replaces the per-model URL, MD5, and path attributes; a unified request and response API for both the Python API and the HTTP server; a fix that keeps image embeddings in the shape (embedding_dim, height, width); and the removal of an import that this work makes unused. Organize the finished work into focused commits in a dependency-safe order, and leave the repository clean.
+
+bare-git system prompt
+
+Use normal shell commands to inspect and edit repository files. Use Git, not git-hunk, for version-control operations. Do not invoke git-hunk or load its bundled skills.
+
+git-hunk system prompt
+
+Use normal shell commands to inspect and edit repository files. Use the git-hunk toolchain for version-control operations. First run `git-hunk skills get core logical-commits`, follow both skills, and use git-hunk to organize the commits.

@@ -1,0 +1,243 @@
+{
+  "artifacts": {
+    "README.md": "3e59ed7975a08c91c827c3cccaff23217700d52a66d01f03db9fcd767c6781ac",
+    "bare-git.jsonl": "3451ab1e6c6371b432cb7742d8e99890fa8cfea5d726554ba302b69a9b106861",
+    "bare-git.patch": "87d8f49fba32b127e4f07501df65a5fed737e011cc7effeb24a30cb24b139435",
+    "git-hunk.jsonl": "626639d89b870e78a7863b3b57b6464601b2be21d546706a92d500199b8c7fbb",
+    "git-hunk.patch": "5b6eb783815aed4a42a07ea13eefe876d9c0f8b9543fd4e5fb016937a530bb9a",
+    "prompt.txt": "1196d9a0bd649c8452e32e78db593d914f3d126bc65786186802b71a870d5a1a"
+  },
+  "claude_code_version": "2.1.222 (Claude Code)",
+  "clean_worktree_at_start": true,
+  "commit": "a1589c9c3670cf598c2b2592c98c33b5720814ad",
+  "condition_order": [
+    "bare-git",
+    "git-hunk"
+  ],
+  "conditions": [
+    {
+      "allowed_tools": [
+        "Bash"
+      ],
+      "checks": {
+        "clean_repository": false,
+        "final_head": true,
+        "forbidden_content_absent": true,
+        "valid_commits": true
+      },
+      "commands": [
+        "git status && echo \"=====DIFF STAT=====\" && git diff --stat",
+        "git diff",
+        "cat samuel/apis.py",
+        "echo \"=========== __main__.py ===========\" && cat -n samuel/__main__.py && echo \"=========== _types.py ===========\" && cat -n samuel/_types.py",
+        "echo \"===== HEAD _types.py =====\" && git show HEAD:samuel/_types.py | cat -n && echo \"===== HEAD _efficient_sam.py =====\" && git show HEAD:samuel/_models/_efficient_sam.py | cat -n && echo \"===== HEAD _sam.py (full) =====\" && git show HEAD:samuel/_models/_sam.py | cat -n",
+        "mkdir -p /tmp/final && cp samuel/__main__.py samuel/_types.py samuel/_server.py samuel/apis.py /tmp/final/ && cp samuel/_models/_base.py /tmp/final/_base.py && cp samuel/_models/_efficient_sam.py /tmp/final/_efficient_sam.py && cp samuel/_models/_sam.py /tmp/final/_sam.py && ls -la /tmp/final",
+        "git checkout -- samuel/__main__.py samuel/_models/_base.py samuel/_models/_efficient_sam.py samuel/_models/_sam.py samuel/_server.py samuel/_types.py && rm samuel/apis.py && git status",
+        "cp /tmp/final/_base.py samuel/_models/_base.py\ncp /tmp/final/_efficient_sam.py samuel/_models/_efficient_sam.py\ncp /tmp/final/_sam.py samuel/_models/_sam.py\n\n# Revert the shape-fix changes in _efficient_sam.py (leave ModelBlob/os/inference_sessions)\nperl -0pi -e 's/\\Q)[0][0]  # (embedding_dim, height, width)\\E/)[0]/' samuel/_models/_efficient_sam.py\nperl -0pi -e 's/        # batch_size, embedding_dim, height, width\\n        batched_image_embedding = image_embedding\\.embedding\\[None, :, :, :\\]\\n//' samuel/_models/_efficient_sam.py\nperl -0pi -e 's/\\Q\"image_embeddings\": batched_image_embedding,\\E/\"image_embeddings\": image_embedding.embedding,/' samuel/_models/_efficient_sam.py\n\n# Revert the shape-fix changes in _sam.py\nperl -0pi -e 's/\\Q    image_embedding = output[0][0]  # (embedding_dim, height, width)\\E/    image_embedding = output[0]/' samuel/_models/_sam.py\nperl -0pi -e 's/\\Q\"image_embeddings\": image_embedding.embedding[None, :, :, :],\\E/\"image_embeddings\": image_embedding.embedding,/' samuel/_models/_sam.py\n\necho \"===== diff for commit A =====\" && git diff",
+        "echo \"--- shape-related lines should be OLD form ---\"; grep -n \"output_names=None\" -A2 samuel/_models/_efficient_sam.py | grep -E \"\\)\\[0\\]\"; grep -n \"batched_image_embedding\\|\\[None, :, :, :\\]\\|embedding_dim, height, width\" samuel/_models/_efficient_sam.py samuel/_models/_sam.py || echo \"(no shape-fix artifacts present \u2014 good)\"\ngit add samuel/_models/_base.py samuel/_models/_efficient_sam.py samuel/_models/_sam.py\ngit commit -q -m \"$(cat <<'EOF'\nIntroduce ModelBlob to encapsulate model blob url, hash, and path\n\nReplace the per-model _encoder/_decoder url, md5, and path attributes\nwith a ModelBlob dataclass and a _blobs mapping, and drive pull, remove,\nsize, and modified_at through it. Load inference sessions from _blobs\ninto a _inference_sessions mapping.\n\nCo-Authored-By: Claude Opus 4.8 <noreply@anthropic.com>\nEOF\n)\"\necho \"committed A\"; git log --oneline -1",
+        "cp /tmp/final/_efficient_sam.py samuel/_models/_efficient_sam.py\ncp /tmp/final/_sam.py samuel/_models/_sam.py\n\n# Convert ImageEmbedding dataclass -> pydantic BaseModel with 3-dim validator, keep `import dataclasses`\nperl -0pi -e 's/\\@dataclasses\\.dataclass\\nclass ImageEmbedding:\\n    original_height: int\\n    original_width: int\\n    embedding: np\\.ndarray\\n/class ImageEmbedding(pydantic.BaseModel):\\n    model_config = pydantic.ConfigDict(arbitrary_types_allowed=True)\\n\\n    original_height: int\\n    original_width: int\\n    embedding: np.ndarray\\n\\n    \\@pydantic.validator(\"embedding\")\\n    def validate_embedding(cls, embedding):\\n        if embedding.ndim != 3:\\n            raise ValueError(\\n                \"embedding must be 3-dimensional: (embedding_dim, height, width)\"\\n            )\\n        return embedding\\n/' samuel/_types.py\n\necho \"===== diff for commit C =====\"; git diff",
+        "git add samuel/_models/_efficient_sam.py samuel/_models/_sam.py samuel/_types.py\ngit commit -q -m \"$(cat <<'EOF'\nKeep image embeddings in (embedding_dim, height, width) shape\n\nDrop the leading batch axis from encoder outputs and re-add it only when\nfeeding the decoder, so ImageEmbedding.embedding is always 3-dimensional.\nEnforce this by making ImageEmbedding a pydantic model that validates the\nembedding is 3-dimensional.\n\nCo-Authored-By: Claude Opus 4.8 <noreply@anthropic.com>\nEOF\n)\"\ngit log --oneline -1",
+        "grep -n \"dataclasses\" samuel/_types.py || echo \"no other dataclasses usage\"\nperl -ni -e 'print unless $. == 1 && /^import dataclasses$/' samuel/_types.py\necho \"===== diff for commit D =====\"; git diff samuel/_types.py",
+        "git add samuel/_types.py\ngit commit -q -m \"$(cat <<'EOF'\nRemove unused dataclasses import\n\nImageEmbedding is no longer a dataclass, so the import is unused.\n\nCo-Authored-By: Claude Opus 4.8 <noreply@anthropic.com>\nEOF\n)\"\ngit log --oneline -1",
+        "cp /tmp/final/_types.py samuel/_types.py\ncp /tmp/final/_server.py samuel/_server.py\ncp /tmp/final/__main__.py samuel/__main__.py\ncp /tmp/final/apis.py samuel/apis.py\necho \"===== diff for commit B =====\"; git diff; echo \"===== new file =====\"; git status --short",
+        "git add samuel/__main__.py samuel/_server.py samuel/_types.py samuel/apis.py\ngit commit -q -m \"$(cat <<'EOF'\nUnify request and response API for Python API and HTTP server\n\nAdd GenerateMaskRequest/GenerateMaskResponse types and a shared\napis.generate_mask, and route both the CLI run command and the HTTP\n/api/generate_mask endpoint through them so they share model lookup,\ndefault center-point prompting, and error handling.\n\nCo-Authored-By: Claude Opus 4.8 <noreply@anthropic.com>\nEOF\n)\"\ngit log --oneline -1",
+        "echo \"===== git status =====\"; git status\necho \"===== verify tree matches original final state =====\"\nfor f in __main__.py _types.py _server.py apis.py; do diff -q /tmp/final/$f samuel/$f && echo \"OK samuel/$f\"; done\nfor f in _base.py _efficient_sam.py _sam.py; do diff -q /tmp/final/$f samuel/_models/$f && echo \"OK samuel/_models/$f\"; done\necho \"===== commit graph =====\"; git log --oneline -5",
+        "set -e\nfor f in __main__.py _types.py _server.py apis.py; do cmp -s /tmp/final/$f samuel/$f && echo \"match samuel/$f\"; done\nfor f in _base.py _efficient_sam.py _sam.py; do cmp -s /tmp/final/$f samuel/_models/$f && echo \"match samuel/_models/$f\"; done\necho \"----- files changed across the 4 commits -----\"\ngit diff --stat 06658e5 HEAD\necho \"----- syntax check all changed modules -----\"\npython -m py_compile samuel/__main__.py samuel/_types.py samuel/_server.py samuel/apis.py samuel/_models/_base.py samuel/_models/_efficient_sam.py samuel/_models/_sam.py && echo \"py_compile OK\""
+      ],
+      "commits": [
+        {
+          "problems": [],
+          "sha": "259175970b14c0fa6d235d393e6654315962ef5c",
+          "subject": "Introduce ModelBlob to encapsulate model blob url, hash, and path",
+          "valid": true
+        },
+        {
+          "problems": [],
+          "sha": "012810554e329ae1c973ec63856b8ff5d9ba8901",
+          "subject": "Keep image embeddings in (embedding_dim, height, width) shape",
+          "valid": true
+        },
+        {
+          "problems": [],
+          "sha": "8e3af1285c0411789eb0a4e2de38190c0fc4b7b4",
+          "subject": "Remove unused dataclasses import",
+          "valid": true
+        },
+        {
+          "problems": [],
+          "sha": "5bb7073fa593884956963ea79c9d687e117d7e93",
+          "subject": "Unify request and response API for Python API and HTTP server",
+          "valid": true
+        }
+      ],
+      "name": "bare-git",
+      "objective_passed": false,
+      "patch": "bare-git.patch",
+      "system_prompt": "Use normal shell commands to inspect and edit repository files. Use Git, not git-hunk, for version-control operations. Do not invoke git-hunk or load its bundled skills.",
+      "trace": "bare-git.jsonl",
+      "trace_summary": {
+        "cost_usd": 1.7692704999999997,
+        "duration_seconds": 391.543339750031,
+        "tool_calls": 17,
+        "usage": {
+          "cache_creation": {
+            "ephemeral_1h_input_tokens": 68596,
+            "ephemeral_5m_input_tokens": 0
+          },
+          "cache_creation_input_tokens": 68596,
+          "cache_read_input_tokens": 712081,
+          "inference_geo": "not_available",
+          "input_tokens": 34,
+          "iterations": [
+            {
+              "cache_creation": {
+                "ephemeral_1h_input_tokens": 1393,
+                "ephemeral_5m_input_tokens": 0
+              },
+              "cache_creation_input_tokens": 1393,
+              "cache_read_input_tokens": 67203,
+              "input_tokens": 2,
+              "output_tokens": 864,
+              "type": "message"
+            }
+          ],
+          "output_tokens": 29056,
+          "server_tool_use": {
+            "web_fetch_requests": 0,
+            "web_search_requests": 0
+          },
+          "service_tier": "standard",
+          "speed": "standard"
+        }
+      }
+    },
+    {
+      "allowed_tools": [
+        "Bash"
+      ],
+      "checks": {
+        "clean_repository": true,
+        "final_head": true,
+        "forbidden_content_absent": true,
+        "valid_commits": true
+      },
+      "commands": [
+        "git-hunk skills get core logical-commits",
+        "git-hunk --help 2>&1 | head -50",
+        "git-hunk list",
+        "git-hunk show 144e99d 68b28d3",
+        "cat \"$(git rev-parse --show-toplevel)/samuel/apis.py\"",
+        "git-hunk show b2cc492 68fdf8d f798847 928c48d aae4315",
+        "git-hunk show 7bc9a31 b6dba8a f8f5123 f211049 12f16b9 ff6878e",
+        "git-hunk show ed784f9 e29b07c 1eef2bc",
+        "git-hunk show ef5e2cb 129f135 8f7ac8a",
+        "git show HEAD:samuel/__main__.py | head -20; echo \"=====CURRENT WORKING TREE HEAD area for PIL usage=====\"; grep -n \"PIL\\|_json\\|Prompt\\|import\" \"$(git rev-parse --show-toplevel)/samuel/__main__.py\" | head -40",
+        "git show HEAD:samuel/__main__.py | grep -n \"_json\\|Prompt\\|_types\\|apis\\.\" ",
+        "root=$(git rev-parse --show-toplevel); for f in samuel/_models/_sam.py samuel/_models/_efficient_sam.py samuel/_server.py samuel/_types.py samuel/__main__.py; do echo \"== $f ==\"; grep -n \"os\\.\\|_json\\.\\|dataclasses\\.\\|Annotated\\|numpy\\|np\\.\\|pydantic\\.\\|Optional\\|Prompt(\" \"$root/$f\" | head; done",
+        "git-hunk show 68fdf8d --json | python3 -c \"import json,sys; h=json.load(sys.stdin)['hunks'][0]; [print(l['n'], l['op'], (l['content'].get('text') if isinstance(l['content'],dict) else l['content'])) for l in h['lines']]\"",
+        "git-hunk stage f211049 12f16b9 f798847 && git-hunk stage 68fdf8d -l 8-9 && git-hunk list --staged",
+        "git commit -m \"Keep image embeddings in shape (embedding_dim, height, width)\" -q && git-hunk list",
+        "git-hunk stage samuel/_models/_base.py samuel/_models/_sam.py samuel/_models/_efficient_sam.py && git commit -m \"Introduce ModelBlob to replace per-model URL, MD5, and path attributes\" -q && git-hunk list",
+        "git-hunk stage samuel/_types.py samuel/_server.py 8f7ac8a && git-hunk stage 129f135 -l 7-9 && git --literal-pathspecs -C \"$(git rev-parse --show-toplevel)\" add -- samuel/apis.py && git-hunk list",
+        "git-hunk show f253855 && echo \"---STAGED __main__ _json still present?---\" && git show :samuel/__main__.py | grep -n \"_json\"",
+        "git commit -m \"Add unified generate_mask request/response API for Python and HTTP\" -q && git-hunk list",
+        "git-hunk stage ef5e88d && git-hunk show --staged && git commit -m \"Remove now-unused _json import from __main__\" -q && git-hunk list",
+        "git log --oneline -5 && echo \"--- status ---\" && git status --short"
+      ],
+      "commits": [
+        {
+          "problems": [],
+          "sha": "b453ce5123b8e225e6367b6169013420ca80c09a",
+          "subject": "Keep image embeddings in shape (embedding_dim, height, width)",
+          "valid": true
+        },
+        {
+          "problems": [],
+          "sha": "c1247b2f6d6af180c3da3c6680533bba25c6fa82",
+          "subject": "Introduce ModelBlob to replace per-model URL, MD5, and path attributes",
+          "valid": true
+        },
+        {
+          "problems": [],
+          "sha": "3816259c727860ab2fbc79dd607aebd47ca5bc0d",
+          "subject": "Add unified generate_mask request/response API for Python and HTTP",
+          "valid": true
+        },
+        {
+          "problems": [],
+          "sha": "bffba812db08a664f763fbd2ae9301fb2f40c07c",
+          "subject": "Remove now-unused _json import from __main__",
+          "valid": true
+        }
+      ],
+      "name": "git-hunk",
+      "objective_passed": true,
+      "patch": "git-hunk.patch",
+      "system_prompt": "Use normal shell commands to inspect and edit repository files. Use the git-hunk toolchain for version-control operations. First run `git-hunk skills get core logical-commits`, follow both skills, and use git-hunk to organize the commits.",
+      "trace": "git-hunk.jsonl",
+      "trace_summary": {
+        "cost_usd": 1.3131719999999998,
+        "duration_seconds": 271.3051069159992,
+        "tool_calls": 21,
+        "usage": {
+          "cache_creation": {
+            "ephemeral_1h_input_tokens": 52709,
+            "ephemeral_5m_input_tokens": 0
+          },
+          "cache_creation_input_tokens": 52709,
+          "cache_read_input_tokens": 608494,
+          "inference_geo": "not_available",
+          "input_tokens": 36,
+          "iterations": [
+            {
+              "cache_creation": {
+                "ephemeral_1h_input_tokens": 258,
+                "ephemeral_5m_input_tokens": 0
+              },
+              "cache_creation_input_tokens": 258,
+              "cache_read_input_tokens": 54159,
+              "input_tokens": 2,
+              "output_tokens": 471,
+              "type": "message"
+            }
+          ],
+          "output_tokens": 19238,
+          "server_tool_use": {
+            "web_fetch_requests": 0,
+            "web_search_requests": 0
+          },
+          "service_tier": "standard",
+          "speed": "standard"
+        }
+      }
+    }
+  ],
+  "duration_seconds": 663.5264393340331,
+  "environment": {
+    "git_hunk_version": "git-hunk \u001b[2m0.2.1.dev282+g3de25d19c.d20260807\u001b[0m",
+    "git_version": "git version 2.55.0",
+    "operating_system": "macOS-26.5.2-arm64-arm-64bit",
+    "python_version": "3.10.19"
+  },
+  "ground_truth": [
+    "Introduce ModelBlob class to manage model blobs",
+    "Use unified api for both python and http",
+    "Ensure image embedding shape is (embedding_dim, height, width)",
+    "Remove unused dataclasses import"
+  ],
+  "model": "claude-opus-4-8",
+  "retried": false,
+  "run_id": "20260807T090159Z-a1589c9-19534e48",
+  "scenario": "osam",
+  "skill_sha256": {
+    "core": "226ac4cb680d15930994ef0a9ffed3c1161b7a2125ae3cf163fc80afdb10af4c",
+    "logical-commits": "290f2b68d6af2b8489e6660bfa7e2eb90420f4837271b25cd68a0e73948d957a"
+  },
+  "started_at": "2026-08-07T09:01:59.441277Z",
+  "starting_state": {
+    "base_commit": "06658e5e1f15904bfe8ecd120db857620b27314f",
+    "dirty_diff_sha256": "aef72d7dbc1f57aef33a9415d906016ae7f501c0bebb1ca1e10090d25a1cda1a",
+    "head_tree": "a11fc582d321e75ee5cef81ba79773f4a32830ba"
+  },
+  "task_prompt": "The working tree contains four finished pieces of work: a ModelBlob class that replaces the per-model URL, MD5, and path attributes; a unified request and response API for both the Python API and the HTTP server; a fix that keeps image embeddings in the shape (embedding_dim, height, width); and the removal of an import that this work makes unused. Organize the finished work into focused commits in a dependency-safe order, and leave the repository clean."
+}
