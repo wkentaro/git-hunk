@@ -92,8 +92,8 @@ grader.
 
 `eval/config.py` contains the two pins:
 
-- Claude Code `2.1.222`
-- Model `claude-opus-4-8`
+- Claude Code `2.1.224`
+- Model `claude-sonnet-5`
 
 The runner has no model override. It rejects a Claude Code version mismatch
 before it builds a task. It also requires the reported stream model to match the
