@@ -98,6 +98,7 @@ exclude = ["eval/scenarios/osam/base/**", "eval/scenarios/osam/dirty/**"]
 [tool.typos.files]
 extend-exclude = [
   "docs/eval/**/*.jsonl",
+  "docs/eval/**/*.patch",
   "docs/eval/**/run.json",
   "eval/scenarios/osam/base/**",
   "eval/scenarios/osam/dirty/**",
