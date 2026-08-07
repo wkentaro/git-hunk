@@ -270,6 +270,29 @@ renaming, removing, or changing the type of an existing field bumps it. (Before
 | `git add <file>` | No          | Yes          | No       | No                 | No          |
 | **`git-hunk`**   | **No**      | **Yes**      | **Yes**  | **Yes**            | **Yes**     |
 
+### Agent demonstration
+
+One pinned Claude Opus 4.8 run organized the same dirty Repository under two
+conditions. This was one small, one-file task, not a statistical benchmark.
+
+| Result                 |                              Bare Git |        `git-hunk` with bundled skills |
+| ---------------------- | ------------------------------------: | ------------------------------------: |
+| Exact Repository state |                                  Pass |                                  Pass |
+| Commit structure       |                             3 commits |                             3 commits |
+| Human review           | Discount and matching label separated | Discount and matching label separated |
+| Duration               |                                 42.4s |                                 65.8s |
+| Cost                   |                               $0.1447 |                               $0.2503 |
+| Output tokens          |                                 2,489 |                                 3,084 |
+| Tool calls             |                                     6 |                                    15 |
+
+This run does not show that `git-hunk` is better than bare Git. Both conditions
+produced the same final state and equivalent commit grouping. Bare Git used less
+time, cost, and tool calls. The workflow differed: the bare Git agent restored
+the file and rebuilt the intended edits, while the `git-hunk` agent split the
+existing Hunk and discarded only the debug output.
+
+[Inspect the prompt, commands, traces, commit patches, and full environment](docs/eval/demonstrations/20260807T062735Z-2e58044-b5b3e85e/README.md).
+
 ## How it works
 
 1. Rejects detected rename, copy, and unmerged states.

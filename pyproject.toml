@@ -86,3 +86,6 @@ force-single-line = true
 
 [tool.ruff.lint.per-file-ignores]
 "__init__.py" = ["F401"]
+
+[tool.typos.files]
+extend-exclude = ["docs/eval/**/*.jsonl", "docs/eval/**/run.json"]
