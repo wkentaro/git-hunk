@@ -3,8 +3,8 @@ import datetime
 import hashlib
 import json
 import sys
+import tempfile
 import time
-import uuid
 from pathlib import Path
 from typing import Any
 
@@ -60,9 +60,10 @@ def _run_scenarios(
 ) -> int:
     started_at = datetime.datetime.now(datetime.timezone.utc)
     started_clock = time.monotonic()
-    run_id = _make_run_id(started_at=started_at, commit=environment.commit)
-    run_dir = environment.checkout / "log" / "agent-eval" / run_id
-    run_dir.mkdir(parents=True)
+    run_directory_prefix = (
+        f"git-hunk-agent-eval-{started_at:%Y%m%dT%H%M%SZ}-{environment.commit[:7]}-"
+    )
+    run_dir = Path(tempfile.mkdtemp(prefix=run_directory_prefix))
     results: list[tuple[Scenario, Result, Path]] = []
 
     for index, scenario in enumerate(scenarios, start=1):
@@ -165,12 +166,6 @@ def _is_run_qualifying(
     results: tuple[Result, ...],
 ) -> bool:
     return not selected_run and complete and all(result.passed for result in results)
-
-
-def _make_run_id(*, started_at: datetime.datetime, commit: str) -> str:
-    timestamp = started_at.strftime("%Y%m%dT%H%M%SZ")
-    suffix = uuid.uuid4().hex[:8]
-    return f"{timestamp}-{commit[:7]}-{suffix}"
 
 
 if __name__ == "__main__":

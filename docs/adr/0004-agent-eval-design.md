@@ -21,11 +21,12 @@ semantics and ADR 0003 for durable Hunk identity.
 
 ## Decision
 
-### Keep the evaluation in the repository
+### Keep the evaluation code in the repository
 
 The evaluation code is in `eval/`. Its deterministic tests are in
-`tests/eval/`. Raw model runs are in the ignored
-`log/agent-eval/<run-id>/` directory.
+`tests/eval/`. Each raw model run is in a unique system temporary directory.
+Its name includes the UTC start time and Git commit. The evaluator prints the
+path and leaves the directory available for diagnosis.
 
 The installed package has no eval entry point or runtime dependency. A package
 content test builds the wheel and source distribution. It requires both
@@ -129,6 +130,8 @@ after all deterministic, lint, package, and pinned model gates pass.
 ## Consequences
 
 - Normal tests stay deterministic and model-free.
+- Raw model runs do not modify the checkout. Their temporary directories are
+  diagnostic data, not durable evidence.
 - Release artifacts cannot include evaluator code or run data.
 - A line-set collision cannot hide an incorrect final tree.
 - Staged, tracked, and untracked leftovers have separate diagnoses.

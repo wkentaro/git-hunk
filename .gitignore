@@ -17,7 +17,6 @@ __pycache__/
 
 # Tools
 /.claude/
-/log/
 
 # Worktrees
 /.wt/
