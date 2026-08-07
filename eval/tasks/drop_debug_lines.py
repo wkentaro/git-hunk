@@ -38,12 +38,13 @@ def _commit_without_debug(repo: GitRepo) -> None:
     (hunk,) = list_hunks(repo, "a.py")
     run_git_hunk(
         repo,
-        "stage",
+        "commit",
         str(hunk["id"]),
         "--exclude-matching",
         DEBUG,
+        "-m",
+        "Double item totals",
     )
-    repo.git("commit", "-m", "Double item totals")
 
 
 def _golden(repo: GitRepo) -> None:

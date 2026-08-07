@@ -61,6 +61,51 @@ def test_commit_partial_lines_leaves_remainder_unstaged(cli: GitHunkCLI) -> None
     assert "cX" in cli.repo.git("diff")
 
 
+def test_commit_exclude_matching_leaves_remainder_unstaged(cli: GitHunkCLI) -> None:
+    _init(
+        cli,
+        {
+            "f.py": (
+                "def process(items):\n"
+                "    total = 0\n"
+                "    for item in items:\n"
+                "        total += item\n"
+                "    return total\n"
+            )
+        },
+    )
+    cli.repo.write_file(
+        "f.py",
+        (
+            "def process(items):\n"
+            "    total = 0\n"
+            "    for item in items:\n"
+            '        print("DEBUG", item)\n'
+            "        total += item\n"
+            "    return total * 2\n"
+        ),
+    )
+
+    cli.run_ok(
+        "commit",
+        _unstaged_ids(cli)[0],
+        "--exclude-matching",
+        'print("DEBUG"',
+        "-m",
+        "Double item totals",
+    )
+
+    assert cli.repo.git("show", "HEAD:f.py") == (
+        "def process(items):\n"
+        "    total = 0\n"
+        "    for item in items:\n"
+        "        total += item\n"
+        "    return total * 2\n"
+    )
+    assert cli.repo.git("diff", "--cached") == ""
+    assert 'print("DEBUG", item)' in cli.repo.git("diff")
+
+
 def test_commit_by_file_path(cli: GitHunkCLI) -> None:
     _init(cli, {"a.txt": "a\n", "b.txt": "b\n"})
     cli.repo.write_file("a.txt", "A1\nA2\nA3\n")

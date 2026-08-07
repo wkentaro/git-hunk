@@ -784,12 +784,18 @@ def cmd_discard(
 @cli.command("commit", add_help_option=False)
 @click.option("-m", "message", default=None)
 @click.option("-l", "line_spec", default=None)
+@click.option("--include-matching", "include_matching", multiple=True)
+@click.option("--exclude-matching", "exclude_matching", multiple=True)
+@click.option("--regex", "use_regex", is_flag=True)
 @click.option("-h", "--help", "show_help", is_flag=True)
 @click.argument("targets", nargs=-1)
 def cmd_commit(
     targets: tuple[str, ...],
     message: str | None,
     line_spec: str | None,
+    include_matching: tuple[str, ...],
+    exclude_matching: tuple[str, ...],
+    use_regex: bool,
     show_help: bool,
 ) -> None:
     if show_help:
@@ -812,8 +818,12 @@ def cmd_commit(
             tip="commit them with 'git commit', or unstage with 'git-hunk unstage'",
         )
 
-    selection = _Selection(
-        line_spec=line_spec, include_matching=(), exclude_matching=(), regex=False
+    selection = _build_selection(
+        line_spec,
+        include_matching,
+        exclude_matching,
+        use_regex,
+        usage=USAGE_COMMIT,
     )
     selected = _apply_selection(
         commit_targets,

@@ -183,10 +183,12 @@ change, and selecting the mode Hunk does not apply text.
 ```bash
 git-hunk commit d161935 -m "fix: ..."      # stage a hunk and commit it in one step
 git-hunk commit d161935 -l 3,5-7 -m "..."  # stage specific lines and commit
+git-hunk commit d161935 --exclude-matching debug -m "..."  # commit all but matching lines
 ```
 
 `commit` aborts if anything is already staged, so the commit contains exactly
-the selected hunks.
+the selected hunks. It accepts the same `-l`, `--include-matching`,
+`--exclude-matching`, and `--regex` selection options as `stage`.
 
 ### JSON output
 
