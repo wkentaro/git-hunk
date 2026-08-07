@@ -21,5 +21,8 @@ __pycache__/
 # Tools
 /.claude/
 
+# Agent eval raw runs (ADR 0004)
+/log/
+
 # Worktrees
 /.wt/
