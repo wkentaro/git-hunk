@@ -118,6 +118,28 @@ The runner exits nonzero for a failed task, solver error, environment mismatch,
 missing or malformed trace, or incomplete task selection. A selected-task run
 can help diagnosis, but it cannot qualify.
 
+### Keep the Agent demonstration separate
+
+`python -m eval.demonstration` runs one pricing scenario under two conditions.
+The same pinned agent receives the same task prompt from byte-identical
+Repository states. The bare Git condition exposes Git only. The git-hunk
+condition requires both bundled skills and a git-hunk mutation command.
+
+The objective checks cover the exact final `HEAD`, debug-line removal, a clean
+index and worktree, and basic commit validity. They do not grade commit purpose,
+grouping, order, patches, or messages. The redacted evidence preserves those
+details for human review.
+
+Each condition runs once. A model, trace, tool-isolation, or other infrastructure
+failure invalidates the complete demonstration. The runner does not retry or
+continue a partial run. Valid evidence is written under
+`docs/eval/demonstrations/<run-id>/`. Raw or invalid runs stay under the ignored
+`log/agent-demonstration/` directory.
+
+This side-by-side demonstration does not change the four-task release qualifier
+or the normal model-free test suite. It illustrates one outcome. It is not a
+statistical benchmark.
+
 ### Keep this ADR Proposed in the integration ticket
 
 This integration adds the deterministic evaluation and the pinned runner. It

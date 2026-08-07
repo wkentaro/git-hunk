@@ -13,6 +13,8 @@ from eval.repo import GitRepo
 from eval.scenario import Solver
 from eval.task import Task
 
+DEFAULT_ALLOWED_TOOLS: Final = ("Bash(git-hunk:*)", "Bash(git:*)")
+
 
 def build_prompt(*, task_prompt: str) -> str:
     preamble = (
@@ -25,15 +27,16 @@ def build_prompt(*, task_prompt: str) -> str:
     return f"{preamble}\n\n{task_prompt}"
 
 
-def build_command_flags() -> list[str]:
-    ALLOWED_TOOLS: Final = ("Bash(git-hunk:*)", "Bash(git:*)")
+def build_command_flags(
+    *, allowed_tools: tuple[str, ...] = DEFAULT_ALLOWED_TOOLS
+) -> list[str]:
     return [
         "--model",
         MODEL,
         "--tools",
         "Bash",
         "--allowedTools",
-        *ALLOWED_TOOLS,
+        *allowed_tools,
         "--permission-mode",
         "dontAsk",
         "--safe-mode",
@@ -48,8 +51,21 @@ def build_command_flags() -> list[str]:
     ]
 
 
-def build_command(*, prompt: str) -> list[str]:
-    return ["claude", "-p", prompt, *build_command_flags()]
+def build_command(
+    *,
+    prompt: str,
+    allowed_tools: tuple[str, ...] = DEFAULT_ALLOWED_TOOLS,
+    append_system_prompt: str | None = None,
+) -> list[str]:
+    command = [
+        "claude",
+        "-p",
+        prompt,
+        *build_command_flags(allowed_tools=allowed_tools),
+    ]
+    if append_system_prompt is not None:
+        command.extend(["--append-system-prompt", append_system_prompt])
+    return command
 
 
 def make_claude_solver(*, task: Task, trace_path: Path) -> Solver:
@@ -61,13 +77,24 @@ def make_claude_solver(*, task: Task, trace_path: Path) -> Solver:
     return solve
 
 
-def run_claude(*, repo: GitRepo, prompt: str, trace_path: Path) -> None:
+def run_claude(
+    *,
+    repo: GitRepo,
+    prompt: str,
+    trace_path: Path,
+    allowed_tools: tuple[str, ...] = DEFAULT_ALLOWED_TOOLS,
+    append_system_prompt: str | None = None,
+) -> None:
     MODEL_TIMEOUT_SECONDS: Final = 30 * 60
     started_at = datetime.datetime.now(datetime.timezone.utc)
     started_clock = time.monotonic()
     try:
         result = repo.run(
-            *build_command(prompt=prompt),
+            *build_command(
+                prompt=prompt,
+                allowed_tools=allowed_tools,
+                append_system_prompt=append_system_prompt,
+            ),
             timeout_seconds=MODEL_TIMEOUT_SECONDS,
         )
     except subprocess.TimeoutExpired as error:
@@ -143,6 +170,11 @@ def _separate_trace_output(*, raw_trace: str) -> tuple[str, str | None]:
 
 
 def validate_trace(*, trace_path: Path) -> None:
+    events = read_trace_events(trace_path=trace_path)
+    validate_trace_events(events=events)
+
+
+def read_trace_events(*, trace_path: Path) -> list[dict[str, Any]]:
     try:
         lines = trace_path.read_text(encoding="utf-8").splitlines()
     except OSError as error:
@@ -160,6 +192,10 @@ def validate_trace(*, trace_path: Path) -> None:
             raise RuntimeError(f"trace line {line_number} is not a JSON object")
         events.append(cast("dict[str, Any]", event))
 
+    return events
+
+
+def validate_trace_events(*, events: list[dict[str, Any]]) -> None:
     assistant_events = [event for event in events if event.get("type") == "assistant"]
     if not assistant_events:
         raise RuntimeError("trace is missing assistant turns")

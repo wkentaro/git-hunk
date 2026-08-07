@@ -68,7 +68,7 @@ def grade(repo: GitRepo, task: Task, base: str) -> Result:
                 detail=f"{before!r} must precede {after!r}",
             )
 
-    actual_head = _read_head(repo=repo)
+    actual_head = read_head(repo=repo)
     if actual_head != task.expected_state.head:
         return _state_failure(
             reason="final-tree",
@@ -135,7 +135,7 @@ def _parse_changes(diff: str) -> frozenset[ChangedLine]:
     return frozenset(changes)
 
 
-def _read_head(repo: GitRepo) -> frozenset[FileState]:
+def read_head(repo: GitRepo) -> frozenset[FileState]:
     listing = repo.git_bytes("ls-tree", "-rz", "--full-tree", "HEAD")
     files: set[FileState] = set()
     for record in listing.rstrip(b"\0").split(b"\0"):
