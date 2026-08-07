@@ -24,6 +24,10 @@ Temporary repositories that compare exact worktree bytes must set
 `core.autocrlf=false`. Otherwise, Git can convert LF to CRLF on Windows and
 make platform-independent expected bytes fail.
 
+Keep generated model traces and run manifests byte-for-byte. Do not edit opaque
+IDs or verbatim model and tool output to satisfy prose lint. These evidence
+paths are excluded from `typos`.
+
 ## Agent skills
 
 ### Issue tracker
