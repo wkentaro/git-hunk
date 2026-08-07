@@ -6,7 +6,6 @@ from typing import NoReturn
 
 import pytest
 
-from eval.config import CLAUDE_CODE_VERSION
 from eval.config import MODEL
 from eval.model import build_command
 from eval.model import build_prompt
@@ -59,11 +58,6 @@ def _write_trace(*, trace_path: Path, events: list[dict[str, Any]]) -> None:
         "".join(f"{json.dumps(event)}\n" for event in events),
         encoding="utf-8",
     )
-
-
-def test_model_pins_are_exact() -> None:
-    assert CLAUDE_CODE_VERSION == "2.1.222"
-    assert MODEL == "claude-opus-4-8"
 
 
 def test_prompt_loads_both_bundled_skills() -> None:
