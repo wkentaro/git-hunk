@@ -145,6 +145,8 @@ and this project adheres to
   hunk as carrying a usable `id`: an `untracked` entry's `id` is empty, so no
   git-hunk command can address it, and plain `list` renders it as a bare path
   (#162).
+- Document that an `untracked` inventory entry has `header: null` and
+  `context_before: null` without classifying it as a whole-file hunk (#202).
 - Report untracked files with Repository paths, matching tracked Hunks,
   so running `git-hunk` from a subdirectory no longer emits an untracked `file`
   on a different path basis than the staged/unstaged hunks beside it (#103).
