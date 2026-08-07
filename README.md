@@ -226,23 +226,23 @@ body; `show --json` adds a structured `lines` array. A `show --json` hunk
 }
 ```
 
-| Field            | Type           | Description                                                                                                                                                   |
-| ---------------- | -------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `schema_version` | int            | Envelope version; bumped on any incompatible change to the shape below.                                                                                       |
-| `hunks`          | array          | The hunks (empty array when there are no changes).                                                                                                            |
-| `id`             | string         | Full canonical SHA-256 Hunk ID; empty for an `untracked` entry, which no command can address. Human output uses a unique prefix of at least seven characters. |
-| `id_stability`   | string         | `stable` or `conditional`. An untracked inventory entry reports `stable`, but its empty `id` remains unaddressable.                                           |
-| `file`           | union          | Repository path of the changed file, as a byte-safe `{text\|bytes}` union (see below).                                                                        |
-| `status`         | string         | One of `staged`, `unstaged`, `untracked`.                                                                                                                     |
-| `change_kind`    | string         | Git status letter: `A` added, `D` deleted, `M` modified, `T` typechange (`R`/`C` reserved and currently rejected). Always present.                            |
-| `a_mode`         | string \| null | 6-digit octal git mode on the pre-image side; `null` when that side does not exist.                                                                           |
-| `b_mode`         | string \| null | 6-digit octal git mode on the post-image side; `null` when that side does not exist.                                                                          |
-| `binary`         | bool           | Whether the change is binary. Always present.                                                                                                                 |
-| `header`         | string \| null | The hunk's bare `@@ -a,b +c,d @@` range; `null` for a whole-file (binary, mode-only, type, or empty tracked file) change.                                     |
-| `context_before` | union \| null  | The function/section git names after the `@@` header, as a `{text\|bytes}` union; `null` when there is none.                                                  |
-| `additions`      | int            | Number of added lines.                                                                                                                                        |
-| `deletions`      | int            | Number of removed lines.                                                                                                                                      |
-| `lines`          | array          | `show --json` only. The structured body; `[]` for a whole-file hunk. See below.                                                                               |
+| Field            | Type           | Description                                                                                                                                                                            |
+| ---------------- | -------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `schema_version` | int            | Envelope version; bumped on any incompatible change to the shape below.                                                                                                                |
+| `hunks`          | array          | The hunks (empty array when there are no changes).                                                                                                                                     |
+| `id`             | string         | Full canonical SHA-256 Hunk ID; empty for an `untracked` entry, which no command can address. Human output uses a unique prefix of at least seven characters.                          |
+| `id_stability`   | string         | `stable` or `conditional`. An untracked inventory entry reports `stable`, but its empty `id` remains unaddressable.                                                                    |
+| `file`           | union          | Repository path of the changed file, as a byte-safe `{text\|bytes}` union (see below).                                                                                                 |
+| `status`         | string         | One of `staged`, `unstaged`, `untracked`.                                                                                                                                              |
+| `change_kind`    | string         | Git status letter: `A` added, `D` deleted, `M` modified, `T` typechange (`R`/`C` reserved and currently rejected). Always present.                                                     |
+| `a_mode`         | string \| null | 6-digit octal git mode on the pre-image side; `null` when that side does not exist.                                                                                                    |
+| `b_mode`         | string \| null | 6-digit octal git mode on the post-image side; `null` when that side does not exist.                                                                                                   |
+| `binary`         | bool           | Whether the change is binary. Always present.                                                                                                                                          |
+| `header`         | string \| null | The bare `@@ -a,b +c,d @@` range for a text hunk; `null` for a whole-file hunk (binary, mode-only, type, or empty tracked file change) or an `untracked` inventory entry.              |
+| `context_before` | union \| null  | The function/section name after a text hunk's `@@` header, as a `{text\|bytes}` union; `null` for a text hunk without a heading, a whole-file hunk, or an `untracked` inventory entry. |
+| `additions`      | int            | Number of added lines.                                                                                                                                                                 |
+| `deletions`      | int            | Number of removed lines.                                                                                                                                                               |
+| `lines`          | array          | `show --json` only. The structured body; `[]` for a whole-file hunk. See below.                                                                                                        |
 
 A `lines` entry is `{ "n", "op", "content", "no_newline"? }`:
 
