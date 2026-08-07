@@ -1,0 +1,64 @@
+commit 171bd6b97527aa22338cfcc5efe3111e2a1ae4c5
+Author: Test <test@test.com>
+Date:   2026-08-07T15:28:05+09:00
+
+    Support numeric-string prices in normalize_price
+
+---
+ pricing.py | 2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+
+diff --git a/pricing.py b/pricing.py
+index 42fcd3a..70751d6 100644
+--- a/pricing.py
++++ b/pricing.py
+@@ -1,5 +1,5 @@
+ def normalize_price(price):
+-    normalized_price = price
++    normalized_price = float(price)
+ 
+     return normalized_price
+ 
+commit 86def257f0d381afc7ad9ad1791a0c2fe83ecce4
+Author: Test <test@test.com>
+Date:   2026-08-07T15:28:09+09:00
+
+    Apply discount in calculate_total
+
+---
+ pricing.py | 2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+
+diff --git a/pricing.py b/pricing.py
+index 70751d6..19557d0 100644
+--- a/pricing.py
++++ b/pricing.py
+@@ -5,7 +5,7 @@ def normalize_price(price):
+ 
+ 
+ def calculate_total(price, discount):
+-    return normalize_price(price)
++    return normalize_price(price) * (1 - discount)
+ 
+ 
+ def format_report(total):
+commit e5f8b3884d259b1f07dc192ca9914a5c21ec1584
+Author: Test <test@test.com>
+Date:   2026-08-07T15:28:14+09:00
+
+    Update report label to reflect discounted total
+
+---
+ pricing.py | 2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+
+diff --git a/pricing.py b/pricing.py
+index 19557d0..4bfd11e 100644
+--- a/pricing.py
++++ b/pricing.py
+@@ -9,4 +9,4 @@ def calculate_total(price, discount):
+ 
+ 
+ def format_report(total):
+-    return f"Total: {total:.2f}"
++    return f"Discounted total: {total:.2f}"

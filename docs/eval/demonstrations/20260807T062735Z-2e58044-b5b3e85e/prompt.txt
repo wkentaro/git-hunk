@@ -1,0 +1,11 @@
+Task prompt
+
+The working tree contains numeric-string price support, discount behavior, a matching report-label change, and temporary debug output. Remove the debug output. Organize the finished work into focused commits in a dependency-safe order, and leave the repository clean.
+
+bare-git system prompt
+
+Use normal shell commands to inspect and edit repository files. Use Git, not git-hunk, for version-control operations. Do not invoke git-hunk or load its bundled skills.
+
+git-hunk system prompt
+
+Use normal shell commands to inspect and edit repository files. Use the git-hunk toolchain for version-control operations. First run `git-hunk skills get core logical-commits`, follow both skills, and use git-hunk to organize the commits.
