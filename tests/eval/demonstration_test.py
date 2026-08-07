@@ -310,3 +310,5 @@ def test_evidence_is_complete_and_redacts_repository_paths(
     assert str(repo.path) not in evidence_text
     assert "<REPOSITORY>" in evidence_text
     assert "one side-by-side Agent demonstration" in evidence_text
+    manifest = json.loads((evidence_dir / "run.json").read_text(encoding="utf-8"))
+    assert manifest["environment"]["git_hunk_version"].startswith("git-hunk ")

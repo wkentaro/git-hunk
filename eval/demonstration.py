@@ -650,7 +650,7 @@ def _read_git_hunk_version(*, environment: EvalEnvironment) -> str:
     )
     if result.returncode != 0:
         raise RuntimeError(f"git-hunk --version failed: {result.stderr.strip()}")
-    return result.stdout.strip()
+    return result.stdout.strip() or result.stderr.strip()
 
 
 def _make_run_id(*, started_at: datetime.datetime, commit: str) -> str:
