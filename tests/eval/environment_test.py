@@ -3,20 +3,9 @@ from pathlib import Path
 
 import pytest
 
-from eval.config import CLAUDE_CODE_VERSION
 from eval.environment import _require_current_skill
 from eval.environment import _run
-from eval.environment import require_claude_version
 from eval.repo import init_repo
-
-
-def test_accepts_exact_claude_code_version() -> None:
-    require_claude_version(version_output=f"{CLAUDE_CODE_VERSION} (Claude Code)")
-
-
-def test_rejects_claude_code_version_mismatch() -> None:
-    with pytest.raises(RuntimeError, match="must be "):
-        require_claude_version(version_output="0.0.0 (Claude Code)")
 
 
 def test_git_commands_ignore_inherited_repository(

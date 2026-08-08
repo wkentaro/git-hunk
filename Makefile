@@ -40,9 +40,5 @@ test:  # Run tests
 coverage:  # Run tests with coverage
 	$(MAKE) test PYTEST_ARGS="--cov=git_hunk --cov-report=term-missing"
 
-eval:  # Run the agent eval with pinned Claude Code (spends real model usage)
-	@set -eu; \
-	pin=$$(uv run --no-sync python -c "from eval.config import CLAUDE_CODE_VERSION; print(CLAUDE_CODE_VERSION)"); \
-	prefix="$$HOME/.cache/git-hunk/claude-$$pin"; \
-	test -x "$$prefix/node_modules/.bin/claude" || npm install --prefix "$$prefix" "@anthropic-ai/claude-code@$$pin"; \
-	PATH="$$prefix/node_modules/.bin:$$PATH" uv run python -m eval $(EVAL_ARGS)
+eval:  # Run the agent eval (spends real model usage)
+	uv run python -m eval $(EVAL_ARGS)

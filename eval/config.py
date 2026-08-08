@@ -1,6 +1,5 @@
 from typing import Final
 
-CLAUDE_CODE_VERSION: Final = "2.1.224"
 MODEL: Final = "claude-sonnet-5"
 TASK_SCHEMA_VERSION: Final = 1
 TASK_NAMES: Final = (

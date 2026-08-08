@@ -12,9 +12,10 @@ that an agent can use both skills to make the correct commit series without
 loss of work.
 
 The evaluation target is the git-hunk toolchain from the current checkout,
-Claude Code, and one model. The result must depend only on observable Git
-repository state. A command trace is useful for diagnosis, but it is not score
-input.
+Claude Code, and one model. Claude Code's version is recorded for reproducibility
+but is not pinned because it auto-updates. The result must depend only on
+observable Git repository state. A command trace is useful for diagnosis, but
+it is not score input.
 
 This ADR is 0004 because current main already uses ADR 0002 for Repository path
 semantics and ADR 0003 for durable Hunk identity.
@@ -89,16 +90,13 @@ the normal model-free test suite.
 The model phase is an opt-in `python -m eval` command. It uses the same tasks and
 grader.
 
-### Pin and isolate the model phase
+### Pin the model and isolate the model phase
 
-`eval/config.py` contains the two pins:
+`eval/config.py` pins the model to `claude-sonnet-5`. The runner has no model
+override and requires the reported stream model to match the model pin.
 
-- Claude Code `2.1.224`
-- Model `claude-sonnet-5`
-
-The runner has no model override. It rejects a Claude Code version mismatch
-before it builds a task. It also requires the reported stream model to match the
-model pin.
+The runner accepts the installed Claude Code version so automatic updates do not
+block an eval run. It records the version in the run manifest.
 
 The runner resolves the git-hunk executable, imported package, and both skill
 paths. All paths must be inside the clean current checkout. It records the Git
@@ -121,7 +119,7 @@ can help diagnosis, but it cannot qualify.
 
 ### Keep this ADR Proposed in the integration ticket
 
-This integration adds the deterministic evaluation and the pinned runner. It
+This integration adds the deterministic evaluation and the model-pinned runner. It
 does not claim a model result. A later release qualification must run all four
 tasks once, without retry, on one clean commit. That work must add redacted run
 evidence under `docs/eval/runs/<run-id>/` and change this ADR to Accepted only
@@ -135,5 +133,5 @@ after all deterministic, lint, package, and pinned model gates pass.
 - Release artifacts cannot include evaluator code or run data.
 - A line-set collision cannot hide an incorrect final tree.
 - Staged, tracked, and untracked leftovers have separate diagnoses.
-- A later change to the CLI, either skill, an eval task, or the runner makes an
-  earlier model result stale.
+- A later change to the CLI, either skill, an eval task, the runner, or the
+  Claude Code version makes an earlier model result stale.

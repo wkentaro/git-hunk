@@ -5,7 +5,6 @@ import subprocess
 from pathlib import Path
 
 import git_hunk
-from eval.config import CLAUDE_CODE_VERSION
 from eval.repo import make_subprocess_env
 
 
@@ -64,7 +63,6 @@ def resolve_environment() -> EvalEnvironment:
         skill_hashes[name] = hashlib.sha256(skill_file.read_bytes()).hexdigest()
 
     claude_version = _run(command=["claude", "--version"], cwd=checkout).stdout.strip()
-    require_claude_version(version_output=claude_version)
     return EvalEnvironment(
         checkout=checkout,
         commit=commit,
@@ -74,14 +72,6 @@ def resolve_environment() -> EvalEnvironment:
         skill_sha256=skill_hashes,
         claude_code_version=claude_version,
     )
-
-
-def require_claude_version(*, version_output: str) -> None:
-    actual_version = version_output.split(maxsplit=1)[0] if version_output else ""
-    if actual_version != CLAUDE_CODE_VERSION:
-        raise RuntimeError(
-            f"Claude Code must be {CLAUDE_CODE_VERSION}, got {version_output!r}"
-        )
 
 
 def _run(*, command: list[str], cwd: Path) -> subprocess.CompletedProcess[str]:
