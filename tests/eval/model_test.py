@@ -1,3 +1,4 @@
+import copy
 import json
 import subprocess
 from collections.abc import Callable
@@ -391,6 +392,7 @@ def test_trace_usage_has_stable_shape_and_compact_format(
         "duration_seconds": 22.67,
         "api_duration_seconds": 22.618,
         "turns": 8,
+        "tool_calls": 1,
         "cost_usd": 0.0891406,
         "tokens": {
             "input": 16,
@@ -416,8 +418,8 @@ def test_trace_usage_has_stable_shape_and_compact_format(
         },
     }
     assert format_usage(usage=usage) == (
-        "usage: 22.7s · 8 turns · tokens 16 input / 8.4k cache-write / "
-        "59.8k cache-read / 1.3k output · $0.0891"
+        "usage: 22.7s · 8 turns · 1 tool calls · tokens 16 input / "
+        "8.4k cache-write / 59.8k cache-read / 1.3k output · $0.0891"
     )
 
     total = aggregate_usage(usages=(usage, usage))
@@ -431,9 +433,43 @@ def test_trace_usage_has_stable_shape_and_compact_format(
     }
     assert total.models["claude-sonnet-5"].cost_usd == pytest.approx(0.1782812)
     assert format_usage(usage=total) == (
-        "usage: 45.3s · 16 turns · tokens 32 input / 16.9k cache-write / "
-        "119.6k cache-read / 2.7k output · $0.1783"
+        "usage: 45.3s · 16 turns · 2 tool calls · tokens 32 input / "
+        "16.9k cache-write / 119.6k cache-read / 2.7k output · $0.1783"
     )
+
+
+def test_trace_usage_counts_each_tool_use_once(
+    tmp_path: Path, trace_events: list[dict[str, Any]]
+) -> None:
+    trace_events[2].update(
+        {
+            "duration_ms": 1000,
+            "duration_api_ms": 900,
+            "num_turns": 2,
+            "total_cost_usd": 0.01,
+            "usage": {
+                "input_tokens": 1,
+                "cache_creation_input_tokens": 2,
+                "cache_read_input_tokens": 3,
+                "output_tokens": 4,
+            },
+        }
+    )
+
+    restreamed = copy.deepcopy(trace_events[0])
+    second_call = copy.deepcopy(trace_events[0])
+    second_call["message"]["content"][0]["id"] = "tool-2"
+    non_assistant = copy.deepcopy(trace_events[0])
+    non_assistant["type"] = "user"
+    non_assistant["message"]["content"][0]["id"] = "tool-3"
+    trace_events[1:1] = [restreamed, second_call, non_assistant]
+    trace_path = tmp_path / "trace.jsonl"
+    _write_trace(trace_path=trace_path, events=trace_events)
+
+    usage = read_trace_usage(trace_path=trace_path)
+
+    assert usage is not None
+    assert usage.tool_calls == 2
 
 
 def test_trace_usage_accepts_missing_optional_model_metadata(

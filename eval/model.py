@@ -4,6 +4,8 @@ import json
 import math
 import subprocess
 import time
+from collections.abc import Iterable
+from collections.abc import Iterator
 from pathlib import Path
 from typing import Any
 from typing import Final
@@ -98,6 +100,7 @@ class TraceUsage:
     duration_seconds: float
     api_duration_seconds: float
     turns: int
+    tool_calls: int
     cost_usd: float
     tokens: TokenUsage
     models: dict[str, ModelUsage]
@@ -107,6 +110,7 @@ class TraceUsage:
             "duration_seconds": self.duration_seconds,
             "api_duration_seconds": self.api_duration_seconds,
             "turns": self.turns,
+            "tool_calls": self.tool_calls,
             "cost_usd": self.cost_usd,
             "tokens": self.tokens.to_dict(),
             "models": {name: usage.to_dict() for name, usage in self.models.items()},
@@ -252,20 +256,8 @@ class TranscriptReporter:
             event = json.loads(line)
         except json.JSONDecodeError:
             return
-        if not isinstance(event, dict):
-            return
-        message = event.get("message")
-        if not isinstance(message, dict):
-            return
-        content = message.get("content")
-        if not isinstance(content, list):
-            return
-        for block in content:
-            if (
-                isinstance(block, dict)
-                and block.get("type") == "tool_use"
-                and block.get("name") == "Bash"
-            ):
+        for block in _iter_message_blocks(events=[event]):
+            if block.get("type") == "tool_use" and block.get("name") == "Bash":
                 self._report_tool_use(block=block)
 
     def _report_tool_use(self, *, block: dict[str, Any]) -> None:
@@ -301,10 +293,51 @@ def read_trace_usage(*, trace_path: Path) -> TraceUsage | None:
     ]
     if len(result_events) != 1:
         return None
-    return _parse_trace_usage(result_event=result_events[0])
+    return _parse_trace_usage(
+        result_event=result_events[0],
+        tool_calls=_count_tool_calls(events=events),
+    )
 
 
-def _parse_trace_usage(*, result_event: dict[str, Any]) -> TraceUsage | None:
+def _iter_message_blocks(*, events: Iterable[Any]) -> Iterator[dict[str, Any]]:
+    # The single place that knows how a trace nests content blocks inside its
+    # stream events, so a schema change lands in one walk rather than four.
+    for event in events:
+        if not isinstance(event, dict):
+            continue
+        message = event.get("message")
+        if not isinstance(message, dict):
+            continue
+        content = message.get("content")
+        if not isinstance(content, list):
+            continue
+        for block in content:
+            if isinstance(block, dict):
+                yield cast("dict[str, Any]", block)
+
+
+def _count_tool_calls(*, events: Iterable[Any]) -> int:
+    assistant_events = [
+        event
+        for event in events
+        if isinstance(event, dict) and event.get("type") == "assistant"
+    ]
+    # Identify a call by its tool-use ID so a re-streamed assistant message
+    # cannot inflate the count.
+    return len(
+        {
+            tool_use_id
+            for block in _iter_message_blocks(events=assistant_events)
+            if block.get("type") == "tool_use"
+            and isinstance((tool_use_id := block.get("id")), str)
+            and tool_use_id
+        }
+    )
+
+
+def _parse_trace_usage(
+    *, result_event: dict[str, Any], tool_calls: int
+) -> TraceUsage | None:
     duration_ms = _nonnegative_number(result_event.get("duration_ms"))
     api_duration_ms = _nonnegative_number(result_event.get("duration_api_ms"))
     turns = _nonnegative_int(result_event.get("num_turns"))
@@ -332,6 +365,7 @@ def _parse_trace_usage(*, result_event: dict[str, Any]) -> TraceUsage | None:
         duration_seconds=duration_ms / 1000,
         api_duration_seconds=api_duration_ms / 1000,
         turns=turns,
+        tool_calls=tool_calls,
         cost_usd=cost_usd,
         tokens=tokens,
         models=models,
@@ -429,7 +463,8 @@ def format_usage(*, usage: TraceUsage) -> str:
     duration = usage.duration_seconds
     tokens = usage.tokens
     return (
-        f"usage: {duration:.1f}s · {usage.turns} turns · tokens "
+        f"usage: {duration:.1f}s · {usage.turns} turns · "
+        f"{usage.tool_calls} tool calls · tokens "
         f"{_format_token_count(tokens.input_tokens)} input / "
         f"{_format_token_count(tokens.cache_creation_input_tokens)} cache-write / "
         f"{_format_token_count(tokens.cache_read_input_tokens)} cache-read / "
@@ -468,6 +503,7 @@ def aggregate_usage(*, usages: tuple[TraceUsage, ...]) -> TraceUsage | None:
         duration_seconds=sum(usage.duration_seconds for usage in usages),
         api_duration_seconds=sum(usage.api_duration_seconds for usage in usages),
         turns=sum(usage.turns for usage in usages),
+        tool_calls=sum(usage.tool_calls for usage in usages),
         cost_usd=sum(usage.cost_usd for usage in usages),
         tokens=TokenUsage.total([usage.tokens for usage in usages]),
         models=models,
@@ -546,16 +582,8 @@ def validate_trace(*, trace_path: Path) -> None:
             f"reported model must be {MODEL!r}, got {sorted(reported_models)!r}"
         )
 
-    content_blocks = [
-        block
-        for event in assistant_events
-        if isinstance((message := event.get("message")), dict)
-        and isinstance((content := message.get("content")), list)
-        for block in content
-        if isinstance(block, dict)
-    ]
     bash_tool_use_ids: set[str] = set()
-    for block in content_blocks:
+    for block in _iter_message_blocks(events=assistant_events):
         if block.get("type") != "tool_use" or block.get("name") != "Bash":
             continue
         tool_use_id = block.get("id")
@@ -628,18 +656,10 @@ def validate_trace(*, trace_path: Path) -> None:
 
 
 def _read_tool_result_ids(*, events: list[dict[str, Any]]) -> set[str]:
-    tool_result_ids: set[str] = set()
-    for event in events:
-        message = event.get("message")
-        if not isinstance(message, dict):
-            continue
-        content = message.get("content")
-        if not isinstance(content, list):
-            continue
-        for block in content:
-            if not isinstance(block, dict) or block.get("type") != "tool_result":
-                continue
-            tool_use_id = block.get("tool_use_id")
-            if isinstance(tool_use_id, str) and tool_use_id:
-                tool_result_ids.add(tool_use_id)
-    return tool_result_ids
+    return {
+        tool_use_id
+        for block in _iter_message_blocks(events=events)
+        if block.get("type") == "tool_result"
+        and isinstance((tool_use_id := block.get("tool_use_id")), str)
+        and tool_use_id
+    }

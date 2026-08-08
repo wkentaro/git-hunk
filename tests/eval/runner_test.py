@@ -70,6 +70,22 @@ def test_run_reports_context_usage_and_artifacts(
         },
         "modelUsage": {},
     }
+    tool_use_events: list[dict[str, Any]] = [
+        {
+            "type": "assistant",
+            "message": {
+                "content": [
+                    {
+                        "type": "tool_use",
+                        "id": f"toolu_{index}",
+                        "name": "Bash",
+                        "input": {"command": "git-hunk list"},
+                    }
+                ]
+            },
+        }
+        for index in range(2)
+    ]
 
     def make_solver(
         *,
@@ -84,7 +100,10 @@ def test_run_reports_context_usage_and_artifacts(
             del repo
             print(f"variant: {variant.name}")
             trace_path.write_text(
-                f"{json.dumps(result_event)}\n",
+                "".join(
+                    f"{json.dumps(event)}\n"
+                    for event in (*tool_use_events, result_event)
+                ),
                 encoding="utf-8",
             )
             transcript_path.write_text(
@@ -125,8 +144,8 @@ def test_run_reports_context_usage_and_artifacts(
     )
 
     expected_usage = (
-        "usage: 22.7s · 8 turns · tokens 16 input / 8.4k cache-write / "
-        "59.8k cache-read / 1.3k output · $0.0891"
+        "usage: 22.7s · 8 turns · 2 tool calls · tokens 16 input / "
+        "8.4k cache-write / 59.8k cache-read / 1.3k output · $0.0891"
     )
     output = capsys.readouterr()
     assert exit_code == 0
@@ -149,6 +168,7 @@ def test_run_reports_context_usage_and_artifacts(
     expected_lines += [
         f"overall: PASS {run_count}/{run_count}",
         f"usage: {run_count * 22.67:.1f}s · {run_count * 8} turns · "
+        f"{run_count * 2} tool calls · "
         f"tokens {run_count * 16} input / "
         f"{run_count * 8434 / 1000:.1f}k cache-write / "
         f"{run_count * 59782 / 1000:.1f}k cache-read / "
