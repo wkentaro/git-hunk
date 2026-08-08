@@ -1,4 +1,5 @@
 import argparse
+import dataclasses
 import datetime
 import hashlib
 import json
@@ -9,54 +10,60 @@ from pathlib import Path
 from typing import Any
 
 from eval.config import MODEL
-from eval.config import TASK_NAMES
 from eval.config import TASK_SCHEMA_VERSION
 from eval.environment import EvalEnvironment
 from eval.environment import resolve_environment
 from eval.grader import Result
 from eval.harness import run_and_grade
+from eval.model import TraceUsage
+from eval.model import TranscriptReporter
+from eval.model import aggregate_usage
 from eval.model import build_command_flags
+from eval.model import format_usage
 from eval.model import make_claude_solver
+from eval.model import read_trace_usage
 from eval.scenario import Scenario
 from eval.tasks import SCENARIOS
 
 
+@dataclasses.dataclass(frozen=True)
+class TaskRun:
+    scenario: Scenario
+    result: Result
+    trace_path: Path
+    transcript_path: Path
+    usage: TraceUsage | None
+
+
 def main(argv: list[str] | None = None) -> int:
+    task_names = tuple(scenario.task.name for scenario in SCENARIOS)
     parser = argparse.ArgumentParser(prog="python -m eval")
     parser.add_argument(
         "--task",
         action="append",
-        choices=TASK_NAMES,
+        choices=task_names,
         metavar="NAME",
-        help="run one named task; a selected-task run is nonqualifying",
+        help="run one named task",
     )
     args = parser.parse_args(argv)
 
-    if tuple(scenario.task.name for scenario in SCENARIOS) != TASK_NAMES:
-        print("error: the configured task set is incomplete", file=sys.stderr)
-        return 2
     try:
         environment = resolve_environment()
     except RuntimeError as error:
         print(f"error: {error}", file=sys.stderr)
         return 2
 
-    selected_names = set(args.task or TASK_NAMES)
+    selected_names = set(args.task or task_names)
     selected = tuple(
         scenario for scenario in SCENARIOS if scenario.task.name in selected_names
     )
-    return _run_scenarios(
-        environment=environment,
-        scenarios=selected,
-        selected_run=args.task is not None,
-    )
+    return _run_scenarios(environment=environment, scenarios=selected)
 
 
 def _run_scenarios(
     *,
     environment: EvalEnvironment,
     scenarios: tuple[Scenario, ...],
-    selected_run: bool,
 ) -> int:
     started_at = datetime.datetime.now(datetime.timezone.utc)
     started_clock = time.monotonic()
@@ -64,74 +71,115 @@ def _run_scenarios(
         f"git-hunk-agent-eval-{started_at:%Y%m%dT%H%M%SZ}-{environment.commit[:7]}-"
     )
     run_dir = Path(tempfile.mkdtemp(prefix=run_directory_prefix))
-    results: list[tuple[Scenario, Result, Path]] = []
+    print(
+        f"eval: model={MODEL} "
+        f"claude={environment.claude_code_version.split()[0]} "
+        f"commit={environment.commit[:7]} dirty={str(environment.dirty).lower()}",
+        flush=True,
+    )
+    results: list[TaskRun] = []
+    multiple_tasks = len(scenarios) > 1
 
     for index, scenario in enumerate(scenarios, start=1):
         name = scenario.task.name
-        print(f"running {index}/{len(scenarios)}: {name}", flush=True)
+        progress = f" {index}/{len(scenarios)}" if multiple_tasks else ""
+        print(f"running{progress}: {name}", flush=True)
         trace_path = run_dir / f"{name}.jsonl"
-        solver = make_claude_solver(task=scenario.task, trace_path=trace_path)
+        transcript_path = run_dir / f"{name}.transcript.txt"
+        solver = make_claude_solver(
+            task=scenario.task,
+            trace_path=trace_path,
+            transcript_path=transcript_path,
+        )
         result = run_and_grade(task=scenario.task, solver=solver)
-        results.append((scenario, result, trace_path))
+        usage = read_trace_usage(trace_path=trace_path)
         mark = "PASS" if result.passed else "FAIL"
         detail = f": {result.reason}: {result.detail}" if result.detail else ""
-        print(f"{mark} {name}{detail}", flush=True)
+        result_line = f"{mark} {name}{detail}"
+        usage_line = (
+            format_usage(usage=usage) if usage is not None else "usage: unavailable"
+        )
+        with transcript_path.open("a", encoding="utf-8") as transcript:
+            TranscriptReporter(transcript=transcript).report_result(
+                result_line=result_line,
+                usage_line=usage_line,
+            )
+        results.append(
+            TaskRun(
+                scenario=scenario,
+                result=result,
+                trace_path=trace_path,
+                transcript_path=transcript_path,
+                usage=usage,
+            )
+        )
 
-    complete = tuple(scenario.task.name for scenario in scenarios) == TASK_NAMES
-    qualifying = _is_run_qualifying(
-        selected_run=selected_run,
-        complete=complete,
-        results=tuple(result for _, result, _ in results),
-    )
-    exit_code = 0 if qualifying else 1
+    passed = sum(run.result.passed for run in results)
+    run_passed = passed == len(results)
+    exit_code = 0 if run_passed else 1
     duration_seconds = time.monotonic() - started_clock
+    reported_usages = tuple(run.usage for run in results if run.usage is not None)
+    total_usage = aggregate_usage(usages=reported_usages)
     manifest = _make_manifest(
         environment=environment,
         results=results,
         started_at=started_at,
         duration_seconds=duration_seconds,
         exit_code=exit_code,
-        complete=complete,
-        selected_run=selected_run,
-        qualifying=qualifying,
+        passed=run_passed,
+        usage=total_usage,
     )
     (run_dir / "run.json").write_text(
         f"{json.dumps(manifest, indent=2, sort_keys=True)}\n",
         encoding="utf-8",
     )
-    print(f"overall: {sum(result.passed for _, result, _ in results)}/{len(results)}")
-    if selected_run:
-        print("selected-task run cannot qualify", file=sys.stderr)
-    elif not complete:
-        print("run is incomplete and cannot qualify", file=sys.stderr)
-    print(f"raw run: {run_dir}")
+    if multiple_tasks:
+        overall_mark = "PASS" if run_passed else "FAIL"
+        print(f"overall: {overall_mark} {passed}/{len(results)}")
+        if total_usage is None:
+            print("usage: unavailable")
+        else:
+            total_usage_line = format_usage(usage=total_usage)
+            if len(reported_usages) != len(results):
+                total_usage_line += (
+                    f" ({len(reported_usages)}/{len(results)} tasks reported)"
+                )
+            print(total_usage_line)
+    print(f"artifacts: {run_dir}")
     return exit_code
 
 
 def _make_manifest(
     *,
     environment: EvalEnvironment,
-    results: list[tuple[Scenario, Result, Path]],
+    results: list[TaskRun],
     started_at: datetime.datetime,
     duration_seconds: float,
     exit_code: int,
-    complete: bool,
-    selected_run: bool,
-    qualifying: bool,
+    passed: bool,
+    usage: TraceUsage | None,
 ) -> dict[str, Any]:
     task_results = []
-    for scenario, result, trace_path in results:
+    for run in results:
         trace_hash = None
-        if trace_path.exists():
-            trace_hash = hashlib.sha256(trace_path.read_bytes()).hexdigest()
+        if run.trace_path.exists():
+            trace_hash = hashlib.sha256(run.trace_path.read_bytes()).hexdigest()
+        transcript_hash = None
+        if run.transcript_path.exists():
+            transcript_hash = hashlib.sha256(
+                run.transcript_path.read_bytes()
+            ).hexdigest()
         task_results.append(
             {
-                "name": scenario.task.name,
-                "passed": result.passed,
-                "reason": result.reason,
-                "detail": result.detail,
-                "trace": trace_path.name,
+                "name": run.scenario.task.name,
+                "passed": run.result.passed,
+                "reason": run.result.reason,
+                "detail": run.result.detail,
+                "usage": run.usage.to_dict() if run.usage is not None else None,
+                "trace": run.trace_path.name,
                 "trace_sha256": trace_hash,
+                "transcript": run.transcript_path.name,
+                "transcript_sha256": transcript_hash,
             }
         )
     return {
@@ -139,7 +187,7 @@ def _make_manifest(
         "started_at": started_at.isoformat().replace("+00:00", "Z"),
         "duration_seconds": duration_seconds,
         "commit": environment.commit,
-        "clean_worktree": True,
+        "clean_worktree": not environment.dirty,
         "git_hunk_executable": str(environment.git_hunk_executable),
         "imported_package": str(environment.imported_package),
         "skill_paths": {
@@ -150,22 +198,11 @@ def _make_manifest(
         "requested_model": MODEL,
         "command_flags": build_command_flags(),
         "permission_policy": "Bash only; git-hunk and git commands only",
-        "complete": complete,
-        "selected_run": selected_run,
-        "qualifying": qualifying,
-        "retried": False,
+        "passed": passed,
+        "usage": usage.to_dict() if usage is not None else None,
         "tasks": task_results,
         "exit_code": exit_code,
     }
-
-
-def _is_run_qualifying(
-    *,
-    selected_run: bool,
-    complete: bool,
-    results: tuple[Result, ...],
-) -> bool:
-    return not selected_run and complete and all(result.passed for result in results)
 
 
 if __name__ == "__main__":
