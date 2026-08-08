@@ -58,6 +58,9 @@ The fixed order makes repeated runs easy to compare, but raw cost is subject to
 prompt-cache asymmetry: the first variant can create cache entries that the
 second variant reads. The manifest retains cache-creation and cache-read token
 counts separately, so cost comparisons must account for that warm-cache effect.
+Because the run ends with a table that places both variants' costs side by side,
+the runner prints that caveat directly under the table. A reader who copies the
+table therefore copies the reason its cost column is not order-neutral.
 
 The evaluator tests commit grouping and order. It does not require a
 Conventional Commit prefix. Commit message format is a project convention, and
@@ -136,14 +139,40 @@ grader outcome and usage summary appear together under a `result` section.
 
 Validation requires assistant turns, Bash inputs, tool results, one successful
 result event, and the pinned reported model. When Claude reports usage and cost,
-the runner prints compact per-task summaries and, for multi-task invocations, an
-aggregate summary. Usage durations come from Claude's task results; the run
-manifest separately records whole-run wall time. The runner copies normalized
-metrics, including the per-model breakdown, into the run manifest. The original
-fields remain in the trace. The grader never reads the trace.
+the runner prints a compact per-task summary. Usage durations come from Claude's
+task results; the run manifest separately records whole-run wall time.
 
-The runner exits nonzero for a failed task variant, solver error, environment
-mismatch, or missing or malformed trace. Each selected task is an independent
+The runner copies normalized metrics, including the per-model breakdown, into
+the run manifest. The original fields remain in the trace. The grader never
+reads the trace. The manifest field for the run-level verdict is `gate_passed`,
+not `passed`, because it reports the exit-code gate below rather than every
+graded outcome.
+
+The run ends with one Markdown table: a row per task, a column per variant, and
+a cell holding that variant's outcome, turn count, and cost. A multi-task run
+adds a total row whose per-variant count is how many of those distinct tasks
+that variant got right. Because each cell is one sample, that count is a
+demonstration tally and not a success rate over repeated trials. Grading is the
+headline, so a failed cell names the grader's failure reason verbatim and a
+legend below the table glosses only the reasons that occurred. That keeps one
+vocabulary across grader, manifest, transcript, and table. The legend is a
+Markdown list: consecutive bare lines collapse into one rendered paragraph,
+which would make a pasted legend unreadable. A cell whose run reported no usage
+shows the outcome with its metrics collapsed, and the total then states how many
+runs reported, including when none did. Cost is rounded to the cent, and a
+nonzero cost that would round to zero renders as `<$0.01` instead. The table
+replaces a separate aggregate line, which would restate the total row with less
+detail. Task rows are named by the task identifier that `--task` selects, not by
+a prose title, so a reader can rerun any single row.
+
+The exit code reports the subject under test, not the comparison. Each variant
+declares whether it is the subject, so the gate reads that flag rather than
+matching a variant name. The runner exits zero only when every subject variant
+passes. A graded bare-Git outcome is evidence and never fails the run, because
+the runs that best show what git-hunk adds are exactly the runs where bare Git
+fails. The runner still exits nonzero for a solver error in either variant, an
+environment mismatch, or a missing or malformed trace: those are broken
+infrastructure rather than a graded result. Each selected task is an independent
 paired comparison; passing it does not depend on running any other task in the
 same invocation.
 
@@ -163,5 +192,9 @@ gates pass.
 - Release artifacts cannot include evaluator code or run data.
 - A line-set collision cannot hide an incorrect final tree.
 - Staged, tracked, and untracked leftovers have separate diagnoses.
+- A bare-Git failure is a published result, not a red run.
+- The table reports one sample per cell. It is an agent demonstration, not a
+  statistical benchmark, so its totals count distinct tasks rather than repeated
+  trials of one task.
 - A later change to the CLI, either skill, an eval task, the runner, or the
   Claude Code version makes an earlier model result stale.

@@ -1,5 +1,4 @@
 import argparse
-import dataclasses
 import datetime
 import hashlib
 import json
@@ -13,10 +12,10 @@ from eval.config import MODEL
 from eval.config import TASK_SCHEMA_VERSION
 from eval.environment import EvalEnvironment
 from eval.environment import resolve_environment
-from eval.grader import Result
+from eval.grader import SOLVER_ERROR
 from eval.harness import prepare_task
 from eval.model import VARIANTS
-from eval.model import EvalVariant
+from eval.model import TaskRun
 from eval.model import TraceUsage
 from eval.model import TranscriptReporter
 from eval.model import aggregate_usage
@@ -25,17 +24,8 @@ from eval.model import format_usage
 from eval.model import make_claude_solver
 from eval.model import read_trace_usage
 from eval.scenario import Scenario
+from eval.summary import render_summary
 from eval.tasks import SCENARIOS
-
-
-@dataclasses.dataclass(frozen=True)
-class TaskRun:
-    scenario: Scenario
-    variant: EvalVariant
-    result: Result
-    trace_path: Path
-    transcript_path: Path
-    usage: TraceUsage | None
 
 
 def main(argv: list[str] | None = None) -> int:
@@ -107,7 +97,9 @@ def _run_scenarios(
                 result = prepared.run_and_grade(solver)
                 usage = read_trace_usage(trace_path=trace_path)
                 mark = "PASS" if result.passed else "FAIL"
-                detail = f": {result.reason}: {result.detail}" if result.detail else ""
+                detail = f": {result.reason}" if result.reason else ""
+                if result.detail:
+                    detail += f": {result.detail}"
                 result_line = f"{mark} {name} [{variant.name}]{detail}"
                 usage_line = (
                     format_usage(usage=usage)
@@ -130,9 +122,8 @@ def _run_scenarios(
                     )
                 )
 
-    passed = sum(run.result.passed for run in results)
-    run_passed = passed == len(results)
-    exit_code = 0 if run_passed else 1
+    gate_passed = _gate_passed(results=results)
+    exit_code = 0 if gate_passed else 1
     duration_seconds = time.monotonic() - started_clock
     reported_usages = tuple(run.usage for run in results if run.usage is not None)
     total_usage = aggregate_usage(usages=reported_usages)
@@ -142,27 +133,26 @@ def _run_scenarios(
         started_at=started_at,
         duration_seconds=duration_seconds,
         exit_code=exit_code,
-        passed=run_passed,
+        gate_passed=gate_passed,
         usage=total_usage,
     )
     (run_dir / "run.json").write_text(
         f"{json.dumps(manifest, indent=2, sort_keys=True)}\n",
         encoding="utf-8",
     )
-    if len(results) > 1:
-        overall_mark = "PASS" if run_passed else "FAIL"
-        print(f"overall: {overall_mark} {passed}/{len(results)}")
-        if total_usage is None:
-            print("usage: unavailable")
-        else:
-            total_usage_line = format_usage(usage=total_usage)
-            if len(reported_usages) != len(results):
-                total_usage_line += (
-                    f" ({len(reported_usages)}/{len(results)} tasks reported)"
-                )
-            print(total_usage_line)
+    summary = render_summary(runs=results)
+    if summary:
+        print()
+        print(summary)
+        print()
     print(f"artifacts: {run_dir}")
     return exit_code
+
+
+def _gate_passed(*, results: list[TaskRun]) -> bool:
+    if any(run.result.reason == SOLVER_ERROR for run in results):
+        return False
+    return all(run.result.passed for run in results if run.variant.subject_under_test)
 
 
 def _make_manifest(
@@ -172,7 +162,7 @@ def _make_manifest(
     started_at: datetime.datetime,
     duration_seconds: float,
     exit_code: int,
-    passed: bool,
+    gate_passed: bool,
     usage: TraceUsage | None,
 ) -> dict[str, Any]:
     task_results = []
@@ -215,7 +205,7 @@ def _make_manifest(
         "skill_sha256": environment.skill_sha256,
         "claude_code_version": environment.claude_code_version,
         "requested_model": MODEL,
-        "passed": passed,
+        "gate_passed": gate_passed,
         "usage": usage.to_dict() if usage is not None else None,
         "tasks": task_results,
         "exit_code": exit_code,
