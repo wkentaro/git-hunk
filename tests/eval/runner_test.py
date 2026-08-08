@@ -17,6 +17,22 @@ from eval.task import Task
 from eval.tasks import SCENARIOS
 
 
+def test_runner_help_lists_available_tasks() -> None:
+    repository_root = Path(__file__).resolve().parents[2]
+    result = subprocess.run(
+        [sys.executable, "-m", "eval", "--help"],
+        capture_output=True,
+        cwd=repository_root,
+        text=True,
+    )
+
+    assert result.returncode == 0
+    _, task_section = result.stdout.split("available tasks:\n", maxsplit=1)
+    assert task_section.splitlines() == [
+        f"  {scenario.task.name}" for scenario in SCENARIOS
+    ]
+
+
 def test_runner_rejects_model_override_before_running_tasks() -> None:
     repository_root = Path(__file__).resolve().parents[2]
     result = subprocess.run(

@@ -40,7 +40,12 @@ class TaskRun:
 
 def main(argv: list[str] | None = None) -> int:
     task_names = tuple(scenario.task.name for scenario in SCENARIOS)
-    parser = argparse.ArgumentParser(prog="python -m eval")
+    task_list = "\n".join(f"  {name}" for name in task_names)
+    parser = argparse.ArgumentParser(
+        prog="python -m eval",
+        epilog=f"available tasks:\n{task_list}",
+        formatter_class=argparse.RawDescriptionHelpFormatter,
+    )
     parser.add_argument(
         "--task",
         action="append",
