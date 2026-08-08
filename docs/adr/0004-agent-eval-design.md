@@ -99,8 +99,8 @@ The runner accepts the installed Claude Code version so automatic updates do not
 block an eval run. It records the version in the run manifest.
 
 The runner resolves the git-hunk executable, imported package, and both skill
-paths. All paths must be inside the clean current checkout. It records the Git
-commit and SHA-256 for both skill files.
+paths. All paths must be inside the current checkout. It records the Git commit,
+whether the checkout is dirty, and SHA-256 for both skill files.
 
 Claude runs with Bash as its only tool. The allowed Bash commands are
 `git-hunk` and `git`. The permission mode is `dontAsk`. Safe mode, no session
@@ -109,21 +109,32 @@ required.
 
 Each task writes a structured JSONL trace. The trace contains the Claude stream
 events and one eval metadata event with UTC start time, duration, and exit code.
+The runner prints the exact composed prompt, then prints each Bash command as an
+indented bullet under a `tool calls` section as events arrive, so a human or
+agent can inspect the prompt and tool-use sequence while the task is running. It
+writes the same view to a human-readable task transcript; tool results stay in
+the complete JSONL trace rather than cluttering the concise live view. The
+grader outcome and usage summary appear together under a `result` section.
+
 Validation requires assistant turns, Bash inputs, tool results, one successful
-result event, and the pinned reported model. Usage and cost fields stay in the
-trace when Claude reports them. The grader never reads the trace.
+result event, and the pinned reported model. When Claude reports usage and cost,
+the runner prints compact per-task summaries and, for multi-task invocations, an
+aggregate summary. Usage durations come from Claude's task results; the run
+manifest separately records whole-run wall time. The runner copies normalized
+metrics, including the per-model breakdown, into the run manifest. The original
+fields remain in the trace. The grader never reads the trace.
 
 The runner exits nonzero for a failed task, solver error, environment mismatch,
-missing or malformed trace, or incomplete task selection. A selected-task run
-can help diagnosis, but it cannot qualify.
+or missing or malformed trace. Each selected task is an independent eval run;
+passing it does not depend on running any other task in the same invocation.
 
 ### Keep this ADR Proposed in the integration ticket
 
-This integration adds the deterministic evaluation and the model-pinned runner. It
-does not claim a model result. A later release qualification must run all four
-tasks once, without retry, on one clean commit. That work must add redacted run
-evidence under `docs/eval/runs/<run-id>/` and change this ADR to Accepted only
-after all deterministic, lint, package, and pinned model gates pass.
+This integration adds the deterministic evaluation and the model-pinned runner.
+It does not claim a model result. A later evaluation study can archive redacted
+evidence for independently run tasks under `docs/eval/runs/<run-id>/` and change
+this ADR to Accepted after its deterministic, lint, package, and pinned model
+gates pass.
 
 ## Consequences
 
