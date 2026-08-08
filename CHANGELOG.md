@@ -10,6 +10,12 @@ and this project adheres to
 
 ### Added
 
+- Agent evals end with a Markdown summary table comparing git-hunk and bare Git
+  per task, with outcome, turns, and cost per cell, a legend for the failure
+  reasons that occurred, and the prompt-cache caveat that makes the cost column
+  readable. The exit code now reports the subject under test (the git-hunk
+  variant) and solver errors, so a graded bare-Git failure is evidence instead
+  of a red run (#221).
 - Agent evals run every task with git-hunk and bare Git from equivalent initial
   state for direct workflow and cost comparison, and `--help` lists the
   available tasks (#216).
