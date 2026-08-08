@@ -39,6 +39,8 @@ and this project adheres to
 
 ### Changed
 
+- Streamline the core skill around one inspection call and one execution call,
+  reducing redundant agent tool use (#217).
 - **Breaking:** Use durable Hunk identity from ADR 0003. JSON returns full
   SHA-256 IDs and `id_stability`; human output shows unique prefixes and marks
   Conditional IDs; commands accept unambiguous case-insensitive prefixes from
