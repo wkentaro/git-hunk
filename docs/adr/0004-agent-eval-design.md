@@ -139,8 +139,10 @@ result event, and the pinned reported model. When Claude reports usage and cost,
 the runner prints compact per-task summaries and, for multi-task invocations, an
 aggregate summary. Usage durations come from Claude's task results; the run
 manifest separately records whole-run wall time. The runner copies normalized
-metrics, including the per-model breakdown, into the run manifest. The original
-fields remain in the trace. The grader never reads the trace.
+metrics, including the per-model breakdown, into the run manifest. Claude reports
+no tool-call count, so the runner derives one by counting the distinct tool-use
+IDs in the trace's assistant events. That count is a reported metric, not score
+input. The original fields remain in the trace. The grader never reads the trace.
 
 The runner exits nonzero for a failed task variant, solver error, environment
 mismatch, or missing or malformed trace. Each selected task is an independent
