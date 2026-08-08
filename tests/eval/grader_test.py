@@ -3,6 +3,7 @@ from typing import Final
 import pytest
 
 from eval.grader import FailureReason
+from eval.grader import Result
 from eval.grader import grade
 from eval.repo import GitRepo
 from eval.scenario import Solver
@@ -22,6 +23,19 @@ _FAILURE_PARAMS: Final = [
     pytest.param(task, solver, reason, id=reason)
     for reason, (task, solver) in _FAILURE_CASES.items()
 ]
+
+
+@pytest.mark.parametrize(
+    ("passed", "reason"),
+    [(False, None), (True, "order")],
+    ids=["failed-without-reason", "passed-with-reason"],
+)
+def test_result_requires_a_failure_reason_exactly_when_it_failed(
+    passed: bool,
+    reason: FailureReason | None,
+) -> None:
+    with pytest.raises(ValueError, match="if and only if it failed"):
+        Result(passed=passed, reason=reason)
 
 
 def test_grade_accepts_exact_repository_state(eval_repo: GitRepo) -> None:

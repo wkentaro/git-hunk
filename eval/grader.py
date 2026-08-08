@@ -1,6 +1,7 @@
 import dataclasses
 import os
 import stat
+from typing import Final
 from typing import Literal
 from typing import cast
 
@@ -21,12 +22,18 @@ FailureReason = Literal[
     "solver-error",
 ]
 
+SOLVER_ERROR: Final[FailureReason] = "solver-error"
+
 
 @dataclasses.dataclass(frozen=True)
 class Result:
     passed: bool
     reason: FailureReason | None = None
     detail: str | None = None
+
+    def __post_init__(self) -> None:
+        if self.passed != (self.reason is None):
+            raise ValueError("a Result has a failure reason if and only if it failed")
 
 
 def grade(repo: GitRepo, task: Task, base: str) -> Result:

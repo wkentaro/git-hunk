@@ -11,6 +11,7 @@ from types import TracebackType
 from typing import Any
 from typing import cast
 
+from eval.grader import SOLVER_ERROR
 from eval.grader import Result
 from eval.grader import grade
 from eval.repo import GitRepo
@@ -49,7 +50,7 @@ class PreparedTask:
         except RuntimeError as error:
             return Result(
                 passed=False,
-                reason="solver-error",
+                reason=SOLVER_ERROR,
                 detail=str(error),
             )
         return grade(repo=repo, task=self.task, base=self.base)

@@ -11,7 +11,9 @@ from typing import TextIO
 from typing import cast
 
 from eval.config import MODEL
+from eval.grader import Result
 from eval.repo import GitRepo
+from eval.scenario import Scenario
 from eval.scenario import Solver
 from eval.task import Task
 
@@ -22,6 +24,7 @@ class EvalVariant:
     tool_instruction: str
     allowed_tools: tuple[str, ...]
     permission_policy: str
+    subject_under_test: bool
 
 
 VARIANTS: Final = (
@@ -32,12 +35,14 @@ VARIANTS: Final = (
         ),
         allowed_tools=("Bash(git-hunk:*)", "Bash(git:*)"),
         permission_policy="Bash only; git-hunk and git commands only",
+        subject_under_test=True,
     ),
     EvalVariant(
         name="bare-git",
         tool_instruction="Use only Git commands; do not use `git-hunk`.",
         allowed_tools=("Bash(git:*)",),
         permission_policy="Bash only; git commands only",
+        subject_under_test=False,
     ),
 )
 
@@ -111,6 +116,16 @@ class TraceUsage:
             "tokens": self.tokens.to_dict(),
             "models": {name: usage.to_dict() for name, usage in self.models.items()},
         }
+
+
+@dataclasses.dataclass(frozen=True)
+class TaskRun:
+    scenario: Scenario
+    variant: EvalVariant
+    result: Result
+    trace_path: Path
+    transcript_path: Path
+    usage: TraceUsage | None
 
 
 def build_prompt(*, task_prompt: str, variant: EvalVariant) -> str:
