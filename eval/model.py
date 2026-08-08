@@ -17,6 +17,32 @@ from eval.task import Task
 
 
 @dataclasses.dataclass(frozen=True)
+class EvalVariant:
+    name: str
+    tool_instruction: str
+    allowed_tools: tuple[str, ...]
+    permission_policy: str
+
+
+VARIANTS: Final = (
+    EvalVariant(
+        name="git-hunk",
+        tool_instruction=(
+            "Run `git-hunk skills get core logical-commits` and follow both skills."
+        ),
+        allowed_tools=("Bash(git-hunk:*)", "Bash(git:*)"),
+        permission_policy="Bash only; git-hunk and git commands only",
+    ),
+    EvalVariant(
+        name="bare-git",
+        tool_instruction="Use only Git commands; do not use `git-hunk`.",
+        allowed_tools=("Bash(git:*)",),
+        permission_policy="Bash only; git commands only",
+    ),
+)
+
+
+@dataclasses.dataclass(frozen=True)
 class TokenUsage:
     input_tokens: int
     cache_creation_input_tokens: int
@@ -87,10 +113,10 @@ class TraceUsage:
         }
 
 
-def build_prompt(*, task_prompt: str) -> str:
+def build_prompt(*, task_prompt: str, variant: EvalVariant) -> str:
     preamble = (
-        "There are uncommitted changes in this Git repository. Run "
-        "`git-hunk skills get core logical-commits` and follow both skills. "
+        "There are uncommitted changes in this Git repository. "
+        f"{variant.tool_instruction} "
         "Organize the working tree into a clean series of focused commits."
     )
     if not task_prompt:
@@ -98,15 +124,14 @@ def build_prompt(*, task_prompt: str) -> str:
     return f"{preamble}\n\n{task_prompt}"
 
 
-def build_command_flags() -> list[str]:
-    ALLOWED_TOOLS: Final = ("Bash(git-hunk:*)", "Bash(git:*)")
+def build_command_flags(*, variant: EvalVariant) -> list[str]:
     return [
         "--model",
         MODEL,
         "--tools",
         "Bash",
         "--allowedTools",
-        *ALLOWED_TOOLS,
+        *variant.allowed_tools,
         "--permission-mode",
         "dontAsk",
         "--safe-mode",
@@ -121,19 +146,24 @@ def build_command_flags() -> list[str]:
     ]
 
 
-def build_command(*, prompt: str) -> list[str]:
-    return ["claude", "-p", prompt, *build_command_flags()]
+def build_command(*, prompt: str, variant: EvalVariant) -> list[str]:
+    return ["claude", "-p", prompt, *build_command_flags(variant=variant)]
 
 
 def make_claude_solver(
-    *, task: Task, trace_path: Path, transcript_path: Path
+    *,
+    task: Task,
+    variant: EvalVariant,
+    trace_path: Path,
+    transcript_path: Path,
 ) -> Solver:
-    prompt = build_prompt(task_prompt=task.prompt)
+    prompt = build_prompt(task_prompt=task.prompt, variant=variant)
 
     def solve(repo: GitRepo) -> None:
         run_claude(
             repo=repo,
             prompt=prompt,
+            variant=variant,
             trace_path=trace_path,
             transcript_path=transcript_path,
         )
@@ -145,6 +175,7 @@ def run_claude(
     *,
     repo: GitRepo,
     prompt: str,
+    variant: EvalVariant,
     trace_path: Path,
     transcript_path: Path,
 ) -> None:
@@ -154,11 +185,12 @@ def run_claude(
     transcript_path.parent.mkdir(parents=True, exist_ok=True)
     with transcript_path.open("w", encoding="utf-8") as transcript:
         reporter = TranscriptReporter(transcript=transcript)
+        reporter.report_variant(variant=variant)
         reporter.report_prompt(prompt=prompt)
         reporter.report_tool_calls_header()
         try:
             result = repo.run_stream(
-                *build_command(prompt=prompt),
+                *build_command(prompt=prompt, variant=variant),
                 timeout_seconds=MODEL_TIMEOUT_SECONDS,
                 on_stdout_line=reporter.consume_line,
             )
@@ -198,6 +230,9 @@ def run_claude(
 class TranscriptReporter:
     def __init__(self, *, transcript: TextIO) -> None:
         self._transcript = transcript
+
+    def report_variant(self, *, variant: EvalVariant) -> None:
+        self._emit(f"variant: {variant.name}")
 
     def report_prompt(self, *, prompt: str) -> None:
         self._emit("prompt:")

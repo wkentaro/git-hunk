@@ -34,13 +34,30 @@ content test builds the wheel and source distribution. It requires both
 archives to contain only the tracked `git_hunk` package files and required
 distribution metadata.
 
-### Test both bundled skills
+### Compare git-hunk with bare Git
 
-Each model task starts with this instruction:
+Every selected task runs twice, first with `git-hunk` and then with bare Git.
+Both variants use the same initial Repository state, model, task-specific
+prompt, and grader. The task is built once, then its complete repository is
+copied back to the same temporary checkout path before each variant so Git
+metadata and the model-visible path are identical. Their composed prompts
+differ only in the tool instruction.
+The git-hunk variant says:
 
 ```text
 Run `git-hunk skills get core logical-commits` and follow both skills.
 ```
+
+The bare-Git variant says:
+
+```text
+Use only Git commands; do not use `git-hunk`.
+```
+
+The fixed order makes repeated runs easy to compare, but raw cost is subject to
+prompt-cache asymmetry: the first variant can create cache entries that the
+second variant reads. The manifest retains cache-creation and cache-read token
+counts separately, so cost comparisons must account for that warm-cache effect.
 
 The evaluator tests commit grouping and order. It does not require a
 Conventional Commit prefix. Commit message format is a project convention, and
@@ -102,18 +119,19 @@ The runner resolves the git-hunk executable, imported package, and both skill
 paths. All paths must be inside the current checkout. It records the Git commit,
 whether the checkout is dirty, and SHA-256 for both skill files.
 
-Claude runs with Bash as its only tool. The allowed Bash commands are
-`git-hunk` and `git`. The permission mode is `dontAsk`. Safe mode, no session
-persistence, no browser integration, and an empty strict MCP configuration are
-required.
+Claude runs with Bash as its only tool. The git-hunk variant allows `git-hunk`
+and `git`; the bare-Git variant allows only `git`. The permission mode is
+`dontAsk`. Safe mode, no session persistence, no browser integration, and an
+empty strict MCP configuration are required.
 
-Each task writes a structured JSONL trace. The trace contains the Claude stream
-events and one eval metadata event with UTC start time, duration, and exit code.
-The runner prints the exact composed prompt, then prints each Bash command as an
+Each task variant writes a structured JSONL trace and transcript whose filenames
+include the variant. The trace contains the Claude stream events and one eval
+metadata event with UTC start time, duration, and exit code. The runner prints
+the variant and exact composed prompt, then prints each Bash command as an
 indented bullet under a `tool calls` section as events arrive, so a human or
-agent can inspect the prompt and tool-use sequence while the task is running. It
-writes the same view to a human-readable task transcript; tool results stay in
-the complete JSONL trace rather than cluttering the concise live view. The
+agent can compare the prompt and tool-use sequence while the task is running.
+It writes the same view to a human-readable task transcript; tool results stay
+in the complete JSONL trace rather than cluttering the concise live view. The
 grader outcome and usage summary appear together under a `result` section.
 
 Validation requires assistant turns, Bash inputs, tool results, one successful
@@ -124,9 +142,10 @@ manifest separately records whole-run wall time. The runner copies normalized
 metrics, including the per-model breakdown, into the run manifest. The original
 fields remain in the trace. The grader never reads the trace.
 
-The runner exits nonzero for a failed task, solver error, environment mismatch,
-or missing or malformed trace. Each selected task is an independent eval run;
-passing it does not depend on running any other task in the same invocation.
+The runner exits nonzero for a failed task variant, solver error, environment
+mismatch, or missing or malformed trace. Each selected task is an independent
+paired comparison; passing it does not depend on running any other task in the
+same invocation.
 
 ### Keep this ADR Proposed in the integration ticket
 
