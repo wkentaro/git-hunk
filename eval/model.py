@@ -1,3 +1,4 @@
+import dataclasses
 import datetime
 import json
 import math
@@ -6,12 +7,84 @@ import time
 from pathlib import Path
 from typing import Any
 from typing import Final
+from typing import TextIO
 from typing import cast
 
 from eval.config import MODEL
 from eval.repo import GitRepo
 from eval.scenario import Solver
 from eval.task import Task
+
+
+@dataclasses.dataclass(frozen=True)
+class TokenUsage:
+    input_tokens: int
+    cache_creation_input_tokens: int
+    cache_read_input_tokens: int
+    output_tokens: int
+
+    def to_dict(self) -> dict[str, int]:
+        return {
+            "input": self.input_tokens,
+            "cache_creation_input": self.cache_creation_input_tokens,
+            "cache_read_input": self.cache_read_input_tokens,
+            "output": self.output_tokens,
+        }
+
+    @classmethod
+    def total(cls, usages: list["TokenUsage"]) -> "TokenUsage":
+        return cls(
+            input_tokens=sum(usage.input_tokens for usage in usages),
+            cache_creation_input_tokens=sum(
+                usage.cache_creation_input_tokens for usage in usages
+            ),
+            cache_read_input_tokens=sum(
+                usage.cache_read_input_tokens for usage in usages
+            ),
+            output_tokens=sum(usage.output_tokens for usage in usages),
+        )
+
+
+@dataclasses.dataclass(frozen=True)
+class ModelUsage:
+    tokens: TokenUsage
+    web_search_requests: int
+    cost_usd: float
+    context_window: int
+    max_output_tokens: int
+    canonical_model: str | None
+    provider: str | None
+
+    def to_dict(self) -> dict[str, Any]:
+        return {
+            "tokens": self.tokens.to_dict(),
+            "web_search_requests": self.web_search_requests,
+            "cost_usd": self.cost_usd,
+            "context_window": self.context_window,
+            "max_output_tokens": self.max_output_tokens,
+            "canonical_model": self.canonical_model,
+            "provider": self.provider,
+        }
+
+
+@dataclasses.dataclass(frozen=True)
+class TraceUsage:
+    duration_seconds: float
+    api_duration_seconds: float
+    turns: int
+    cost_usd: float
+    tokens: TokenUsage
+    models: dict[str, ModelUsage]
+
+    def to_dict(self) -> dict[str, Any]:
+        return {
+            "duration_seconds": self.duration_seconds,
+            "api_duration_seconds": self.api_duration_seconds,
+            "turns": self.turns,
+            "cost_usd": self.cost_usd,
+            "tokens": self.tokens.to_dict(),
+            "models": {name: usage.to_dict() for name, usage in self.models.items()},
+        }
 
 
 def build_prompt(*, task_prompt: str) -> str:
@@ -52,41 +125,60 @@ def build_command(*, prompt: str) -> list[str]:
     return ["claude", "-p", prompt, *build_command_flags()]
 
 
-def make_claude_solver(*, task: Task, trace_path: Path) -> Solver:
+def make_claude_solver(
+    *, task: Task, trace_path: Path, transcript_path: Path
+) -> Solver:
     prompt = build_prompt(task_prompt=task.prompt)
 
     def solve(repo: GitRepo) -> None:
-        run_claude(repo=repo, prompt=prompt, trace_path=trace_path)
+        run_claude(
+            repo=repo,
+            prompt=prompt,
+            trace_path=trace_path,
+            transcript_path=transcript_path,
+        )
 
     return solve
 
 
-def run_claude(*, repo: GitRepo, prompt: str, trace_path: Path) -> None:
+def run_claude(
+    *,
+    repo: GitRepo,
+    prompt: str,
+    trace_path: Path,
+    transcript_path: Path,
+) -> None:
     MODEL_TIMEOUT_SECONDS: Final = 30 * 60
     started_at = datetime.datetime.now(datetime.timezone.utc)
     started_clock = time.monotonic()
-    try:
-        result = repo.run(
-            *build_command(prompt=prompt),
-            timeout_seconds=MODEL_TIMEOUT_SECONDS,
-        )
-    except subprocess.TimeoutExpired as error:
-        duration_seconds = time.monotonic() - started_clock
-        raw_trace = error.stdout or ""
-        if isinstance(raw_trace, bytes):
-            raw_trace = raw_trace.decode(errors="replace")
-        raw_trace, incomplete_output = _separate_trace_output(raw_trace=raw_trace)
-        _write_trace(
-            trace_path=trace_path,
-            raw_trace=raw_trace,
-            started_at=started_at,
-            duration_seconds=duration_seconds,
-            exit_code=124,
-            incomplete_output=incomplete_output,
-        )
-        raise RuntimeError(
-            f"claude timed out after {MODEL_TIMEOUT_SECONDS} seconds"
-        ) from error
+    transcript_path.parent.mkdir(parents=True, exist_ok=True)
+    with transcript_path.open("w", encoding="utf-8") as transcript:
+        reporter = TranscriptReporter(transcript=transcript)
+        reporter.report_prompt(prompt=prompt)
+        reporter.report_tool_calls_header()
+        try:
+            result = repo.run_stream(
+                *build_command(prompt=prompt),
+                timeout_seconds=MODEL_TIMEOUT_SECONDS,
+                on_stdout_line=reporter.consume_line,
+            )
+        except subprocess.TimeoutExpired as error:
+            duration_seconds = time.monotonic() - started_clock
+            raw_trace = error.stdout or ""
+            if isinstance(raw_trace, bytes):
+                raw_trace = raw_trace.decode(errors="replace")
+            raw_trace, incomplete_output = _separate_trace_output(raw_trace=raw_trace)
+            _write_trace(
+                trace_path=trace_path,
+                raw_trace=raw_trace,
+                started_at=started_at,
+                duration_seconds=duration_seconds,
+                exit_code=124,
+                incomplete_output=incomplete_output,
+            )
+            raise RuntimeError(
+                f"claude timed out after {MODEL_TIMEOUT_SECONDS} seconds"
+            ) from error
 
     duration_seconds = time.monotonic() - started_clock
     _write_trace(
@@ -101,6 +193,250 @@ def run_claude(*, repo: GitRepo, prompt: str, trace_path: Path) -> None:
             f"claude exited {result.returncode}: {result.stderr.strip()}"
         )
     validate_trace(trace_path=trace_path)
+
+
+class TranscriptReporter:
+    def __init__(self, *, transcript: TextIO) -> None:
+        self._transcript = transcript
+
+    def report_prompt(self, *, prompt: str) -> None:
+        self._emit("prompt:")
+        for line in prompt.splitlines():
+            self._emit(f"  {line}")
+
+    def report_tool_calls_header(self) -> None:
+        self._emit("tool calls:")
+
+    def report_result(self, *, result_line: str, usage_line: str) -> None:
+        self._emit("result:")
+        self._emit(f"  {result_line}")
+        self._emit(f"  {usage_line}")
+
+    def consume_line(self, line: str) -> None:
+        try:
+            event = json.loads(line)
+        except json.JSONDecodeError:
+            return
+        if not isinstance(event, dict):
+            return
+        message = event.get("message")
+        if not isinstance(message, dict):
+            return
+        content = message.get("content")
+        if not isinstance(content, list):
+            return
+        for block in content:
+            if (
+                isinstance(block, dict)
+                and block.get("type") == "tool_use"
+                and block.get("name") == "Bash"
+            ):
+                self._report_tool_use(block=block)
+
+    def _report_tool_use(self, *, block: dict[str, Any]) -> None:
+        tool_input = block.get("input")
+        command = tool_input.get("command") if isinstance(tool_input, dict) else None
+        if not isinstance(command, str):
+            return
+        command_lines = command.rstrip().splitlines()
+        if not command_lines:
+            return
+        self._emit(f"  - {command_lines[0]}")
+        for command_line in command_lines[1:]:
+            self._emit(f"    {command_line}")
+
+    def _emit(self, line: str) -> None:
+        print(line, flush=True)
+        self._transcript.write(f"{line}\n")
+        self._transcript.flush()
+
+
+def read_trace_usage(*, trace_path: Path) -> TraceUsage | None:
+    try:
+        events = [
+            json.loads(line)
+            for line in trace_path.read_text(encoding="utf-8").splitlines()
+        ]
+    except (OSError, json.JSONDecodeError):
+        return None
+    result_events = [
+        event
+        for event in events
+        if isinstance(event, dict) and event.get("type") == "result"
+    ]
+    if len(result_events) != 1:
+        return None
+    return _parse_trace_usage(result_event=result_events[0])
+
+
+def _parse_trace_usage(*, result_event: dict[str, Any]) -> TraceUsage | None:
+    duration_ms = _nonnegative_number(result_event.get("duration_ms"))
+    api_duration_ms = _nonnegative_number(result_event.get("duration_api_ms"))
+    turns = _nonnegative_int(result_event.get("num_turns"))
+    cost_usd = _nonnegative_number(result_event.get("total_cost_usd"))
+    raw_usage = result_event.get("usage")
+    if (
+        duration_ms is None
+        or api_duration_ms is None
+        or turns is None
+        or cost_usd is None
+        or not isinstance(raw_usage, dict)
+    ):
+        return None
+    tokens = _parse_token_usage(
+        raw_usage=cast("dict[str, Any]", raw_usage),
+        input_key="input_tokens",
+        cache_creation_key="cache_creation_input_tokens",
+        cache_read_key="cache_read_input_tokens",
+        output_key="output_tokens",
+    )
+    if tokens is None:
+        return None
+    models = _parse_model_usage(result_event.get("modelUsage"))
+    return TraceUsage(
+        duration_seconds=duration_ms / 1000,
+        api_duration_seconds=api_duration_ms / 1000,
+        turns=turns,
+        cost_usd=cost_usd,
+        tokens=tokens,
+        models=models,
+    )
+
+
+def _parse_token_usage(
+    *,
+    raw_usage: dict[str, Any],
+    input_key: str,
+    cache_creation_key: str,
+    cache_read_key: str,
+    output_key: str,
+) -> TokenUsage | None:
+    input_tokens = _nonnegative_int(raw_usage.get(input_key))
+    cache_creation_input_tokens = _nonnegative_int(raw_usage.get(cache_creation_key))
+    cache_read_input_tokens = _nonnegative_int(raw_usage.get(cache_read_key))
+    output_tokens = _nonnegative_int(raw_usage.get(output_key))
+    if (
+        input_tokens is None
+        or cache_creation_input_tokens is None
+        or cache_read_input_tokens is None
+        or output_tokens is None
+    ):
+        return None
+    return TokenUsage(
+        input_tokens=input_tokens,
+        cache_creation_input_tokens=cache_creation_input_tokens,
+        cache_read_input_tokens=cache_read_input_tokens,
+        output_tokens=output_tokens,
+    )
+
+
+def _parse_model_usage(raw_models: object) -> dict[str, ModelUsage]:
+    if not isinstance(raw_models, dict):
+        return {}
+    models: dict[str, ModelUsage] = {}
+    for name, raw_model_usage in cast("dict[object, object]", raw_models).items():
+        if not isinstance(name, str) or not isinstance(raw_model_usage, dict):
+            continue
+        raw_usage = cast("dict[str, Any]", raw_model_usage)
+        tokens = _parse_token_usage(
+            raw_usage=raw_usage,
+            input_key="inputTokens",
+            cache_creation_key="cacheCreationInputTokens",
+            cache_read_key="cacheReadInputTokens",
+            output_key="outputTokens",
+        )
+        web_search_requests = _nonnegative_int(raw_usage.get("webSearchRequests"))
+        cost_usd = _nonnegative_number(raw_usage.get("costUSD"))
+        context_window = _nonnegative_int(raw_usage.get("contextWindow"))
+        max_output_tokens = _nonnegative_int(raw_usage.get("maxOutputTokens"))
+        canonical_model = raw_usage.get("canonicalModel")
+        provider = raw_usage.get("provider")
+        if (
+            tokens is None
+            or web_search_requests is None
+            or cost_usd is None
+            or context_window is None
+            or max_output_tokens is None
+            or (canonical_model is not None and not isinstance(canonical_model, str))
+            or (provider is not None and not isinstance(provider, str))
+        ):
+            continue
+        models[name] = ModelUsage(
+            tokens=tokens,
+            web_search_requests=web_search_requests,
+            cost_usd=cost_usd,
+            context_window=context_window,
+            max_output_tokens=max_output_tokens,
+            canonical_model=canonical_model,
+            provider=provider,
+        )
+    return models
+
+
+def _nonnegative_int(value: object) -> int | None:
+    if isinstance(value, bool) or not isinstance(value, int) or value < 0:
+        return None
+    return value
+
+
+def _nonnegative_number(value: object) -> float | None:
+    if (
+        isinstance(value, bool)
+        or not isinstance(value, (int, float))
+        or not math.isfinite(value)
+        or value < 0
+    ):
+        return None
+    return float(value)
+
+
+def format_usage(*, usage: TraceUsage) -> str:
+    duration = usage.duration_seconds
+    tokens = usage.tokens
+    return (
+        f"usage: {duration:.1f}s · {usage.turns} turns · tokens "
+        f"{_format_token_count(tokens.input_tokens)} input / "
+        f"{_format_token_count(tokens.cache_creation_input_tokens)} cache-write / "
+        f"{_format_token_count(tokens.cache_read_input_tokens)} cache-read / "
+        f"{_format_token_count(tokens.output_tokens)} output · ${usage.cost_usd:.4f}"
+    )
+
+
+def _format_token_count(count: int) -> str:
+    if count >= 1_000_000:
+        return f"{count / 1_000_000:.1f}m"
+    if count >= 1_000:
+        return f"{count / 1_000:.1f}k"
+    return str(count)
+
+
+def aggregate_usage(*, usages: tuple[TraceUsage, ...]) -> TraceUsage | None:
+    if not usages:
+        return None
+    model_names = {name for usage in usages for name in usage.models}
+    models: dict[str, ModelUsage] = {}
+    for name in sorted(model_names):
+        model_usages = [usage.models[name] for usage in usages if name in usage.models]
+        first = model_usages[0]
+        models[name] = ModelUsage(
+            tokens=TokenUsage.total([usage.tokens for usage in model_usages]),
+            web_search_requests=sum(
+                usage.web_search_requests for usage in model_usages
+            ),
+            cost_usd=sum(usage.cost_usd for usage in model_usages),
+            context_window=first.context_window,
+            max_output_tokens=first.max_output_tokens,
+            canonical_model=first.canonical_model,
+            provider=first.provider,
+        )
+    return TraceUsage(
+        duration_seconds=sum(usage.duration_seconds for usage in usages),
+        api_duration_seconds=sum(usage.api_duration_seconds for usage in usages),
+        turns=sum(usage.turns for usage in usages),
+        cost_usd=sum(usage.cost_usd for usage in usages),
+        tokens=TokenUsage.total([usage.tokens for usage in usages]),
+        models=models,
+    )
 
 
 def _write_trace(

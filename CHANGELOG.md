@@ -10,6 +10,8 @@ and this project adheres to
 
 ### Added
 
+- Agent evals stream composed prompts and Bash calls, report normalized token
+  and cost usage, and write human-readable transcripts (#215).
 - `skills` subcommand (`git-hunk skills list|get|path`) serving the bundled,
   version-matched core usage guide for AI agents.
 - Examples section in `--help` for every subcommand.

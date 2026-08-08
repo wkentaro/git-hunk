@@ -12,6 +12,7 @@ from eval.repo import make_subprocess_env
 class EvalEnvironment:
     checkout: Path
     commit: str
+    dirty: bool
     git_hunk_executable: Path
     imported_package: Path
     skill_paths: dict[str, Path]
@@ -25,8 +26,6 @@ def resolve_environment() -> EvalEnvironment:
         command=["git", "status", "--porcelain=v1", "--untracked-files=all"],
         cwd=checkout,
     )
-    if status.stdout:
-        raise RuntimeError("the eval checkout must be clean")
     commit = _run(command=["git", "rev-parse", "HEAD"], cwd=checkout).stdout.strip()
 
     executable_name = shutil.which("git-hunk")
@@ -66,6 +65,7 @@ def resolve_environment() -> EvalEnvironment:
     return EvalEnvironment(
         checkout=checkout,
         commit=commit,
+        dirty=bool(status.stdout.strip()),
         git_hunk_executable=executable,
         imported_package=imported_package,
         skill_paths=skill_paths,
