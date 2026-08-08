@@ -1,42 +1,30 @@
 ---
 name: logical-commits
-description: Group hunks into logical commits, one logical change per commit, ordered so each commit is independently valid, with a message that describes that one change. Use when splitting a pile of changes into commits in a project with no commit conventions of its own.
+description: Decides how to group, order, and describe working-tree changes as focused commits. Use when splitting mixed changes in a project with no commit conventions of its own.
 allowed-tools: Bash(git-hunk:*), Bash(git:*)
 ---
 
 # git-hunk logical commits
 
-Judgment guidance for splitting changes into logical commits. The mechanics of
-inspecting and staging hunks are in the `core` skill; this skill covers only
-what belongs in which commit, in what order, and how its message reads.
+Plan the entire commit series from the core skill's diff output before changing
+the repository, and follow that skill's command workflow.
 
-## Grouping hunks into commits
+## Grouping
 
-Plan the commits *before* you stage anything. For each planned commit, write
-down the current Hunk IDs it contains. Refresh the inventory and recorded IDs
-after a partial operation or an operation on a Conditional Hunk ID. Use the
-`core` skill for ID and command behavior.
+- Put one intent in each commit: one feature, fix, refactor, test, or formatting
+  change.
+- Group by intent, not file. Related hunks across files belong together;
+  unrelated hunks in one file stay apart.
+- Preserve incomplete or unrelated work when the user asks. If intent remains
+  genuinely ambiguous after reading the diff, ask instead of guessing.
 
-- **One logical change per commit.** A bug fix, a refactor, a feature, a
-  formatting pass, a test: each is its own commit, even when they touch the
-  same file.
-- **Group by intent, not by file.** Two hunks in different files that serve one
-  change belong together; two hunks in one file that serve different changes
-  belong apart.
-- **When grouping is ambiguous, ask the user.** Don't guess at intent you can't
-  see in the diff.
+## Ordering
 
-## Ordering commits
+Each commit must stand alone: the build and tests would pass at every commit,
+not only the last. Put prerequisites first: a refactor, rename, or signature
+change precedes behavior that depends on it. Keep pure formatting separate.
 
-Order so that **each commit is independently valid**: the build/tests would
-pass at every commit, not just at the end.
+## Messages
 
-- Refactors and groundwork that a feature depends on come **before** the feature.
-- A symbol rename or signature change comes before the code that uses the new form.
-- Pure formatting goes in its own commit (first or last), never mixed into a
-  logic commit where it hides the real change.
-
-## Commit messages
-
-The message describes the commit's one logical change. Its format follows the
-project's own conventions.
+Follow any clear repository convention. Otherwise use a concise message
+describing only that commit's change.

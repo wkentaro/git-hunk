@@ -24,9 +24,16 @@ def test_list_shows_skill_name(cli: GitHunkCLI) -> None:
 def test_list_json(cli: GitHunkCLI) -> None:
     skills = cli.run_json("skills", "list", "--json")
     names = [skill["name"] for skill in skills]
-    assert "core" in names
+    assert {"core", "logical-commits"} <= set(names)
     core = next(s for s in skills if s["name"] == "core")
     assert "git-hunk" in core["description"].lower()
+
+
+def test_list_json_has_parsed_skill_descriptions(cli: GitHunkCLI) -> None:
+    for skill in cli.run_json("skills", "list", "--json"):
+        description = skill["description"]
+        assert description.endswith("."), skill["name"]
+        assert "Use when" in description, skill["name"]
 
 
 def test_get_outputs_full_content(cli: GitHunkCLI) -> None:
