@@ -41,6 +41,8 @@ and this project adheres to
 
 - Streamline the core skill around one inspection call and one execution call,
   reducing redundant agent tool use (#217).
+- Condense the logical-commits skill around commit judgment and make core
+  isolate and refresh partial-line and Conditional Hunk ID operations (#218).
 - **Breaking:** Use durable Hunk identity from ADR 0003. JSON returns full
   SHA-256 IDs and `id_stability`; human output shows unique prefixes and marks
   Conditional IDs; commands accept unambiguous case-insensitive prefixes from
