@@ -14,7 +14,9 @@ from eval.config import TASK_SCHEMA_VERSION
 from eval.environment import EvalEnvironment
 from eval.environment import resolve_environment
 from eval.grader import Result
-from eval.harness import run_and_grade
+from eval.harness import prepare_task
+from eval.model import VARIANTS
+from eval.model import EvalVariant
 from eval.model import TraceUsage
 from eval.model import TranscriptReporter
 from eval.model import aggregate_usage
@@ -29,6 +31,7 @@ from eval.tasks import SCENARIOS
 @dataclasses.dataclass(frozen=True)
 class TaskRun:
     scenario: Scenario
+    variant: EvalVariant
     result: Result
     trace_path: Path
     transcript_path: Path
@@ -37,7 +40,12 @@ class TaskRun:
 
 def main(argv: list[str] | None = None) -> int:
     task_names = tuple(scenario.task.name for scenario in SCENARIOS)
-    parser = argparse.ArgumentParser(prog="python -m eval")
+    task_list = "\n".join(f"  {name}" for name in task_names)
+    parser = argparse.ArgumentParser(
+        prog="python -m eval",
+        epilog=f"available tasks:\n{task_list}",
+        formatter_class=argparse.RawDescriptionHelpFormatter,
+    )
     parser.add_argument(
         "--task",
         action="append",
@@ -84,35 +92,43 @@ def _run_scenarios(
         name = scenario.task.name
         progress = f" {index}/{len(scenarios)}" if multiple_tasks else ""
         print(f"running{progress}: {name}", flush=True)
-        trace_path = run_dir / f"{name}.jsonl"
-        transcript_path = run_dir / f"{name}.transcript.txt"
-        solver = make_claude_solver(
-            task=scenario.task,
-            trace_path=trace_path,
-            transcript_path=transcript_path,
-        )
-        result = run_and_grade(task=scenario.task, solver=solver)
-        usage = read_trace_usage(trace_path=trace_path)
-        mark = "PASS" if result.passed else "FAIL"
-        detail = f": {result.reason}: {result.detail}" if result.detail else ""
-        result_line = f"{mark} {name}{detail}"
-        usage_line = (
-            format_usage(usage=usage) if usage is not None else "usage: unavailable"
-        )
-        with transcript_path.open("a", encoding="utf-8") as transcript:
-            TranscriptReporter(transcript=transcript).report_result(
-                result_line=result_line,
-                usage_line=usage_line,
-            )
-        results.append(
-            TaskRun(
-                scenario=scenario,
-                result=result,
-                trace_path=trace_path,
-                transcript_path=transcript_path,
-                usage=usage,
-            )
-        )
+        with prepare_task(scenario.task) as prepared:
+            for variant in VARIANTS:
+                print(flush=True)
+                artifact_stem = f"{name}.{variant.name}"
+                trace_path = run_dir / f"{artifact_stem}.jsonl"
+                transcript_path = run_dir / f"{artifact_stem}.transcript.txt"
+                solver = make_claude_solver(
+                    task=scenario.task,
+                    variant=variant,
+                    trace_path=trace_path,
+                    transcript_path=transcript_path,
+                )
+                result = prepared.run_and_grade(solver)
+                usage = read_trace_usage(trace_path=trace_path)
+                mark = "PASS" if result.passed else "FAIL"
+                detail = f": {result.reason}: {result.detail}" if result.detail else ""
+                result_line = f"{mark} {name} [{variant.name}]{detail}"
+                usage_line = (
+                    format_usage(usage=usage)
+                    if usage is not None
+                    else "usage: unavailable"
+                )
+                with transcript_path.open("a", encoding="utf-8") as transcript:
+                    TranscriptReporter(transcript=transcript).report_result(
+                        result_line=result_line,
+                        usage_line=usage_line,
+                    )
+                results.append(
+                    TaskRun(
+                        scenario=scenario,
+                        variant=variant,
+                        result=result,
+                        trace_path=trace_path,
+                        transcript_path=transcript_path,
+                        usage=usage,
+                    )
+                )
 
     passed = sum(run.result.passed for run in results)
     run_passed = passed == len(results)
@@ -133,7 +149,7 @@ def _run_scenarios(
         f"{json.dumps(manifest, indent=2, sort_keys=True)}\n",
         encoding="utf-8",
     )
-    if multiple_tasks:
+    if len(results) > 1:
         overall_mark = "PASS" if run_passed else "FAIL"
         print(f"overall: {overall_mark} {passed}/{len(results)}")
         if total_usage is None:
@@ -172,6 +188,7 @@ def _make_manifest(
         task_results.append(
             {
                 "name": run.scenario.task.name,
+                "variant": run.variant.name,
                 "passed": run.result.passed,
                 "reason": run.result.reason,
                 "detail": run.result.detail,
@@ -180,6 +197,8 @@ def _make_manifest(
                 "trace_sha256": trace_hash,
                 "transcript": run.transcript_path.name,
                 "transcript_sha256": transcript_hash,
+                "command_flags": build_command_flags(variant=run.variant),
+                "permission_policy": run.variant.permission_policy,
             }
         )
     return {
@@ -196,8 +215,6 @@ def _make_manifest(
         "skill_sha256": environment.skill_sha256,
         "claude_code_version": environment.claude_code_version,
         "requested_model": MODEL,
-        "command_flags": build_command_flags(),
-        "permission_policy": "Bash only; git-hunk and git commands only",
         "passed": passed,
         "usage": usage.to_dict() if usage is not None else None,
         "tasks": task_results,

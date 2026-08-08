@@ -8,6 +8,7 @@ from typing import NoReturn
 import pytest
 
 from eval.config import MODEL
+from eval.model import VARIANTS
 from eval.model import aggregate_usage
 from eval.model import build_command
 from eval.model import build_prompt
@@ -64,16 +65,34 @@ def _write_trace(*, trace_path: Path, events: list[dict[str, Any]]) -> None:
     )
 
 
-def test_prompt_loads_both_bundled_skills() -> None:
-    prompt = build_prompt(task_prompt="Keep unrelated work in place.")
+def test_variant_prompts_differ_only_by_tool_instruction() -> None:
+    task_prompt = "Keep unrelated work in place."
+    git_hunk_variant, bare_git_variant = VARIANTS
+    git_hunk_prompt = build_prompt(
+        task_prompt=task_prompt,
+        variant=git_hunk_variant,
+    )
+    bare_git_prompt = build_prompt(
+        task_prompt=task_prompt,
+        variant=bare_git_variant,
+    )
 
-    assert "git-hunk skills get core logical-commits" in prompt
-    assert "follow both skills" in prompt
-    assert "conventional" not in prompt.lower()
+    git_hunk_instruction = (
+        "Run `git-hunk skills get core logical-commits` and follow both skills."
+    )
+    bare_git_instruction = "Use only Git commands; do not use `git-hunk`."
+    assert git_hunk_instruction in git_hunk_prompt
+    assert bare_git_instruction in bare_git_prompt
+    assert git_hunk_prompt.replace(
+        git_hunk_instruction, "<tool instruction>"
+    ) == bare_git_prompt.replace(bare_git_instruction, "<tool instruction>")
+    assert git_hunk_prompt.endswith(task_prompt)
+    assert bare_git_prompt.endswith(task_prompt)
 
 
 def test_command_pins_model_and_isolates_claude() -> None:
-    command = build_command(prompt="Do the task")
+    git_hunk_variant, bare_git_variant = VARIANTS
+    command = build_command(prompt="Do the task", variant=git_hunk_variant)
 
     assert command[:3] == ["claude", "-p", "Do the task"]
     assert command[command.index("--model") + 1] == MODEL
@@ -91,6 +110,13 @@ def test_command_pins_model_and_isolates_claude() -> None:
         "Bash(git-hunk:*)",
         "Bash(git:*)",
     ]
+
+    bare_git_command = build_command(prompt="Do the task", variant=bare_git_variant)
+    bare_allowed_index = bare_git_command.index("--allowedTools")
+    assert bare_git_command[bare_allowed_index + 1 : bare_allowed_index + 2] == [
+        "Bash(git:*)"
+    ]
+    assert "Bash(git-hunk:*)" not in bare_git_command
 
 
 def test_validate_trace_accepts_complete_trace(
@@ -234,6 +260,7 @@ def test_run_claude_writes_partial_trace_on_timeout(
         run_claude(
             repo=repo,
             prompt="Do the task",
+            variant=VARIANTS[0],
             trace_path=trace_path,
             transcript_path=transcript_path,
         )
@@ -302,12 +329,14 @@ def test_run_claude_streams_tool_calls_without_results(
     run_claude(
         repo=repo,
         prompt="First line.\n\nSecond line.",
+        variant=VARIANTS[0],
         trace_path=trace_path,
         transcript_path=transcript_path,
     )
 
     expected = "\n".join(
         [
+            "variant: git-hunk",
             "prompt:",
             "  First line.",
             "  ",

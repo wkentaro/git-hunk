@@ -10,6 +10,9 @@ and this project adheres to
 
 ### Added
 
+- Agent evals run every task with git-hunk and bare Git from equivalent initial
+  state for direct workflow and cost comparison, and `--help` lists the
+  available tasks (#216).
 - Agent evals stream composed prompts and Bash calls, report normalized token
   and cost usage, and write human-readable transcripts (#215).
 - `skills` subcommand (`git-hunk skills list|get|path`) serving the bundled,
