@@ -1,6 +1,6 @@
 ---
 name: core
-description: Provides non-interactive git-hunk mechanics for inspecting, splitting, committing, or explicitly discarding working-tree changes by stable Hunk ID or exact Repository path. Use when an agent needs hunk-level staging or commits without an interactive prompt.
+description: Provides non-interactive git-hunk mechanics for inspecting, splitting, committing, or explicitly discarding working-tree changes by Hunk ID or exact Repository path. Use when an agent needs hunk-level staging or commits without an interactive prompt.
 allowed-tools: Bash(git-hunk:*), Bash(git:*)
 ---
 
@@ -16,10 +16,15 @@ After loading the skills, normally use only two more Bash calls:
 
 1. Run `git-hunk list && git-hunk show` once. The list includes untracked files;
    show prints every staged and unstaged diff with its Hunk ID. Plan all commits
-   from that output. Do not also run `git status`, `git diff`, `git log`, `cat`,
-   or individual `show` commands unless information is genuinely missing.
-2. In one Bash call, chain the complete plan: one `git-hunk commit` per logical
-   change, any requested cleanup, then `git-hunk list` as the final check.
+   from that output and record their Hunk IDs. Do not also run `git status`,
+   `git diff`, `git log`, `cat`, or individual `show` commands unless information
+   is genuinely missing.
+2. In one Bash call, chain the plan while it uses Repository paths or Hunk IDs
+   not marked `conditional`. A partial-line operation must be the last
+   mutation in its call; a Conditional Hunk ID operation must be the only
+   mutation. End every execution call with `git-hunk list`. If work remains,
+   inspect that output, replace recorded IDs in the plan, and continue in a new
+   call.
 
 Example:
 
@@ -32,39 +37,49 @@ git-hunk list
 
 `git-hunk commit <id-or-path>... -m <message>` stages exactly the selected
 hunks and commits them. It aborts when the index already contains staged
-changes. Stable Hunk IDs remain valid as other complete hunks are committed, so
-independent commits can be chained. Conditional IDs can change when a duplicate
-hunk is committed; after using one, re-run `git-hunk list` before the next
-mutation. A Repository path selects every changed hunk in that exact file and
-is usually shorter than an ID for a whole-file commit.
+changes. Human output marks Conditional Hunk IDs with `conditional`; IDs of
+complete hunks not marked `conditional` remain valid as other complete hunks
+are committed. A Conditional Hunk ID can change when its Duplicate Hunk group
+changes, so the core loop isolates those operations. A Repository path selects
+every changed hunk in that exact file and is usually shorter than an ID for
+committing an entire file.
 
-The final `git-hunk list` must show no hunks when the whole tree should be clean.
-When the user says to preserve unrelated work, it must show only that work.
+The final `git-hunk list` must show no hunks or untracked inventory entries when
+the whole tree should be clean. Otherwise, it must show only the intentionally
+preserved work.
 
 ## Splitting and cleanup
 
-For part of one hunk, select changed-line positions shown by `git-hunk show`:
+For part of one hunk, select the 1-based body positions shown by `git-hunk show`,
+counting context lines:
 
 ```bash
-git-hunk commit d161935 -l 3,5-7 -m "add retry"
+git-hunk commit d161935 -l 3,5-7 -m "add retry" &&
+git-hunk list
 ```
 
-Prefer content matching when separating a recognizable line; it avoids another
-inspection round trip:
+Prefer content matching when a target line has distinctive text; it avoids
+manually tracking body positions. End the call with the required refresh:
 
 ```bash
 git-hunk commit d161935 --exclude-matching 'print("DEBUG"' -m "fix total" &&
+git-hunk list
+```
+
+After inspecting the refreshed inventory:
+
+```bash
 git-hunk discard src/total.py &&
 git-hunk list
 ```
 
 `--include-matching` and `--exclude-matching` match changed-line content as a
-literal substring; add `--regex` for a regular expression. They are repeatable
-and cannot be combined with `-l`. A partial operation changes the remainder's
-ID. A Repository path selects every remaining hunk in that file, so use the
-shortcut above only when the initial inspection proved that this hunk was the
-file's sole change. Otherwise, re-run `git-hunk list` after the partial commit
-and discard the remainder by its new ID.
+literal substring; add `--regex` for a regular expression. Each is repeatable
+and OR'd, but choose only one of `-l`, `--include-matching`, or
+`--exclude-matching`. Selection requires one text hunk. Whole-file hunks,
+submodule pointer changes, and grouped replacements wider than one-for-one must
+be selected whole. Use a Repository path for the remainder only when no other
+work in that file must be preserved.
 
 Use `git-hunk stage` plus `git commit` only when staged inspection is required.
 Use `git-hunk unstage` to correct staging. `git-hunk discard` permanently
@@ -74,8 +89,9 @@ cleanup or confirmed it.
 ## Boundaries
 
 - Paths are exact, worktree-root-relative Repository paths; they are not globs
-  or Git pathspecs. `show` accepts IDs only, while mutation commands accept IDs
-  or paths. Shell-quote every path operand copied from inventory output.
+  or Git pathspecs. `show` accepts Hunk IDs only, `list` accepts Repository paths
+  only, and mutation commands accept either. Shell-quote every path operand
+  copied from inventory output.
 - Untracked files have no Hunk ID. For a commit that combines them with tracked
   hunks, run `git-hunk stage <id-or-path>...`, then
   `git --literal-pathspecs -C "$(git rev-parse --show-toplevel)" add -- 'path/to/file'`,
