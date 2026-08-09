@@ -4,6 +4,8 @@ import json
 import math
 import subprocess
 import time
+from collections.abc import Iterable
+from collections.abc import Iterator
 from pathlib import Path
 from typing import Any
 from typing import Final
@@ -267,20 +269,8 @@ class TranscriptReporter:
             event = json.loads(line)
         except json.JSONDecodeError:
             return
-        if not isinstance(event, dict):
-            return
-        message = event.get("message")
-        if not isinstance(message, dict):
-            return
-        content = message.get("content")
-        if not isinstance(content, list):
-            return
-        for block in content:
-            if (
-                isinstance(block, dict)
-                and block.get("type") == "tool_use"
-                and block.get("name") == "Bash"
-            ):
+        for block in _iter_message_blocks(events=[event]):
+            if block.get("type") == "tool_use" and block.get("name") == "Bash":
                 self._report_tool_use(block=block)
 
     def _report_tool_use(self, *, block: dict[str, Any]) -> None:
@@ -317,6 +307,23 @@ def read_trace_usage(*, trace_path: Path) -> TraceUsage | None:
     if len(result_events) != 1:
         return None
     return _parse_trace_usage(result_event=result_events[0])
+
+
+def _iter_message_blocks(*, events: Iterable[Any]) -> Iterator[dict[str, Any]]:
+    # The single place that knows how a trace nests content blocks inside its
+    # stream events, so a schema change lands in one walk rather than four.
+    for event in events:
+        if not isinstance(event, dict):
+            continue
+        message = event.get("message")
+        if not isinstance(message, dict):
+            continue
+        content = message.get("content")
+        if not isinstance(content, list):
+            continue
+        for block in content:
+            if isinstance(block, dict):
+                yield cast("dict[str, Any]", block)
 
 
 def _parse_trace_usage(*, result_event: dict[str, Any]) -> TraceUsage | None:
@@ -561,16 +568,8 @@ def validate_trace(*, trace_path: Path) -> None:
             f"reported model must be {MODEL!r}, got {sorted(reported_models)!r}"
         )
 
-    content_blocks = [
-        block
-        for event in assistant_events
-        if isinstance((message := event.get("message")), dict)
-        and isinstance((content := message.get("content")), list)
-        for block in content
-        if isinstance(block, dict)
-    ]
     bash_tool_use_ids: set[str] = set()
-    for block in content_blocks:
+    for block in _iter_message_blocks(events=assistant_events):
         if block.get("type") != "tool_use" or block.get("name") != "Bash":
             continue
         tool_use_id = block.get("id")
@@ -643,18 +642,10 @@ def validate_trace(*, trace_path: Path) -> None:
 
 
 def _read_tool_result_ids(*, events: list[dict[str, Any]]) -> set[str]:
-    tool_result_ids: set[str] = set()
-    for event in events:
-        message = event.get("message")
-        if not isinstance(message, dict):
-            continue
-        content = message.get("content")
-        if not isinstance(content, list):
-            continue
-        for block in content:
-            if not isinstance(block, dict) or block.get("type") != "tool_result":
-                continue
-            tool_use_id = block.get("tool_use_id")
-            if isinstance(tool_use_id, str) and tool_use_id:
-                tool_result_ids.add(tool_use_id)
-    return tool_result_ids
+    return {
+        tool_use_id
+        for block in _iter_message_blocks(events=events)
+        if block.get("type") == "tool_result"
+        and isinstance((tool_use_id := block.get("tool_use_id")), str)
+        and tool_use_id
+    }
