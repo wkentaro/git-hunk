@@ -20,6 +20,7 @@ _REPEAT_CAVEAT: Final = (
 )
 
 REASON_LEGEND: Final[dict[FailureReason, str]] = {
+    "broken-commit": "a commit leaves a Python file that does not parse",
     "partition": "commits do not match the required change groups",
     "order": "a required commit order constraint is violated",
     "final-tree": "the final HEAD tree does not match the expected files",
