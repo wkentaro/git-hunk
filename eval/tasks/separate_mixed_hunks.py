@@ -1,6 +1,6 @@
 from typing import Final
 
-from eval.harness import list_hunks
+from eval.harness import find_hunk
 from eval.harness import run_git_hunk
 from eval.repo import GitRepo
 from eval.scenario import Scenario
@@ -36,26 +36,18 @@ def _build(repo: GitRepo) -> None:
     repo.write_file(name="a.py", content=_FINAL)
 
 
-def _find_hunk(repo: GitRepo, needle: str) -> str:
-    for hunk in list_hunks(repo, "a.py"):
-        hunk_id = str(hunk["id"])
-        if needle in run_git_hunk(repo, "show", hunk_id):
-            return hunk_id
-    raise RuntimeError(f"no hunk in a.py contains {needle!r}")
-
-
 def _golden(repo: GitRepo) -> None:
     run_git_hunk(
         repo,
         "commit",
-        _find_hunk(repo, "CONFIG"),
+        find_hunk(repo, "a.py", "CONFIG"),
         "-m",
         "Default config",
     )
     run_git_hunk(
         repo,
         "commit",
-        _find_hunk(repo, "LOG:"),
+        find_hunk(repo, "a.py", "LOG:"),
         "-m",
         "Prefix log output",
     )

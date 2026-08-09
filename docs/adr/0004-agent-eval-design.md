@@ -102,6 +102,20 @@ The four version 1 tasks are:
 3. Commit a behavior change and drop a debug line.
 4. Commit one complete change and keep unrelated work in the worktree.
 
+Three version 2 tasks target the situations where non-interactive bare Git has
+no per-hunk selection at all, so the paired comparison measures what git-hunk
+adds rather than what both tools share:
+
+5. Split two intents inside one hunk into two commits. The two Change groups
+   sit one line apart, closer than the diff context width, so no whole-hunk
+   operation can separate them.
+6. Lift a fix out of formatter churn that shares a hunk with it, and commit
+   the churn on its own.
+7. Commit one member of a Duplicate Hunk group and keep its identical twin in
+   the worktree. Changed-line sets cannot tell the twins apart, which is
+   exactly the collision the complete `HEAD` snapshot exists to catch, and the
+   agent must address the right member through a Conditional Hunk ID.
+
 Every task has a deterministic golden solver. The adversarial matrix proves all
 grader boundaries. It includes a duplicate added line, a staged leftover, an
 incorrect tracked leftover, and a binary untracked leftover. These tests run in

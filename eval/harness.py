@@ -87,3 +87,18 @@ def run_git_hunk(repo: GitRepo, *args: str) -> str:
 def list_hunks(repo: GitRepo, *file_paths: str) -> list[dict[str, Any]]:
     envelope = json.loads(run_git_hunk(repo, "list", "--json", *file_paths))
     return cast("list[dict[str, Any]]", envelope["hunks"])
+
+
+def find_hunk(repo: GitRepo, path: str, needle: str) -> str:
+    # The needle is matched against the full `show` rendering, context lines
+    # included, so pick text unique to the target hunk's changed lines.
+    matches = [
+        hunk_id
+        for hunk in list_hunks(repo, path)
+        if needle in run_git_hunk(repo, "show", hunk_id := str(hunk["id"]))
+    ]
+    if len(matches) != 1:
+        raise RuntimeError(
+            f"{len(matches)} hunks in {path} contain {needle!r}, expected one"
+        )
+    return matches[0]
