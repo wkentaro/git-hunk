@@ -10,7 +10,7 @@ At release, that section is promoted to the new version.
 
 The suite removes inherited `GIT_*` variables that can make Git use the outer
 repository. You can run the suite from inside `git rebase --exec`, a hook,
-`filter-branch`, or `bisect run`. The `_scrubbed_git_env` fixture in
+`filter-branch`, or `bisect run`. The `_scrubbed_process_env` fixture in
 `tests/conftest.py` removes these variables and explains why this is necessary.
 Keep this behavior. `tests/git_env_test.py` verifies that the suite does not
 change the outer repository.

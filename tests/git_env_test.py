@@ -8,7 +8,7 @@ def test_suite_ignores_an_inherited_git_environment(tmp_path: Path) -> None:
     """The suite must not write to whatever repository GIT_DIR names.
 
     Point GIT_DIR and friends at a decoy repository, run a slice of the suite,
-    and assert the decoy stays empty. `_scrubbed_git_env` in conftest.py
+    and assert the decoy stays empty. `_scrubbed_process_env` in conftest.py
     explains why the scrub exists.
     """
     decoy = tmp_path / "decoy"

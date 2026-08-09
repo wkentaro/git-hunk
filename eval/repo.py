@@ -390,10 +390,15 @@ def init_repo(path: str | Path) -> GitRepo:
 
 
 def make_subprocess_env() -> dict[str, str]:
+    """Build a reproducible environment for eval subprocesses."""
     env = os.environ.copy()
     for name in tuple(env):
         if name.startswith("GIT_"):
             del env[name]
+    # Keep eval output stable when the invoking shell forces or disables color.
+    for name in ("FORCE_COLOR", "CLICOLOR_FORCE"):
+        env.pop(name, None)
+    env["NO_COLOR"] = "1"
     env["GIT_CONFIG_GLOBAL"] = os.devnull
     env["GIT_CONFIG_NOSYSTEM"] = "1"
     env["GIT_CONFIG_SYSTEM"] = os.devnull
