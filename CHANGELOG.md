@@ -10,6 +10,10 @@ and this project adheres to
 
 ### Added
 
+- Three hard agent eval tasks covering the cases where non-interactive bare Git
+  has no per-hunk answer: splitting two intents inside one hunk, lifting a fix
+  out of formatter churn that shares its hunk, and committing one member of a
+  Duplicate Hunk group while its identical twin stays in the worktree (#226).
 - Agent evals end with a Markdown summary table comparing git-hunk and bare Git
   per task, with outcome, turns, and cost per cell, a legend for the failure
   reasons that occurred, and the prompt-cache caveat that makes the cost column
@@ -48,6 +52,11 @@ and this project adheres to
 
 ### Changed
 
+- The core skill, README, and domain glossary warn that a partial selection of
+  a one-for-one replacement covers only the lines it names, after an eval run
+  showed a one-sided match silently committing a deletion-only half. The
+  warning is documentation; a guard in the CLI itself is tracked by #225
+  (#226).
 - Ask for a one-line-per-commit close in the core skill, so the agent's final
   report stops restating the diff it just committed (#220).
 - Condense the core skill to the rules an agent acts on, trimming the text it
