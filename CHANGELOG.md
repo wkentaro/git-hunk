@@ -17,7 +17,7 @@ and this project adheres to
   with git-hunk's bundled skills versus bare Git, each cell reporting the
   median with its observed range and the cost column omitted because raw
   costs are not order-neutral (#224) — with the checked-in harness linked for
-  reproduction (#255, #259).
+  reproduction (#255, #259, #263).
 - Agent eval task and grader criterion for a partial selection that would
   commit syntactically broken code: one hunk interleaves the change to keep
   with debug scaffolding, so every tempting whole-noise selection stages
