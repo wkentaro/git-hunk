@@ -79,6 +79,11 @@
   code. The git-hunk variant is the subject; bare Git is the comparison baseline, so its
   graded outcome is evidence and never fails the run.
 
+- **Broken commit**: an eval grader verdict — a commit in the graded range whose own
+  tree holds a `.py` file that does not parse. Checked before the commit partition,
+  because a commit nobody can check out and run is a worse fault than a wrongly grouped
+  one, and checked on every commit in the series rather than only on `HEAD`.
+
 - **Agent demonstration**: a side-by-side scenario run by the same pinned agent
   from the same Repository state with bare Git and with the git-hunk toolchain. It
   illustrates the difference between the resulting commit series but is not a

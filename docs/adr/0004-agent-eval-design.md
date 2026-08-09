@@ -80,12 +80,23 @@ The grader checks the first failed invariant in this order:
 
 | Check              | Required state                                                   | Failure reason       |
 | ------------------ | ---------------------------------------------------------------- | -------------------- |
+| Commit parses      | Every `.py` blob in each commit's own tree parses                | `broken-commit`      |
 | Partition          | Actual commits match the declared changed-line groups            | `partition`          |
 | Order              | Required before and after constraints hold                       | `order`              |
 | Final commit       | The complete `HEAD` tree matches the declared files              | `final-tree`         |
 | Index              | Its tree and exact paths equal `HEAD`                            | `leftover-index`     |
 | Tracked worktree   | Exact bytes and modes match the declared tracked state           | `leftover-worktree`  |
 | Untracked worktree | Exact paths, bytes, and modes match the declared untracked state | `leftover-untracked` |
+
+The parse check is first because a partial selection that splits a syntactic
+structure produces a commit nobody can check out and run, and that is a worse
+fault than a wrongly grouped one. Reporting it as `partition` would name a
+line-set mismatch when the real defect is a file that does not compile. It
+reads each commit's own tree, not just `HEAD`, so a broken intermediate state
+cannot hide behind a correct final tree, and it names the commit, the path, and
+the syntax error. Only regular-file `.py` blobs are parsed: the task
+repositories are Python, and a symlink or a text fixture is not source the
+grader can judge.
 
 The complete snapshots make absence exact. They also detect duplicate lines,
 binary bytes, empty files, executable files, symlinks, and deletions. Changed
@@ -116,6 +127,19 @@ adds rather than what both tools share:
    the worktree. Changed-line sets cannot tell the twins apart, which is
    exactly the collision the complete `HEAD` snapshot exists to catch, and the
    agent must address the right member through a Conditional Hunk ID.
+
+One version 3 task targets the selection that is easy to make and impossible to
+verify by reading the diff alone:
+
+8. Commit the one change worth keeping out of a hunk whose debug scaffolding is
+   interleaved with it, leaving valid Python. Dropping the `print` lines by
+   content or by number strands the `if` header whose only body they are, and
+   any single line range covering both of them also swallows the `continue` the
+   kept change needs, so all three tempting selections stage a file that does
+   not parse. Its golden solver runs the stage-then-verify dance an agent has to
+   perform by hand today: stage the selection, parse the bytes the index now
+   holds, and commit from that verified index. The criterion is the backstop
+   either way, since it fails the run whether or not the agent thought to check.
 
 Every task has a deterministic golden solver. The adversarial matrix proves all
 grader boundaries. It includes a duplicate added line, a staged leftover, an
@@ -269,6 +293,9 @@ gates pass.
   diagnostic data, not durable evidence.
 - Release artifacts cannot include evaluator code or run data.
 - A line-set collision cannot hide an incorrect final tree.
+- A commit that does not parse is diagnosed as such, in every commit of the
+  series, rather than as a partition failure. Adding a non-Python task, or a
+  Python fixture that is deliberately invalid, needs this criterion revisited.
 - Staged, tracked, and untracked leftovers have separate diagnoses.
 - A bare-Git failure is a published result, not a red run.
 - The table reports one sample per cell by default and a median with its
