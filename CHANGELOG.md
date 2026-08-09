@@ -8,6 +8,8 @@ and this project adheres to
 
 ## [Unreleased]
 
+## [0.3.0] - 2026-08-09
+
 ### Added
 
 - Agent eval task and grader criterion for a partial selection that would
@@ -234,4 +236,5 @@ and this project adheres to
   working across multiple hunks when they share the same single-hunk
   constraint as `-l` (#155).
 
-[unreleased]: https://github.com/wkentaro/git-hunk/compare/v0.2.0...HEAD
+[0.3.0]: https://github.com/wkentaro/git-hunk/compare/v0.2.0...v0.3.0
+[unreleased]: https://github.com/wkentaro/git-hunk/compare/v0.3.0...HEAD
