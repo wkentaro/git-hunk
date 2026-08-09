@@ -36,7 +36,7 @@ class GitRepo:
 
 
 @pytest.fixture(autouse=True, scope="session")
-def _scrubbed_git_env() -> Generator[None]:
+def _scrubbed_process_env() -> Generator[None]:
     # git exports GIT_DIR, GIT_INDEX_FILE, and friends to the commands it runs:
     # `rebase --exec`, hooks, `filter-branch`, `bisect run`. Those beat cwd, so
     # every git subprocess the suite starts (the fixtures' own, and the ones
@@ -45,11 +45,16 @@ def _scrubbed_git_env() -> Generator[None]:
     # Drop all of it, except the config overrides a caller may set to shield
     # the suite from the machine's gitconfig (e.g. GIT_CONFIG_GLOBAL=/dev/null
     # in CI); those improve hermeticity rather than break it.
+    # Also pin color output so inherited terminal preferences cannot change
+    # captured output assertions.
     KEEP: Final = {"GIT_CONFIG_GLOBAL", "GIT_CONFIG_SYSTEM", "GIT_CONFIG_NOSYSTEM"}
     with pytest.MonkeyPatch.context() as monkeypatch:
         for name in list(os.environ):
             if name.startswith("GIT_") and name not in KEEP:
                 monkeypatch.delenv(name)
+        for name in ("FORCE_COLOR", "CLICOLOR_FORCE"):
+            monkeypatch.delenv(name, raising=False)
+        monkeypatch.setenv("NO_COLOR", "1")
         yield
 
 
