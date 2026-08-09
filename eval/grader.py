@@ -133,7 +133,9 @@ def _find_broken_commit(*, repo: GitRepo, shas: list[str]) -> Result | None:
             content = repo.git_bytes("cat-file", "blob", object_id)
             try:
                 ast.parse(content)
-            except SyntaxError as error:
+            # ast.parse raises ValueError, not SyntaxError, for source it
+            # refuses to read at all, such as null bytes.
+            except (SyntaxError, ValueError) as error:
                 return _fail(
                     reason="broken-commit",
                     detail=f"commit {sha} leaves {path!r} unparsable: {error}",

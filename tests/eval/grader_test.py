@@ -110,6 +110,24 @@ def test_grade_reports_an_intermediate_commit_that_does_not_parse(
     assert "expected an indented block" in (result.detail or "")
 
 
+def test_grade_reports_a_python_file_ast_refuses_to_read(
+    eval_repo: GitRepo,
+) -> None:
+    eval_repo.write_file(name="a.py", content="value = 1\n")
+    eval_repo.git("add", "a.py")
+    eval_repo.git("commit", "-m", "Initial state")
+    base = eval_repo.git("rev-parse", "HEAD").strip()
+    # ast.parse raises ValueError, not SyntaxError, for null bytes.
+    eval_repo.write_file(name="a.py", content=b"value = 1\x00\n")
+    eval_repo.git("commit", "--all", "-m", "Null byte")
+    task = _single_commit_task(path="a.py", content="value = 1\n")
+
+    result = grade(repo=eval_repo, task=task, base=base)
+
+    assert result.reason == "broken-commit"
+    assert "null bytes" in (result.detail or "")
+
+
 def test_grade_parses_only_python_files(eval_repo: GitRepo) -> None:
     eval_repo.write_file(name="notes.txt", content="")
     eval_repo.git("add", "notes.txt")
