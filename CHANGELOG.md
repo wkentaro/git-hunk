@@ -16,6 +16,9 @@ and this project adheres to
   readable. The exit code now reports the subject under test (the git-hunk
   variant) and solver errors, so a graded bare-Git failure is evidence instead
   of a red run (#221).
+- Agent eval summary tables, usage lines, and run manifests count the tool calls
+  each task variant made, so the workflow comparison reports the metric it is
+  about (#220).
 - Agent evals run every task with git-hunk and bare Git from equivalent initial
   state for direct workflow and cost comparison, and `--help` lists the
   available tasks (#216).
@@ -45,6 +48,14 @@ and this project adheres to
 
 ### Changed
 
+- Ask for a one-line-per-commit close in the core skill, so the agent's final
+  report stops restating the diff it just committed (#220).
+- Condense the core skill to the rules an agent acts on, trimming the text it
+  loads before its first inspection call (#220).
+- Let a partial-line or Conditional Hunk ID commit chain path-addressed cleanup
+  and the closing `git-hunk list` into one call, and make that list the agent's
+  final check, so dropping a debug line out of a hunk costs one Bash call
+  instead of two (#220).
 - Streamline the core skill around one inspection call and one execution call,
   reducing redundant agent tool use (#217).
 - Condense the logical-commits skill around commit judgment and make core
