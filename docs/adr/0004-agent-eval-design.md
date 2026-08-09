@@ -1,7 +1,8 @@
 # ADR 0004: grade agent judgment from exact Repository state
 
-**Status:** Proposed\
-**Date:** 2026-08-07
+**Status:** Accepted\
+**Proposed:** 2026-08-07\
+**Accepted:** 2026-08-09
 
 ## Context
 
@@ -278,19 +279,39 @@ significance. It remains an agent demonstration. `--repeat 1` is the default and
 produces the single-sample run this ADR described before this section, output
 and artifact names included.
 
-### Keep this ADR Proposed in the integration ticket
+### Accepted on the v0.3.0 qualifying run
 
-This integration adds the deterministic evaluation and the model-pinned runner.
-It does not claim a model result. A later evaluation study can archive redacted
-evidence for independently run tasks under `docs/eval/runs/<run-id>/` and change
-this ADR to Accepted after its deterministic, lint, package, and pinned model
-gates pass.
+The integration ticket added the deterministic evaluation and the model-pinned
+runner without claiming a model result, so this ADR stayed Proposed there. Run
+evidence is not checked into the repository. A qualifying study records its
+summary — run id, candidate commit, model and Claude Code versions, per-task
+grades, and usage — on the release pull request and the release ticket after
+its deterministic, lint, package, and pinned model gates pass; the raw
+manifest, traces, and transcripts stay with the maintainer outside git, and
+any re-qualification records a new summary the same way.
+
+A first qualifying study passed 8/8 on 2026-08-09 at candidate commit
+`64861ae2b5ddf3e50ccfbf92c95bd4d588bcf281`; #257 then changed the runner by
+pinning the solver's reasoning effort to `high`, which makes an earlier result
+stale under this ADR, so the qualifier was re-run rather than the rule
+narrowed. The qualifying study ran on 2026-08-09 at commit
+`5a05866e801d9d379fd79f3c117fb383b1056acf` — the release-candidate branch
+after that runner change, whose CLI and bundled skills are byte-identical to
+the first candidate: one uninterrupted `python -m eval` invocation with the
+pinned `high` effort passed all eight subject variants with exit code 0, after
+the deterministic test and lint gates passed on the same clean checkout. The
+package gates, first passed on the frozen candidate, were then re-run on
+`5a05866` to cover its hatch-vcs-derived metadata. Both summaries are recorded on
+[pull request #255](https://github.com/wkentaro/git-hunk/pull/255) and
+[issue #192](https://github.com/wkentaro/git-hunk/issues/192), and this ADR is
+Accepted on that evidence.
 
 ## Consequences
 
 - Normal tests stay deterministic and model-free.
-- Raw model runs do not modify the checkout. Their temporary directories are
-  diagnostic data, not durable evidence.
+- Raw model runs do not modify the checkout. Their directories back a recorded
+  qualifying-run summary and are retained outside the repository; git carries
+  the summary trail, not the artifacts.
 - Release artifacts cannot include evaluator code or run data.
 - A line-set collision cannot hide an incorrect final tree.
 - A commit that does not parse is diagnosed as such, in every commit of the
