@@ -141,6 +141,7 @@ def test_grade_reports_each_repository_failure_reason(
 
 def test_failure_cases_cover_every_repository_boundary() -> None:
     assert set(_FAILURE_CASES) == {
+        "broken-commit",
         "partition",
         "order",
         "final-tree",
