@@ -74,6 +74,10 @@
 - **git-hunk toolchain**: the git-hunk CLI together with the bundled `core` and
   `logical-commits` skills as presented to an agent.
 
+- **Subject under test**: the eval variant whose graded outcome decides the run's exit
+  code. The git-hunk variant is the subject; bare Git is the comparison baseline, so its
+  graded outcome is evidence and never fails the run.
+
 - **Agent demonstration**: one side-by-side scenario run by the same pinned agent
   from the same Repository state with bare Git and with the git-hunk toolchain. It
   illustrates the difference between the resulting commit series but is not a
