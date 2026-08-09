@@ -110,6 +110,9 @@
   converges #127/#159.
 - **ADR 0003**: Hunk IDs are durable for unchanged Hunks, unique in the combined
   staged and unstaged inventory, and conditional for Duplicate Hunk groups.
+- **ADR 0004** — agent eval. Grades agent judgment from exact Repository state,
+  compares git-hunk with bare Git from the same prepared state, and pins the
+  model.
 
 ## Invariants
 
