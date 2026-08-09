@@ -105,6 +105,7 @@ class TraceUsage:
     duration_seconds: float
     api_duration_seconds: float
     turns: int
+    tool_calls: int
     cost_usd: float
     tokens: TokenUsage
     models: dict[str, ModelUsage]
@@ -114,6 +115,7 @@ class TraceUsage:
             "duration_seconds": self.duration_seconds,
             "api_duration_seconds": self.api_duration_seconds,
             "turns": self.turns,
+            "tool_calls": self.tool_calls,
             "cost_usd": self.cost_usd,
             "tokens": self.tokens.to_dict(),
             "models": {name: usage.to_dict() for name, usage in self.models.items()},
@@ -306,7 +308,10 @@ def read_trace_usage(*, trace_path: Path) -> TraceUsage | None:
     ]
     if len(result_events) != 1:
         return None
-    return _parse_trace_usage(result_event=result_events[0])
+    return _parse_trace_usage(
+        result_event=result_events[0],
+        tool_calls=_count_tool_calls(events=events),
+    )
 
 
 def _iter_message_blocks(*, events: Iterable[Any]) -> Iterator[dict[str, Any]]:
@@ -326,7 +331,28 @@ def _iter_message_blocks(*, events: Iterable[Any]) -> Iterator[dict[str, Any]]:
                 yield cast("dict[str, Any]", block)
 
 
-def _parse_trace_usage(*, result_event: dict[str, Any]) -> TraceUsage | None:
+def _count_tool_calls(*, events: Iterable[Any]) -> int:
+    assistant_events = [
+        event
+        for event in events
+        if isinstance(event, dict) and event.get("type") == "assistant"
+    ]
+    # Identify a call by its tool-use ID so a re-streamed assistant message
+    # cannot inflate the count.
+    return len(
+        {
+            tool_use_id
+            for block in _iter_message_blocks(events=assistant_events)
+            if block.get("type") == "tool_use"
+            and isinstance((tool_use_id := block.get("id")), str)
+            and tool_use_id
+        }
+    )
+
+
+def _parse_trace_usage(
+    *, result_event: dict[str, Any], tool_calls: int
+) -> TraceUsage | None:
     duration_ms = _nonnegative_number(result_event.get("duration_ms"))
     api_duration_ms = _nonnegative_number(result_event.get("duration_api_ms"))
     turns = _nonnegative_int(result_event.get("num_turns"))
@@ -354,6 +380,7 @@ def _parse_trace_usage(*, result_event: dict[str, Any]) -> TraceUsage | None:
         duration_seconds=duration_ms / 1000,
         api_duration_seconds=api_duration_ms / 1000,
         turns=turns,
+        tool_calls=tool_calls,
         cost_usd=cost_usd,
         tokens=tokens,
         models=models,
@@ -451,7 +478,8 @@ def format_usage(*, usage: TraceUsage) -> str:
     duration = usage.duration_seconds
     tokens = usage.tokens
     return (
-        f"usage: {duration:.1f}s · {usage.turns} turns · tokens "
+        f"usage: {duration:.1f}s · {usage.turns} turns · "
+        f"{usage.tool_calls} tool calls · tokens "
         f"{_format_token_count(tokens.input_tokens)} input / "
         f"{_format_token_count(tokens.cache_creation_input_tokens)} cache-write / "
         f"{_format_token_count(tokens.cache_read_input_tokens)} cache-read / "
@@ -490,6 +518,7 @@ def aggregate_usage(*, usages: tuple[TraceUsage, ...]) -> TraceUsage | None:
         duration_seconds=sum(usage.duration_seconds for usage in usages),
         api_duration_seconds=sum(usage.api_duration_seconds for usage in usages),
         turns=sum(usage.turns for usage in usages),
+        tool_calls=sum(usage.tool_calls for usage in usages),
         cost_usd=sum(usage.cost_usd for usage in usages),
         tokens=TokenUsage.total([usage.tokens for usage in usages]),
         models=models,

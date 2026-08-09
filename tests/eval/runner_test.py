@@ -69,6 +69,23 @@ _RESULT_EVENT: Final[dict[str, Any]] = {
     "modelUsage": {},
 }
 
+_TOOL_USE_EVENTS: Final[list[dict[str, Any]]] = [
+    {
+        "type": "assistant",
+        "message": {
+            "content": [
+                {
+                    "type": "tool_use",
+                    "id": f"toolu_{index}",
+                    "name": "Bash",
+                    "input": {"command": "git-hunk list"},
+                }
+            ]
+        },
+    }
+    for index in range(2)
+]
+
 
 def _install_fake_run(
     *,
@@ -93,7 +110,10 @@ def _install_fake_run(
             del repo
             print(f"variant: {variant.name}")
             trace_path.write_text(
-                f"{json.dumps(_RESULT_EVENT)}\n",
+                "".join(
+                    f"{json.dumps(event)}\n"
+                    for event in (*_TOOL_USE_EVENTS, _RESULT_EVENT)
+                ),
                 encoding="utf-8",
             )
             transcript_path.write_text(
@@ -129,19 +149,24 @@ def _install_fake_run(
 
 
 _SINGLE_TASK_SUMMARY: Final = [
-    "| Task                      | git-hunk          | bare-git          |",
-    "| ------------------------- | ----------------- | ----------------- |",
-    "| split_refactor_vs_feature | PASS · 8t · $0.09 | PASS · 8t · $0.09 |",
+    "| Task                      | git-hunk               | bare-git               |",
+    "| ------------------------- | ---------------------- | ---------------------- |",
+    "| split_refactor_vs_feature | PASS · 2c · 8t · $0.09 | PASS · 2c · 8t · $0.09 |",
     "",
     _CACHE_CAVEAT,
 ]
 
 _TWO_TASK_SUMMARY: Final = [
-    "| Task                      | git-hunk              | bare-git              |",
-    "| ------------------------- | --------------------- | --------------------- |",
-    "| split_refactor_vs_feature | PASS · 8t · $0.09     | PASS · 8t · $0.09     |",
-    "| separate_mixed_hunks      | PASS · 8t · $0.09     | PASS · 8t · $0.09     |",
-    "| **total**                 | **2/2 · 16t · $0.18** | **2/2 · 16t · $0.18** |",
+    "| Task                      | git-hunk                   "
+    "| bare-git                   |",
+    "| ------------------------- | -------------------------- "
+    "| -------------------------- |",
+    "| split_refactor_vs_feature | PASS · 2c · 8t · $0.09     "
+    "| PASS · 2c · 8t · $0.09     |",
+    "| separate_mixed_hunks      | PASS · 2c · 8t · $0.09     "
+    "| PASS · 2c · 8t · $0.09     |",
+    "| **total**                 | **2/2 · 4c · 16t · $0.18** "
+    "| **2/2 · 4c · 16t · $0.18** |",
     "",
     _CACHE_CAVEAT,
 ]
@@ -175,8 +200,8 @@ def test_run_reports_context_usage_and_artifacts(
     )
 
     expected_usage = (
-        "usage: 22.7s · 8 turns · tokens 16 input / 8.4k cache-write / "
-        "59.8k cache-read / 1.3k output · $0.0891"
+        "usage: 22.7s · 8 turns · 2 tool calls · tokens 16 input / "
+        "8.4k cache-write / 59.8k cache-read / 1.3k output · $0.0891"
     )
     output = capsys.readouterr()
     assert exit_code == 0
