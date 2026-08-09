@@ -74,6 +74,9 @@ member) renumbers its group. After either, only a bare Repository path may
 follow in that call, as above: `-l` and content matching need a single-hunk
 selection, so they need a fresh `git-hunk list`.
 
+An operation on a complete hunk outside the group leaves those `conditional`
+IDs byte-identical, so it may precede one in the same call.
+
 `--include-matching` and `--exclude-matching` match changed-line content as a
 literal substring; `--regex` switches to a regular expression. Each is
 repeatable and OR'd, but choose only one of `-l`, `--include-matching`, or
