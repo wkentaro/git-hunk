@@ -112,4 +112,6 @@
 - Moving a complete Hunk between staged and unstaged state does not change its Hunk ID.
 - A partial-line operation creates new Hunks with new Hunk IDs.
 - A Conditional Hunk ID can change when its Duplicate Hunk group changes.
+- A Duplicate Hunk group keeps its Conditional Hunk IDs when complete Hunks outside
+  the group are committed.
 - Each Hunk ID in an inventory addresses exactly one Hunk.
