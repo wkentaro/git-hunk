@@ -78,6 +78,23 @@ def test_commit_rejection_is_atomic(grouped_replacement: GitHunkCLI) -> None:
     assert _capture_repo_state(cli) == before
 
 
+@pytest.mark.parametrize("spec", ["2,4", "^3,^5"])
+def test_allow_one_sided_does_not_relax_the_group_rule(
+    grouped_replacement: GitHunkCLI, spec: str
+) -> None:
+    # --allow-one-sided covers a one-for-one pair only; a wider grouped
+    # replacement stays a hard error.
+    cli = grouped_replacement
+    before = _capture_repo_state(cli)
+
+    result = cli.run(
+        "stage", cli.get_only_hunk_id("--unstaged"), "-l", spec, "--allow-one-sided"
+    )
+
+    _assert_group_error(result.returncode, result.stderr)
+    assert _capture_repo_state(cli) == before
+
+
 @pytest.mark.parametrize(
     "selector",
     [

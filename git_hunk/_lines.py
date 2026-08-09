@@ -165,22 +165,36 @@ def _render_body_lines(kept: list[_BodyLine]) -> list[str]:
     return rendered
 
 
-def _validate_group(group: list[tuple[int, str]], selected: set[int]) -> None:
+def _validate_group(
+    group: list[tuple[int, str]], selected: set[int], *, allow_one_sided: bool
+) -> None:
     """Reject a partial subset of a grouped replacement.
 
     Git pairs no old line with any new line inside a run of changed lines, so a
     subset of a replacement wider than one-for-one has no defined meaning. Pure
-    additions, pure deletions, and one-for-one replacements stay unrestricted.
+    additions and pure deletions stay unrestricted.
+
+    A one-for-one replacement has a defined half, but taking one is almost never
+    what the caller meant: it leaves the old line deleted with nothing put back,
+    or the new line added beside the old one. Reject it unless the caller asks
+    for that half deliberately with allow_one_sided; the wider grouped
+    replacement stays a hard error either way.
     """
     deletions = sum(prefix == "-" for _, prefix in group)
     additions = sum(prefix == "+" for _, prefix in group)
     if not deletions or not additions:
         return
-    if deletions == 1 and additions == 1:
-        return
     selected_count = sum(number in selected for number, _ in group)
     if selected_count in (0, len(group)):
         return
+    if deletions == 1 and additions == 1:
+        if allow_one_sided:
+            return
+        raise ValueError(
+            f"cannot select one side of lines {group[0][0]}-{group[-1][0]}: "
+            "one-for-one replacement; match text both lines share, select both "
+            "lines, or pass --allow-one-sided"
+        )
     raise ValueError(
         f"cannot partially select lines {group[0][0]}-{group[-1][0]}: "
         f"grouped replacement (deletions: {deletions}, additions: {additions}); "
@@ -188,15 +202,17 @@ def _validate_group(group: list[tuple[int, str]], selected: set[int]) -> None:
     )
 
 
-def _validate_group_selection(body: list[_BodyLine], selected: set[int]) -> None:
+def _validate_group_selection(
+    body: list[_BodyLine], selected: set[int], *, allow_one_sided: bool
+) -> None:
     group: list[tuple[int, str]] = []
     for line_num, line in enumerate(body, start=1):
         if line.prefix in ("+", "-"):
             group.append((line_num, line.prefix))
             continue
-        _validate_group(group, selected)
+        _validate_group(group, selected, allow_one_sided=allow_one_sided)
         group = []
-    _validate_group(group, selected)
+    _validate_group(group, selected, allow_one_sided=allow_one_sided)
 
 
 def resolve_matching_lines(
@@ -241,7 +257,12 @@ def resolve_matching_lines(
 
 
 def filter_hunk_lines(
-    hunk: Hunk, lines: set[int], *, exclude: bool, reverse: bool = False
+    hunk: Hunk,
+    lines: set[int],
+    *,
+    exclude: bool,
+    reverse: bool = False,
+    allow_one_sided: bool = False,
 ) -> Hunk:
     """Return a new Hunk with only the selected lines as changes.
 
@@ -265,7 +286,7 @@ def filter_hunk_lines(
     else:
         selected = lines
 
-    _validate_group_selection(body, selected)
+    _validate_group_selection(body, selected, allow_one_sided=allow_one_sided)
     # A forward apply matches OLD content, so unselected '-' lines become
     # context and unselected '+' lines drop. A reverse apply matches NEW
     # content, so the two sides swap.

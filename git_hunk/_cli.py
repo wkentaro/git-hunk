@@ -275,6 +275,7 @@ class _Selection:
     include_matching: tuple[str, ...]
     exclude_matching: tuple[str, ...]
     regex: bool
+    allow_one_sided: bool
 
     def is_active(self) -> bool:
         return (
@@ -299,8 +300,9 @@ def _build_selection(
     line_spec: str | None,
     include_matching: tuple[str, ...],
     exclude_matching: tuple[str, ...],
-    regex: bool,
     *,
+    regex: bool,
+    allow_one_sided: bool,
     usage: str,
 ) -> _Selection:
     mechanisms = [line_spec is not None, bool(include_matching), bool(exclude_matching)]
@@ -314,11 +316,17 @@ def _build_selection(
             "--regex requires --include-matching or --exclude-matching",
             usage=usage,
         )
+    if allow_one_sided and not any(mechanisms):
+        raise CliError(
+            "--allow-one-sided requires -l, --include-matching, or --exclude-matching",
+            usage=usage,
+        )
     return _Selection(
         line_spec=line_spec,
         include_matching=include_matching,
         exclude_matching=exclude_matching,
         regex=regex,
+        allow_one_sided=allow_one_sided,
     )
 
 
@@ -341,7 +349,15 @@ def _apply_line_filter(
         )
     try:
         lines, exclude = selection.resolve(hunks[0])
-        return [filter_hunk_lines(hunks[0], lines, exclude=exclude, reverse=reverse)]
+        return [
+            filter_hunk_lines(
+                hunks[0],
+                lines,
+                exclude=exclude,
+                reverse=reverse,
+                allow_one_sided=selection.allow_one_sided,
+            )
+        ]
     except ValueError as exc:
         raise CliError(str(exc)) from exc
 
@@ -682,6 +698,7 @@ def _add_patch_selection_options(command: Callable[..., None]) -> Callable[..., 
         click.option("--include-matching", "include_matching", multiple=True),
         click.option("--exclude-matching", "exclude_matching", multiple=True),
         click.option("--regex", "use_regex", is_flag=True),
+        click.option("--allow-one-sided", "allow_one_sided", is_flag=True),
         click.option("--dry-run", "dry_run", is_flag=True),
         click.option("-h", "--help", "show_help", is_flag=True),
         click.argument("targets", nargs=-1),
@@ -699,6 +716,7 @@ def cmd_stage(
     include_matching: tuple[str, ...],
     exclude_matching: tuple[str, ...],
     use_regex: bool,
+    allow_one_sided: bool,
     dry_run: bool,
     show_help: bool,
 ) -> None:
@@ -706,7 +724,12 @@ def cmd_stage(
         print_help(HELP_STAGE)
         return
     selection = _build_selection(
-        line_spec, include_matching, exclude_matching, use_regex, usage=USAGE_STAGE
+        line_spec,
+        include_matching,
+        exclude_matching,
+        regex=use_regex,
+        allow_one_sided=allow_one_sided,
+        usage=USAGE_STAGE,
     )
     _run_patch_command(
         list(targets),
@@ -729,6 +752,7 @@ def cmd_unstage(
     include_matching: tuple[str, ...],
     exclude_matching: tuple[str, ...],
     use_regex: bool,
+    allow_one_sided: bool,
     dry_run: bool,
     show_help: bool,
 ) -> None:
@@ -736,7 +760,12 @@ def cmd_unstage(
         print_help(HELP_UNSTAGE)
         return
     selection = _build_selection(
-        line_spec, include_matching, exclude_matching, use_regex, usage=USAGE_UNSTAGE
+        line_spec,
+        include_matching,
+        exclude_matching,
+        regex=use_regex,
+        allow_one_sided=allow_one_sided,
+        usage=USAGE_UNSTAGE,
     )
     _run_patch_command(
         list(targets),
@@ -759,6 +788,7 @@ def cmd_discard(
     include_matching: tuple[str, ...],
     exclude_matching: tuple[str, ...],
     use_regex: bool,
+    allow_one_sided: bool,
     dry_run: bool,
     show_help: bool,
 ) -> None:
@@ -766,7 +796,12 @@ def cmd_discard(
         print_help(HELP_DISCARD)
         return
     selection = _build_selection(
-        line_spec, include_matching, exclude_matching, use_regex, usage=USAGE_DISCARD
+        line_spec,
+        include_matching,
+        exclude_matching,
+        regex=use_regex,
+        allow_one_sided=allow_one_sided,
+        usage=USAGE_DISCARD,
     )
     _run_patch_command(
         list(targets),
@@ -787,6 +822,7 @@ def cmd_discard(
 @click.option("--include-matching", "include_matching", multiple=True)
 @click.option("--exclude-matching", "exclude_matching", multiple=True)
 @click.option("--regex", "use_regex", is_flag=True)
+@click.option("--allow-one-sided", "allow_one_sided", is_flag=True)
 @click.option("-h", "--help", "show_help", is_flag=True)
 @click.argument("targets", nargs=-1)
 def cmd_commit(
@@ -796,6 +832,7 @@ def cmd_commit(
     include_matching: tuple[str, ...],
     exclude_matching: tuple[str, ...],
     use_regex: bool,
+    allow_one_sided: bool,
     show_help: bool,
 ) -> None:
     if show_help:
@@ -822,7 +859,8 @@ def cmd_commit(
         line_spec,
         include_matching,
         exclude_matching,
-        use_regex,
+        regex=use_regex,
+        allow_one_sided=allow_one_sided,
         usage=USAGE_COMMIT,
     )
     selected = _apply_selection(

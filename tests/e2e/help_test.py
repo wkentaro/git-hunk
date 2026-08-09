@@ -41,3 +41,12 @@ def test_hunk_command_help_describes_prefix_lookup(
 
     assert "unambiguous" in output
     assert "case-insensitive" in output
+
+
+@pytest.mark.parametrize("command", ["stage", "unstage", "discard", "commit"])
+def test_selection_command_help_documents_allow_one_sided(
+    cli: GitHunkCLI, command: str
+) -> None:
+    output = cli.run_ok(command, "--help")
+
+    assert "--allow-one-sided" in output

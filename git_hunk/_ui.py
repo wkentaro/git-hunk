@@ -241,7 +241,8 @@ _LINE_OPT_ROW = f"""\
   [bold cyan]--include-matching[/bold cyan] [cyan]<pattern>[/cyan]  Select changed lines containing <pattern> (repeatable, OR'd)
   [bold cyan]--exclude-matching[/bold cyan] [cyan]<pattern>[/cyan]  Select every changed line except those matching (repeatable, OR'd)
              Line selection (-l, --include-matching, --exclude-matching) requires exactly one hunk.
-  [bold cyan]--regex[/bold cyan]    Treat matching patterns as regular expressions (default: literal substring)"""  # noqa: E501
+  [bold cyan]--regex[/bold cyan]    Treat matching patterns as regular expressions (default: literal substring)
+  [bold cyan]--allow-one-sided[/bold cyan]  Permit selecting one side of a one-for-one replacement (rejected by default)"""  # noqa: E501
 
 _LINE_OPTS = f"""\
 [bold green]Options:[/bold green]

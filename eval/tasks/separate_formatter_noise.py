@@ -84,12 +84,15 @@ def _commit_by_hunk_not_intent(repo: GitRepo) -> None:
 
 
 def _commit_one_sided_match(repo: GitRepo) -> None:
+    # The guard rejects a lone half by default, so the adversarial solver has to
+    # ask for it explicitly to still reproduce the broken partition.
     run_git_hunk(
         repo,
         "commit",
         find_hunk(repo, "client.py", "session.get"),
         "--include-matching",
         "session.get(url)",
+        "--allow-one-sided",
         "-m",
         "Add a request timeout",
     )
