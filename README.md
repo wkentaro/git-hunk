@@ -123,8 +123,10 @@ creates new Hunks with new IDs.
 Hunks with the same Repository path and patch content form a Duplicate Hunk
 group. Each member gets a unique Conditional Hunk ID, shown with a
 `conditional` label in human output and `"id_stability": "conditional"` in JSON.
-The ID can change when its Duplicate Hunk group changes. Run `git-hunk list`
-again after a partial operation or an operation on a Conditional Hunk ID.
+The ID can change when its Duplicate Hunk group changes. After a partial-line
+operation or an operation on a Conditional Hunk ID, address anything remaining
+by Repository path, which is ID-independent, or run `git-hunk list` again for
+the new IDs.
 
 ### List hunks
 
