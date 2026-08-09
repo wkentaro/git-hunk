@@ -49,11 +49,11 @@ reruns the protocol and prints a table in the same format.
 
 `c` = tool calls, `t` = turns; a cell reports the median of its three repeats
 with the observed range in brackets, dropped where every repeat agreed, and the
-pass column counts passing repeats. The cost column is omitted until its
-accounting is order-neutral
-([#224](https://github.com/wkentaro/git-hunk/issues/224)): bare Git runs second
-in each pair and partly reads the prompt cache the git-hunk run warmed. Three
-samples per task variant, dated 2026-08-09 at commit `328392e`.
+pass column counts passing repeats. The cost column is omitted: bare Git runs
+second in each pair and partly reads the prompt cache the git-hunk run warmed,
+so raw costs are not order-neutral
+([#224](https://github.com/wkentaro/git-hunk/issues/224)). Three samples per
+task variant, dated 2026-08-09 at commit `328392e`.
 
 ## Install
 

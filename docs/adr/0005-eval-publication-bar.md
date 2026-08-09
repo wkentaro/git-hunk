@@ -39,12 +39,13 @@ claimed at any repeat count.
 
 The runner's cost column is not order-neutral
 ([#224](https://github.com/wkentaro/git-hunk/issues/224)): bare Git runs
-second and partly reads the prompt cache the git-hunk run warmed. Until cost
-is computed order-neutrally — the manifest already retains cache-creation and
-cache-read token counts separately — published tables omit the cost column and
-lead with tool calls and turns. Qualifying-run records on the release pull
-request and ticket keep the full runner table; its caveat travels with it, per
-ADR 0004.
+second and partly reads the prompt cache the git-hunk run warmed. Published
+tables therefore omit the cost column and lead with tool calls and turns;
+cost is not part of the published claim, and making it order-neutral is not
+planned. If cost is ever computed order-neutrally — the manifest already
+retains cache-creation and cache-read token counts separately — the column
+may return. Qualifying-run records on the release pull request and ticket
+keep the full runner table; its caveat travels with it, per ADR 0004.
 
 ### One pinned model suffices
 
@@ -66,8 +67,9 @@ requires.
   the single-sample table it replaces did not meet the bar.
 - A qualifying run costs three times a single-sample run, and its gate is
   strictly harder: the subject variant must pass every repeat.
-- The cost column returns to published tables only when
-  [#224](https://github.com/wkentaro/git-hunk/issues/224) lands.
+- The cost column stays out of published tables;
+  [#224](https://github.com/wkentaro/git-hunk/issues/224) is closed as not
+  planned, and making cost order-neutral is the path to bringing it back.
 - Announcements and positioning
   ([#233](https://github.com/wkentaro/git-hunk/issues/233)) cite the published
   table and no stronger claim.
