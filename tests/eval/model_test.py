@@ -8,6 +8,7 @@ from typing import NoReturn
 
 import pytest
 
+from eval.config import EFFORT
 from eval.config import MODEL
 from eval.model import VARIANTS
 from eval.model import aggregate_usage
@@ -97,6 +98,7 @@ def test_command_pins_model_and_isolates_claude() -> None:
 
     assert command[:3] == ["claude", "-p", "Do the task"]
     assert command[command.index("--model") + 1] == MODEL
+    assert command[command.index("--effort") + 1] == EFFORT
     assert command[command.index("--tools") + 1] == "Bash"
     assert command[command.index("--permission-mode") + 1] == "dontAsk"
     assert command[command.index("--output-format") + 1] == "stream-json"

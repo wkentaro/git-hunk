@@ -8,6 +8,7 @@ import time
 from pathlib import Path
 from typing import Any
 
+from eval.config import EFFORT
 from eval.config import MODEL
 from eval.config import TASK_SCHEMA_VERSION
 from eval.environment import EvalEnvironment
@@ -88,7 +89,7 @@ def _run_scenarios(
     )
     run_dir = Path(tempfile.mkdtemp(prefix=run_directory_prefix))
     print(
-        f"eval: model={MODEL} "
+        f"eval: model={MODEL} effort={EFFORT} "
         f"claude={environment.claude_code_version.split()[0]} "
         f"commit={environment.commit[:7]} dirty={str(environment.dirty).lower()}",
         flush=True,
@@ -258,6 +259,7 @@ def _make_manifest(
         "skill_sha256": environment.skill_sha256,
         "claude_code_version": environment.claude_code_version,
         "requested_model": MODEL,
+        "requested_effort": EFFORT,
         "repeats": repeats,
         "gate_passed": gate_passed,
         "usage": usage.to_dict() if usage is not None else None,
