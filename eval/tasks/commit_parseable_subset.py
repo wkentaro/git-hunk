@@ -131,9 +131,10 @@ SCENARIO: Final = Scenario(
             worktree=_FINAL_FILES,
         ),
         prompt=(
-            "Keep the skip for voided rows. The temporary debug tracing goes: "
-            "the print statements and the threshold check that exists only to "
-            "print. Every commit must leave the file valid Python."
+            "Commit the skip for voided rows. Delete the temporary debug "
+            "tracing instead of committing it: the print statements and the "
+            "threshold check that exists only to print. Every commit must "
+            "leave the file valid Python."
         ),
     ),
     golden=_golden,
