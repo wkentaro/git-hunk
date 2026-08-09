@@ -52,8 +52,15 @@ git-hunk commit d161935 -l 3,5-7 -m "add retry" && git-hunk list
 ```
 
 Prefer content matching when the line has distinctive text; it avoids tracking
-body positions. Once the user has asked for the rest to go, the discard and the
-refresh finish the same call:
+body positions. Unless a lone half is the goal, a partial selection of a
+one-for-one replacement must cover both its `-` and `+` line: with `-l`,
+`--include-matching`, and `--exclude-matching` alike, a one-sided selection
+silently commits a deletion-only or addition-only half. To lift `delay = base`
+into `delay = base * backoff`, match `base`, which both lines contain and no
+other changed line shares, not `base * backoff`. When the pair shares no such
+text, repeat `--include-matching` with one pattern per side, or fall back to
+`-l`. Once the user has asked for the rest to go, the discard and the refresh
+finish the same call:
 
 ```bash
 git-hunk commit a4c0b82 --exclude-matching 'print("DEBUG"' -m "fix total" &&

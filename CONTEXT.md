@@ -32,7 +32,8 @@
 
 - **Change group**: a maximal run of changed `-` and `+` lines with no context line
   between them. Partial line selection is unrestricted for pure additions, pure
-  deletions, and one-for-one replacements. A larger grouped replacement is selected
+  deletions, and one-for-one replacements; a one-sided selection of a one-for-one
+  replacement applies only that half. A larger grouped replacement is selected
   as a whole or not selected.
 
 - **Whole-file hunk**: a tracked Hunk with no `@@` text range: a binary change, a mode-only
