@@ -22,16 +22,24 @@ _CACHE_CAVEAT: Final = (
     "bare-git runs second and may read cache written by the git-hunk run; "
     "costs are not order-neutral."
 )
+_REPEAT_CAVEAT: Final = (
+    "Only the first repeat starts cold, so a cost range mixes cache warmup with "
+    "run-to-run noise."
+)
+
+
+def _run_eval_cli(*args: str) -> subprocess.CompletedProcess[str]:
+    """Invoke the runner as a user does, from the checkout root."""
+    return subprocess.run(
+        [sys.executable, "-m", "eval", *args],
+        capture_output=True,
+        cwd=Path(__file__).resolve().parents[2],
+        text=True,
+    )
 
 
 def test_runner_help_lists_available_tasks() -> None:
-    repository_root = Path(__file__).resolve().parents[2]
-    result = subprocess.run(
-        [sys.executable, "-m", "eval", "--help"],
-        capture_output=True,
-        cwd=repository_root,
-        text=True,
-    )
+    result = _run_eval_cli("--help")
 
     assert result.returncode == 0
     _, task_section = result.stdout.split("available tasks:\n", maxsplit=1)
@@ -40,14 +48,22 @@ def test_runner_help_lists_available_tasks() -> None:
     ]
 
 
+def test_runner_help_documents_the_repeat_count() -> None:
+    result = _run_eval_cli("--help")
+
+    assert result.returncode == 0
+    assert "--repeat N" in result.stdout
+
+
+def test_runner_rejects_a_repeat_count_below_one() -> None:
+    result = _run_eval_cli("--repeat", "0")
+
+    assert result.returncode == 2
+    assert "--repeat must be at least 1" in result.stderr
+
+
 def test_runner_rejects_model_override_before_running_tasks() -> None:
-    repository_root = Path(__file__).resolve().parents[2]
-    result = subprocess.run(
-        [sys.executable, "-m", "eval", "--model", "opus"],
-        capture_output=True,
-        cwd=repository_root,
-        text=True,
-    )
+    result = _run_eval_cli("--model", "opus")
 
     assert result.returncode == 2
     assert "unrecognized arguments: --model opus" in result.stderr
@@ -94,8 +110,13 @@ def _install_fake_run(
     run_dir: Path,
     next_result: Callable[[], Result],
     monotonic: Callable[[], float],
+    prepared_tasks: list[str] | None = None,
 ) -> EvalEnvironment:
-    """Drive `_run_scenarios` without a model: fake solver, grade, and clock."""
+    """Drive `_run_scenarios` without a model: fake solver, grade, and clock.
+
+    `prepared_tasks` collects the name of every task the runner prepares, so a
+    caller can check that repeats share one prepared initial state.
+    """
 
     def make_solver(
         *,
@@ -129,7 +150,8 @@ def _install_fake_run(
             return next_result()
 
     def prepare_task(task: Task) -> contextlib.AbstractContextManager[PreparedTask]:
-        del task
+        if prepared_tasks is not None:
+            prepared_tasks.append(task.name)
         return contextlib.nullcontext(PreparedTask())
 
     monkeypatch.setattr(eval_main.tempfile, "mkdtemp", lambda **kwargs: str(run_dir))
@@ -197,6 +219,7 @@ def test_run_reports_context_usage_and_artifacts(
     exit_code = eval_main._run_scenarios(
         environment=environment,
         scenarios=SCENARIOS[:scenario_count],
+        repeats=1,
     )
 
     expected_usage = (
@@ -226,6 +249,8 @@ def test_run_reports_context_usage_and_artifacts(
     manifest = json.loads((run_dir / "run.json").read_text(encoding="utf-8"))
     assert manifest["clean_worktree"] is False
     assert manifest["gate_passed"] is True
+    assert manifest["repeats"] == 1
+    assert [task["repeat"] for task in manifest["tasks"]] == [1] * run_count
     assert "passed" not in manifest
     assert "selected_run" not in manifest
     assert "complete" not in manifest
@@ -249,6 +274,109 @@ def test_run_reports_context_usage_and_artifacts(
         "  PASS split_refactor_vs_feature [git-hunk]",
         f"  {expected_usage}",
     ]
+
+
+def test_run_samples_each_variant_repeatedly_from_one_prepared_task(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    run_dir = tmp_path / "run"
+    run_dir.mkdir()
+    pending = [
+        Result(passed=True),
+        Result(passed=True),
+        Result(passed=True),
+        Result(passed=False, reason="order"),
+        Result(passed=True),
+        Result(passed=True),
+    ]
+    prepared: list[str] = []
+    environment = _install_fake_run(
+        tmp_path=tmp_path,
+        monkeypatch=monkeypatch,
+        run_dir=run_dir,
+        next_result=lambda: pending.pop(0),
+        monotonic=lambda: 0.0,
+        prepared_tasks=prepared,
+    )
+
+    exit_code = eval_main._run_scenarios(
+        environment=environment,
+        scenarios=SCENARIOS[:1],
+        repeats=3,
+    )
+
+    output = capsys.readouterr()
+    name = SCENARIOS[0].task.name
+    # One prepared task serves all three repeats, so they share initial state.
+    assert prepared == [name]
+    assert exit_code == 0
+    assert [line for line in output.out.splitlines() if line.startswith("repeat ")] == [
+        f"repeat {repeat}/3: {name}" for repeat in (1, 2, 3)
+    ]
+    assert sorted(path.name for path in run_dir.glob("*.jsonl")) == [
+        f"{name}.{variant}.r{repeat}.jsonl"
+        for variant in ("bare-git", "git-hunk")
+        for repeat in (1, 2, 3)
+    ]
+    summary = [line for line in output.out.splitlines() if line.startswith("| ")]
+    # Identical repeats keep the cell at one sample's metrics rather than their
+    # sum: the cell reports a typical repeat, not the whole spend.
+    assert summary[2] == (
+        f"| {name} | PASS 3/3 · 2c · 8t · $0.09 | MIXED 2/3 order · 2c · 8t · $0.09 |"
+    )
+    manifest = json.loads((run_dir / "run.json").read_text(encoding="utf-8"))
+    assert manifest["repeats"] == 3
+    assert [(task["variant"], task["repeat"]) for task in manifest["tasks"]] == [
+        (variant, repeat)
+        for repeat in (1, 2, 3)
+        for variant in ("git-hunk", "bare-git")
+    ]
+    assert [task["trace"] for task in manifest["tasks"]] == [
+        f"{name}.{variant}.r{repeat}.jsonl"
+        for repeat in (1, 2, 3)
+        for variant in ("git-hunk", "bare-git")
+    ]
+    assert len({task["trace_sha256"] for task in manifest["tasks"]}) == 1
+    assert f"{_CACHE_CAVEAT} {_REPEAT_CAVEAT}" in output.out
+
+
+def test_run_gates_on_every_repeat_of_the_subject_variant(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    run_dir = tmp_path / "run"
+    run_dir.mkdir()
+    # The subject variant passes two of its three repeats.
+    pending = [
+        Result(passed=True),
+        Result(passed=True),
+        Result(passed=False, reason="order"),
+        Result(passed=True),
+        Result(passed=True),
+        Result(passed=True),
+    ]
+    environment = _install_fake_run(
+        tmp_path=tmp_path,
+        monkeypatch=monkeypatch,
+        run_dir=run_dir,
+        next_result=lambda: pending.pop(0),
+        monotonic=lambda: 0.0,
+    )
+
+    exit_code = eval_main._run_scenarios(
+        environment=environment,
+        scenarios=SCENARIOS[:1],
+        repeats=3,
+    )
+
+    output = capsys.readouterr()
+    assert exit_code == 1
+    assert "MIXED 2/3 order" in output.out
+    manifest = json.loads((run_dir / "run.json").read_text(encoding="utf-8"))
+    assert manifest["gate_passed"] is False
 
 
 @pytest.mark.parametrize(
@@ -282,6 +410,7 @@ def test_run_gates_on_subject_variant_outcomes_and_solver_errors(
     exit_code = eval_main._run_scenarios(
         environment=environment,
         scenarios=SCENARIOS[:1],
+        repeats=1,
     )
 
     capsys.readouterr()
