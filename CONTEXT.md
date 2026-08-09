@@ -72,6 +72,12 @@
   `{"text": s}` when the bytes are valid UTF-8, else `{"bytes": base64}`. Always an object
   (even for valid UTF-8) so consumers have one code path. The ripgrep `--json` idiom.
 
+- **Materialized staged content**: the exact bytes one file would hold in the index
+  after a given selection was staged. Produced by applying the selected patch to a
+  throwaway copy of the index, so the real index and worktree never change. Internal
+  only (`_staged_content.materialize_staged_content`): it is the unit a validator
+  would check before a partial selection is committed, not something a command emits.
+
 - **git-hunk toolchain**: the git-hunk CLI together with the bundled `core` and
   `logical-commits` skills as presented to an agent.
 

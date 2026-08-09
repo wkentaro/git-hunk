@@ -1,5 +1,9 @@
+import contextlib
 import os
+import shutil
 import subprocess
+import tempfile
+from collections.abc import Iterator
 from collections.abc import Mapping
 from dataclasses import dataclass
 from typing import Final
@@ -173,10 +177,77 @@ def apply_patch(
     run_git(*args, worktree_root=worktree_root, input=patch, env=env)
 
 
-# These file-level commands hand git paths as pathspecs, so they ask for literal
-# ones. Setting this globally would also change how a commit hook interprets its
+@contextlib.contextmanager
+def scratch_index(*, worktree_root: str) -> Iterator[Mapping[str, str]]:
+    """Yield an env overlay aiming git at a throwaway copy of the index.
+
+    Commands run with the overlay read the current index content but write only
+    to the copy, so the real index and working tree are never touched. Objects
+    they create still land in the repository's object database, unreferenced
+    until `git gc` reclaims them.
+    """
+    index_path = os.path.join(
+        worktree_root,
+        run_git(
+            "rev-parse", "--git-path", "index", worktree_root=worktree_root
+        ).removesuffix("\n"),
+    )
+    with tempfile.TemporaryDirectory() as tmpdir:
+        scratch_path = os.path.join(tmpdir, "index")
+        # A repository whose index has never been written has no index file
+        # yet; leaving the copy absent gives git the same empty starting point.
+        # Tolerate a concurrent writer replacing it between the two calls.
+        try:
+            shutil.copyfile(index_path, scratch_path)
+        except FileNotFoundError:
+            pass
+        yield {"GIT_INDEX_FILE": scratch_path}
+
+
+# The commands below hand git a path as a pathspec, so they ask for a literal
+# one. Setting this globally would also change how a commit hook interprets its
 # own pathspecs.
 _LITERAL_PATHSPECS: Final = "--literal-pathspecs"
+
+
+def read_index_blob(
+    path: str, *, worktree_root: str, env: Mapping[str, str] | None = None
+) -> bytes | None:
+    """Return the bytes an index entry holds, or None when it has no entry.
+
+    Reads the blob through ls-files rather than a `:<path>` revision so the
+    Repository path stays a literal pathspec instead of gaining `git show`'s
+    cwd-relative quirks.
+    """
+    output = run_git(
+        _LITERAL_PATHSPECS,
+        "ls-files",
+        "--stage",
+        "--full-name",
+        "-z",
+        "--",
+        path,
+        worktree_root=worktree_root,
+        env=env,
+    )
+    records = [record for record in output.split("\0") if record]
+    if not records:
+        return None
+    # One path yields several records only when it is unmerged, and then no
+    # single record is "the" content; refuse rather than return a merge stage.
+    if len(records) != 1:
+        raise RuntimeError(f"unmerged index entry for '{path}'")
+    metadata, separator, _ = records[0].partition("\t")
+    fields = metadata.split(" ")
+    if not separator or len(fields) != 3:
+        raise RuntimeError("cannot parse git index entry")
+    mode, object_id, _ = fields
+    # A gitlink entry points at a commit, not a blob (see _hunk.is_submodule_hunk).
+    if mode == "160000":
+        raise RuntimeError(f"'{path}' is a submodule, not a file")
+    return run_git_bytes(
+        "cat-file", "blob", object_id, worktree_root=worktree_root, env=env
+    )
 
 
 def stage_files(files: list[str], *, worktree_root: str, dry_run: bool) -> None:

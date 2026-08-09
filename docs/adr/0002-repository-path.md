@@ -64,7 +64,8 @@ An operand names one exact changed Repository path. Directories, globs, and Git
 pathspec magic are not expanded. A leading `./` and internal `..` components are
 normalized; absolute paths and paths that escape the worktree are rejected.
 
-`git add` and `git restore` are the only calls that hand Git a path as a pathspec, so
+`git add`, `git rm`, `git restore`, and the `git ls-files` that reads a materialized
+blob out of the scratch index are the only calls that hand Git a path as a pathspec, so
 they alone pass `--literal-pathspecs`. The path they receive is `Hunk.file`, taken from
 Git's own diff output rather than from the operand, so this guards any filename
 containing pathspec punctuation however the Hunk was selected. The flag is deliberately
