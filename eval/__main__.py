@@ -13,8 +13,10 @@ from eval.config import TASK_SCHEMA_VERSION
 from eval.environment import EvalEnvironment
 from eval.environment import resolve_environment
 from eval.grader import SOLVER_ERROR
+from eval.harness import PreparedTask
 from eval.harness import prepare_task
 from eval.model import VARIANTS
+from eval.model import EvalVariant
 from eval.model import TaskRun
 from eval.model import TraceUsage
 from eval.model import TranscriptReporter
@@ -43,7 +45,20 @@ def main(argv: list[str] | None = None) -> int:
         metavar="NAME",
         help="run one named task",
     )
+    parser.add_argument(
+        "--repeat",
+        type=int,
+        default=1,
+        metavar="N",
+        help=(
+            "sample every selected task variant N times from the same prepared "
+            "state, so the summary reports spread instead of one sample "
+            "(default: 1)"
+        ),
+    )
     args = parser.parse_args(argv)
+    if args.repeat < 1:
+        parser.error("--repeat must be at least 1")
 
     try:
         environment = resolve_environment()
@@ -55,13 +70,16 @@ def main(argv: list[str] | None = None) -> int:
     selected = tuple(
         scenario for scenario in SCENARIOS if scenario.task.name in selected_names
     )
-    return _run_scenarios(environment=environment, scenarios=selected)
+    return _run_scenarios(
+        environment=environment, scenarios=selected, repeats=args.repeat
+    )
 
 
 def _run_scenarios(
     *,
     environment: EvalEnvironment,
     scenarios: tuple[Scenario, ...],
+    repeats: int,
 ) -> int:
     started_at = datetime.datetime.now(datetime.timezone.utc)
     started_clock = time.monotonic()
@@ -82,45 +100,23 @@ def _run_scenarios(
         name = scenario.task.name
         progress = f" {index}/{len(scenarios)}" if multiple_tasks else ""
         print(f"running{progress}: {name}", flush=True)
+        # One prepared task feeds every repeat, so the repeats differ only in
+        # the model run and not in the initial Repository state.
         with prepare_task(scenario.task) as prepared:
-            for variant in VARIANTS:
-                print(flush=True)
-                artifact_stem = f"{name}.{variant.name}"
-                trace_path = run_dir / f"{artifact_stem}.jsonl"
-                transcript_path = run_dir / f"{artifact_stem}.transcript.txt"
-                solver = make_claude_solver(
-                    task=scenario.task,
-                    variant=variant,
-                    trace_path=trace_path,
-                    transcript_path=transcript_path,
-                )
-                result = prepared.run_and_grade(solver)
-                usage = read_trace_usage(trace_path=trace_path)
-                mark = "PASS" if result.passed else "FAIL"
-                detail = f": {result.reason}" if result.reason else ""
-                if result.detail:
-                    detail += f": {result.detail}"
-                result_line = f"{mark} {name} [{variant.name}]{detail}"
-                usage_line = (
-                    format_usage(usage=usage)
-                    if usage is not None
-                    else "usage: unavailable"
-                )
-                with transcript_path.open("a", encoding="utf-8") as transcript:
-                    TranscriptReporter(transcript=transcript).report_result(
-                        result_line=result_line,
-                        usage_line=usage_line,
-                    )
-                results.append(
-                    TaskRun(
+            for repeat in range(1, repeats + 1):
+                if repeats > 1:
+                    print(f"repeat {repeat}/{repeats}: {name}", flush=True)
+                results += [
+                    _run_variant(
                         scenario=scenario,
                         variant=variant,
-                        result=result,
-                        trace_path=trace_path,
-                        transcript_path=transcript_path,
-                        usage=usage,
+                        prepared=prepared,
+                        run_dir=run_dir,
+                        repeat=repeat,
+                        repeats=repeats,
                     )
-                )
+                    for variant in VARIANTS
+                ]
 
     gate_passed = _gate_passed(results=results)
     exit_code = 0 if gate_passed else 1
@@ -130,6 +126,7 @@ def _run_scenarios(
     manifest = _make_manifest(
         environment=environment,
         results=results,
+        repeats=repeats,
         started_at=started_at,
         duration_seconds=duration_seconds,
         exit_code=exit_code,
@@ -149,6 +146,60 @@ def _run_scenarios(
     return exit_code
 
 
+def _run_variant(
+    *,
+    scenario: Scenario,
+    variant: EvalVariant,
+    prepared: PreparedTask,
+    run_dir: Path,
+    repeat: int,
+    repeats: int,
+) -> TaskRun:
+    print(flush=True)
+    name = scenario.task.name
+    artifact_stem = _artifact_stem(
+        name=name, variant=variant.name, repeat=repeat, repeats=repeats
+    )
+    trace_path = run_dir / f"{artifact_stem}.jsonl"
+    transcript_path = run_dir / f"{artifact_stem}.transcript.txt"
+    solver = make_claude_solver(
+        task=scenario.task,
+        variant=variant,
+        trace_path=trace_path,
+        transcript_path=transcript_path,
+    )
+    result = prepared.run_and_grade(solver)
+    usage = read_trace_usage(trace_path=trace_path)
+    mark = "PASS" if result.passed else "FAIL"
+    detail = f": {result.reason}" if result.reason else ""
+    if result.detail:
+        detail += f": {result.detail}"
+    usage_line = (
+        format_usage(usage=usage) if usage is not None else "usage: unavailable"
+    )
+    with transcript_path.open("a", encoding="utf-8") as transcript:
+        TranscriptReporter(transcript=transcript).report_result(
+            result_line=f"{mark} {name} [{variant.name}]{detail}",
+            usage_line=usage_line,
+        )
+    return TaskRun(
+        scenario=scenario,
+        variant=variant,
+        result=result,
+        trace_path=trace_path,
+        transcript_path=transcript_path,
+        usage=usage,
+        repeat=repeat,
+    )
+
+
+def _artifact_stem(*, name: str, variant: str, repeat: int, repeats: int) -> str:
+    # A single-repeat run keeps the unsuffixed artifact names, so its printed
+    # output and artifacts match runs made before repeats existed.
+    suffix = f".r{repeat}" if repeats > 1 else ""
+    return f"{name}.{variant}{suffix}"
+
+
 def _gate_passed(*, results: list[TaskRun]) -> bool:
     if any(run.result.reason == SOLVER_ERROR for run in results):
         return False
@@ -159,6 +210,7 @@ def _make_manifest(
     *,
     environment: EvalEnvironment,
     results: list[TaskRun],
+    repeats: int,
     started_at: datetime.datetime,
     duration_seconds: float,
     exit_code: int,
@@ -179,6 +231,7 @@ def _make_manifest(
             {
                 "name": run.scenario.task.name,
                 "variant": run.variant.name,
+                "repeat": run.repeat,
                 "passed": run.result.passed,
                 "reason": run.result.reason,
                 "detail": run.result.detail,
@@ -205,6 +258,7 @@ def _make_manifest(
         "skill_sha256": environment.skill_sha256,
         "claude_code_version": environment.claude_code_version,
         "requested_model": MODEL,
+        "repeats": repeats,
         "gate_passed": gate_passed,
         "usage": usage.to_dict() if usage is not None else None,
         "tasks": task_results,

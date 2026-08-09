@@ -130,6 +130,8 @@ class TaskRun:
     trace_path: Path
     transcript_path: Path
     usage: TraceUsage | None
+    # 1-based index of this sample within its task variant's repeats.
+    repeat: int
 
 
 def build_prompt(*, task_prompt: str, variant: EvalVariant) -> str:

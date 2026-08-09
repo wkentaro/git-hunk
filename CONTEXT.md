@@ -79,10 +79,21 @@
   code. The git-hunk variant is the subject; bare Git is the comparison baseline, so its
   graded outcome is evidence and never fails the run.
 
-- **Agent demonstration**: one side-by-side scenario run by the same pinned agent
+- **Agent demonstration**: a side-by-side scenario run by the same pinned agent
   from the same Repository state with bare Git and with the git-hunk toolchain. It
   illustrates the difference between the resulting commit series but is not a
   statistical benchmark.
+
+- **Repeat**: one complete sample of a task variant. A run can take several from
+  the same prepared Repository state; they differ only in the model run.
+
+- **Spread**: what a summary cell reports across its Repeats, as the median with
+  the observed minimum-to-maximum range. It describes run-to-run variation, not
+  a confidence interval.
+
+- **Mixed cell**: a summary cell whose task variant passed some Repeats and
+  failed others. It is neither a pass nor a plain failure and reads as
+  `MIXED j/k`.
 
 ## Key decisions
 

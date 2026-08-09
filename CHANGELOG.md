@@ -10,6 +10,11 @@ and this project adheres to
 
 ### Added
 
+- `python -m eval --repeat N` samples every selected task variant N times from
+  the same prepared state. Each cell reports the median with its observed range
+  for tool calls, turns, and cost, a variant that failed only some repeats reads
+  `MIXED j/k` instead of a pass, and the run manifest keeps every individual
+  repeat. `--repeat 1` stays the default and is unchanged (#237).
 - Three hard agent eval tasks covering the cases where non-interactive bare Git
   has no per-hunk answer: splitting two intents inside one hunk, lifting a fix
   out of formatter churn that shares its hunk, and committing one member of a
