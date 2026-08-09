@@ -16,9 +16,10 @@ staged and unstaged state.
 Partial-line operations create new Hunks with new IDs. Each member of a Duplicate
 Hunk group receives a unique Conditional Hunk ID. A Conditional Hunk ID can change
 when its group changes. Every JSON Hunk reports `id_stability` as `"stable"` or
-`"conditional"`. Human output marks each Conditional Hunk ID. The bundled skills
-must get a new inventory after a partial-line operation or an operation on a
-Conditional Hunk ID.
+`"conditional"`. Human output marks each Conditional Hunk ID. After a
+partial-line operation or an operation on a Conditional Hunk ID, the bundled
+skills must either get a new inventory or address what remains by Repository
+path, which no ID change can invalidate.
 
 ## Relationship to ADR 0001
 

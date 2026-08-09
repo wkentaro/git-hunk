@@ -90,8 +90,10 @@ def _format_total(*, runs: list[TaskRun]) -> str:
 def _format_metrics(*, usages: list[TraceUsage]) -> str:
     if not usages:
         return _MISSING_METRICS
+    tool_calls = sum(usage.tool_calls for usage in usages)
     turns = sum(usage.turns for usage in usages)
-    return f"{turns}t · {_format_cost(value=sum(usage.cost_usd for usage in usages))}"
+    cost = _format_cost(value=sum(usage.cost_usd for usage in usages))
+    return f"{tool_calls}c · {turns}t · {cost}"
 
 
 def _format_cost(*, value: float) -> str:

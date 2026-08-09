@@ -23,6 +23,7 @@ def _make_usage(*, turns: int, cost_usd: float) -> TraceUsage:
         duration_seconds=22.67,
         api_duration_seconds=22.62,
         turns=turns,
+        tool_calls=turns - 1,
         cost_usd=cost_usd,
         tokens=TokenUsage(
             input_tokens=16,
@@ -85,16 +86,16 @@ def test_render_summary_pairs_variants_and_totals_reported_metrics() -> None:
     ]
 
     assert render_summary(runs=runs).splitlines() == [
-        "| Task                      | git-hunk              "
-        "| bare-git                            |",
-        "| ------------------------- | --------------------- "
-        "| ----------------------------------- |",
-        "| split_refactor_vs_feature | PASS · 12t · $0.21    "
-        "| FAIL order · 9t · $0.18             |",
-        "| separate_mixed_hunks      | PASS · 10t · $0.19    "
-        "| FAIL leftover-worktree · 8t · $0.15 |",
-        "| **total**                 | **2/2 · 22t · $0.40** "
-        "| **0/2 · 17t · $0.33**               |",
+        "| Task                      | git-hunk                    "
+        "| bare-git                                 |",
+        "| ------------------------- | --------------------------- "
+        "| ---------------------------------------- |",
+        "| split_refactor_vs_feature | PASS · 11c · 12t · $0.21    "
+        "| FAIL order · 8c · 9t · $0.18             |",
+        "| separate_mixed_hunks      | PASS · 9c · 10t · $0.19     "
+        "| FAIL leftover-worktree · 7c · 8t · $0.15 |",
+        "| **total**                 | **2/2 · 20c · 22t · $0.40** "
+        "| **0/2 · 15c · 17t · $0.33**              |",
         "",
         _CACHE_CAVEAT,
         "",
@@ -122,9 +123,12 @@ def test_render_summary_omits_total_row_for_a_single_task() -> None:
     lines = render_summary(runs=runs).splitlines()
 
     assert lines == [
-        "| Task                      | git-hunk           | bare-git          |",
-        "| ------------------------- | ------------------ | ----------------- |",
-        "| split_refactor_vs_feature | PASS · 12t · $0.21 | PASS · 9t · $0.18 |",
+        "| Task                      | git-hunk                 "
+        "| bare-git               |",
+        "| ------------------------- | ------------------------ "
+        "| ---------------------- |",
+        "| split_refactor_vs_feature | PASS · 11c · 12t · $0.21 "
+        "| PASS · 8c · 9t · $0.18 |",
         "",
         _CACHE_CAVEAT,
     ]
@@ -162,7 +166,7 @@ def test_render_summary_marks_missing_usage_and_counts_reported_runs() -> None:
     lines = render_summary(runs=runs).splitlines()
 
     assert "| FAIL solver-error · —" in lines[2]
-    assert "**1/2 · 8t · $0.15** (1/2 reported)" in lines[4]
+    assert "**1/2 · 7c · 8t · $0.15** (1/2 reported)" in lines[4]
 
 
 def test_render_summary_states_the_reported_count_when_no_run_reported() -> None:
@@ -199,8 +203,8 @@ def test_render_summary_never_reports_a_sub_cent_cost_as_zero() -> None:
 
     lines = render_summary(runs=runs).splitlines()
 
-    assert "PASS · 1t · <$0.01" in lines[2]
-    assert "PASS · 1t · $0.00" in lines[2]
+    assert "PASS · 0c · 1t · <$0.01" in lines[2]
+    assert "PASS · 0c · 1t · $0.00" in lines[2]
 
 
 def test_render_summary_lists_only_reasons_that_occurred_in_grader_order() -> None:

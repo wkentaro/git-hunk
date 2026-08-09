@@ -143,8 +143,11 @@ the runner prints a compact per-task summary. Usage durations come from Claude's
 task results; the run manifest separately records whole-run wall time.
 
 The runner copies normalized metrics, including the per-model breakdown, into
-the run manifest. The original fields remain in the trace. The grader never
-reads the trace. The manifest field for the run-level verdict is `gate_passed`,
+the run manifest. Claude reports no tool-call count, so the runner derives one
+by counting the distinct tool-use IDs in the trace's assistant events. That
+count is a reported metric, not score input. The original fields remain in the
+trace. The grader never reads the trace. The manifest field for the run-level
+verdict is `gate_passed`,
 not `passed`, because it reports the exit-code gate below rather than every
 graded outcome.
 
