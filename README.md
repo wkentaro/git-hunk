@@ -45,6 +45,14 @@ Verify it works:
 git-hunk --version
 ```
 
+> [!TIP]
+> To try the latest development version (the head of `main` on GitHub) before
+> it is published:
+>
+> ```bash
+> uv tool install git+https://github.com/wkentaro/git-hunk
+> ```
+
 ### For AI agents
 
 A usage guide ships inside the CLI, so agents (Claude Code, Codex, etc.) can
