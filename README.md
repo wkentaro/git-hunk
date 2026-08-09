@@ -168,11 +168,13 @@ expressions). Both are repeatable and OR'd, case-sensitive, and error if nothing
 matches. They are mutually exclusive with `-l` and with each other.
 
 Line selection accepts any subset of a pure addition, pure deletion, or
-one-for-one replacement. A grouped replacement with multiple deleted or added
-lines must be selected as a whole or not selected. Numeric range endpoints are
-checked against the Hunk before expansion, and no-newline state is preserved for
-each patch side. Submodule pointer changes and whole-file Hunks do not support
-line selection. Select the Hunk as a whole.
+one-for-one replacement. Selecting one side of a one-for-one replacement
+applies just that half, leaving a deletion-only or addition-only change. A
+grouped replacement with multiple deleted or added lines must be selected as a
+whole or not selected. Numeric range endpoints are checked against the Hunk
+before expansion, and no-newline state is preserved for each patch side.
+Submodule pointer changes and whole-file Hunks do not support line selection.
+Select the Hunk as a whole.
 
 A binary, mode-only, type, or empty tracked file change is a whole-file Hunk.
 Plain output labels empty tracked changes as `Empty file (added)` or
