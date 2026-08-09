@@ -1,6 +1,8 @@
+import ast
 import dataclasses
 import os
 import stat
+from collections.abc import Iterator
 from typing import Final
 from typing import Literal
 from typing import cast
@@ -13,6 +15,7 @@ from eval.task import FileState
 from eval.task import Task
 
 FailureReason = Literal[
+    "broken-commit",
     "partition",
     "order",
     "final-tree",
@@ -23,6 +26,9 @@ FailureReason = Literal[
 ]
 
 SOLVER_ERROR: Final[FailureReason] = "solver-error"
+
+# Symlinks are blobs too, and their target is not Python source.
+_REGULAR_FILE_MODES: Final = frozenset({b"100644", b"100755"})
 
 
 @dataclasses.dataclass(frozen=True)
@@ -38,6 +44,12 @@ class Result:
 
 def grade(repo: GitRepo, task: Task, base: str) -> Result:
     shas = repo.git("rev-list", "--reverse", f"{base}..HEAD").split()
+    # A commit nobody can run is worse than a wrongly grouped one, so this reads
+    # every commit's own tree before the partition is even considered.
+    broken = _find_broken_commit(repo=repo, shas=shas)
+    if broken is not None:
+        return broken
+
     if len(shas) != len(task.commits):
         return _fail(
             reason="partition",
@@ -113,6 +125,39 @@ def grade(repo: GitRepo, task: Task, base: str) -> Result:
         )
 
     return Result(passed=True)
+
+
+def _find_broken_commit(*, repo: GitRepo, shas: list[str]) -> Result | None:
+    for sha in shas:
+        for path, object_id in _iter_python_blobs(repo=repo, sha=sha):
+            content = repo.git_bytes("cat-file", "blob", object_id)
+            try:
+                ast.parse(content)
+            # ast.parse raises ValueError, not SyntaxError, for source it
+            # refuses to read at all, such as null bytes.
+            except (SyntaxError, ValueError) as error:
+                return _fail(
+                    reason="broken-commit",
+                    detail=f"commit {sha} leaves {path!r} unparsable: {error}",
+                )
+    return None
+
+
+def _iter_python_blobs(*, repo: GitRepo, sha: str) -> Iterator[tuple[str, str]]:
+    listing = repo.git_bytes("ls-tree", "-rz", "--full-tree", sha)
+    for record in listing.rstrip(b"\0").split(b"\0"):
+        if not record:
+            continue
+        metadata, raw_path = record.split(b"\t", maxsplit=1)
+        raw_mode, object_type, object_id = metadata.split(b" ")
+        path = os.fsdecode(raw_path)
+        if (
+            object_type != b"blob"
+            or raw_mode not in _REGULAR_FILE_MODES
+            or not path.endswith(".py")
+        ):
+            continue
+        yield path, object_id.decode()
 
 
 def _extract_changes(repo: GitRepo, sha: str) -> frozenset[ChangedLine]:

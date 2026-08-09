@@ -1,6 +1,7 @@
 from typing import Final
 
 from eval.scenario import Scenario
+from eval.tasks import commit_parseable_subset
 from eval.tasks import drop_debug_lines
 from eval.tasks import pick_duplicate_hunk
 from eval.tasks import protect_unrelated_work
@@ -17,4 +18,5 @@ SCENARIOS: Final[tuple[Scenario, ...]] = (
     split_single_hunk.SCENARIO,
     separate_formatter_noise.SCENARIO,
     pick_duplicate_hunk.SCENARIO,
+    commit_parseable_subset.SCENARIO,
 )
