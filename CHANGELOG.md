@@ -63,6 +63,9 @@ and this project adheres to
 
 ### Changed
 
+- Agent evals pin the solver's reasoning effort to `high` instead of relying
+  on the claude CLI's default, and report the requested effort in the startup
+  line and the run manifest (#257).
 - **Breaking:** Selecting exactly one side of a one-for-one replacement now
   exits 1 with an error naming the pair's line numbers, instead of exiting 0
   after silently staging, committing, or discarding the deletion-only or
