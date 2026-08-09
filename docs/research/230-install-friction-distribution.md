@@ -30,15 +30,15 @@ was modified; nothing was committed or pushed.
 
 ## Summary table
 
-| Channel | Status today | Works for the agent wedge? | Gap |
-|---|---|---|---|
-| PyPI (`pip install git-hunk`) | Published: 0.1.0, 0.2.0 (latest 2026-04-16) [repo/external] | Yes, but installs 0.2.0, which predates `git-hunk skills`, durable IDs, Repository paths, and JSON v2 [repo] | **Release staleness, not a missing channel.** README on `main` documents features the installable release does not have |
-| `uv tool install` / `uvx` | Works against the same PyPI release [external] | Best path: uv provisions Python itself, no preinstalled interpreter needed [external] | None beyond release staleness |
-| pipx | Works against the same PyPI release [external] | Yes, where pipx (needs Python >= 3.10 + pip) is present [external] | None beyond release staleness |
-| GitHub release artifacts | Tags v0.1.0/v0.2.0 + GitHub Releases exist; no attached binaries [repo] | n/a | wheel/sdist live only on PyPI |
-| Homebrew (core or tap) | No formula anywhere (formulae API 404) [external] | macOS humans only; agents rarely need it | No tap; core has real per-release maintenance costs |
-| Prebuilt single-file binary | None [repo] | Low value: every audited sandbox already has Python | Per-OS CI builds; `_skills.py` uses `Path(__file__)`, so zipapp breaks and PyInstaller needs data-file work [repo/external] |
-| Sandboxed agents (Claude Code, GH Actions, Codex cloud) | `pip install` from PyPI is possible in all three, with caveats below [external] | Yes | Network allowlisting (Claude Code sandbox, Codex agent phase) must include PyPI; docs don't say so anywhere in this repo |
+| Channel                                                 | Status today                                                                    | Works for the agent wedge?                                                                                   | Gap                                                                                                                         |
+| ------------------------------------------------------- | ------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------ | --------------------------------------------------------------------------------------------------------------------------- |
+| PyPI (`pip install git-hunk`)                           | Published: 0.1.0, 0.2.0 (latest 2026-04-16) [repo/external]                     | Yes, but installs 0.2.0, which predates `git-hunk skills`, durable IDs, Repository paths, and JSON v2 [repo] | **Release staleness, not a missing channel.** README on `main` documents features the installable release does not have     |
+| `uv tool install` / `uvx`                               | Works against the same PyPI release [external]                                  | Best path: uv provisions Python itself, no preinstalled interpreter needed [external]                        | None beyond release staleness                                                                                               |
+| pipx                                                    | Works against the same PyPI release [external]                                  | Yes, where pipx (needs Python >= 3.10 + pip) is present [external]                                           | None beyond release staleness                                                                                               |
+| GitHub release artifacts                                | Tags v0.1.0/v0.2.0 + GitHub Releases exist; no attached binaries [repo]         | n/a                                                                                                          | wheel/sdist live only on PyPI                                                                                               |
+| Homebrew (core or tap)                                  | No formula anywhere (formulae API 404) [external]                               | macOS humans only; agents rarely need it                                                                     | No tap; core has real per-release maintenance costs                                                                         |
+| Prebuilt single-file binary                             | None [repo]                                                                     | Low value: every audited sandbox already has Python                                                          | Per-OS CI builds; `_skills.py` uses `Path(__file__)`, so zipapp breaks and PyInstaller needs data-file work [repo/external] |
+| Sandboxed agents (Claude Code, GH Actions, Codex cloud) | `pip install` from PyPI is possible in all three, with caveats below [external] | Yes                                                                                                          | Network allowlisting (Claude Code sandbox, Codex agent phase) must include PyPI; docs don't say so anywhere in this repo    |
 
 ## Part 1 — Repo-observed current state
 
@@ -95,7 +95,7 @@ was modified; nothing was committed or pushed.
 
 ### Release pipeline: exists on main vs. planned
 
-Exists on `main` (`.github/workflows/publish.yml`) [repo]:
+Exists on `main` (`.github/workflows/publish.yml`) \[repo\]:
 
 - Trigger: push of a `v*` tag; runs the test workflow, then builds with
   `uv build` (reproducible via `SOURCE_DATE_EPOCH`), verifies the wheel
@@ -106,7 +106,7 @@ Exists on `main` (`.github/workflows/publish.yml`) [repo]:
 - This pipeline is what shipped 0.2.0: the PyPI upload timestamps match the
   `v0.2.0` tag date [repo/external].
 
-Planned, not yet demonstrated on `main` [repo, from issue text]:
+Planned, not yet demonstrated on `main` \[repo, from issue text\]:
 
 - #192 (open, `ready-for-agent`) proves the v0.3.0 candidate: package-content,
   metadata, install, and eval checks on one exact SHA, then freeze.
@@ -151,7 +151,7 @@ Planned, not yet demonstrated on `main` [repo, from issue text]:
 
 - No `git-hunk` formula exists in homebrew-core (formulae API returns 404)
   [external], and no tap was found.
-- homebrew-core requirements (docs.brew.sh/Acceptable-Formulae) [external]:
+- homebrew-core requirements (docs.brew.sh/Acceptable-Formulae) \[external\]:
   "Upstream must identify the packaged version as stable and provide an
   immutable tag or release"; "Software without a stable release is difficult
   to reproduce, bottle and support and is not eligible for homebrew/core";
@@ -289,8 +289,7 @@ not.
    that #192 already budgets; per-release cost thereafter is tag + approve.
 
 2. **Docs: sandbox and uv install guidance** (README section or a short
-   `docs/` page). State the three verified recipes: (a) `uv tool install
-   git-hunk` / `uvx git-hunk`, noting uv provisions Python itself, so this is
+   `docs/` page). State the three verified recipes: (a) `uv tool install git-hunk` / `uvx git-hunk`, noting uv provisions Python itself, so this is
    the fresh-environment default; (b) Claude Code sandbox/devcontainer: allow
    `pypi.org` and `files.pythonhosted.org`, or bake the install into the
    image; (c) Codex cloud: `pip install git-hunk` in the environment setup
