@@ -125,4 +125,6 @@
 - A Conditional Hunk ID can change when its Duplicate Hunk group changes.
 - A Duplicate Hunk group keeps its Conditional Hunk IDs when complete Hunks outside
   the group are committed.
+- Ordering a Duplicate Hunk group's members counts only the unstaged Hunks with the
+  same Repository path, so an unstaged change elsewhere cannot renumber the group.
 - Each Hunk ID in an inventory addresses exactly one Hunk.
