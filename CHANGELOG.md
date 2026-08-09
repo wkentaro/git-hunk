@@ -63,11 +63,16 @@ and this project adheres to
 
 ### Changed
 
-- The core skill, README, and domain glossary warn that a partial selection of
-  a one-for-one replacement covers only the lines it names, after an eval run
-  showed a one-sided match silently committing a deletion-only half. The
-  warning is documentation; a guard in the CLI itself is tracked by #225
-  (#226).
+- **Breaking:** Selecting exactly one side of a one-for-one replacement now
+  exits 1 with an error naming the pair's line numbers, instead of exiting 0
+  after silently staging, committing, or discarding the deletion-only or
+  addition-only half. `-l`, `--include-matching`, and `--exclude-matching` share
+  the guard, and nothing is mutated when it fires. `stage`, `unstage`,
+  `discard`, and `commit` take a new `--allow-one-sided` flag for the deliberate
+  lone-half case; it requires one of the selection options and does not relax
+  the wider grouped-replacement rule. An eval run first caught the silent half,
+  and the core skill, README, and domain glossary documented the hazard (#226)
+  before this release made it an error (#251).
 - Ask for a one-line-per-commit close in the core skill, so the agent's final
   report stops restating the diff it just committed (#220).
 - Condense the core skill to the rules an agent acts on, trimming the text it

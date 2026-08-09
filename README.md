@@ -167,14 +167,15 @@ instead of line number (literal substring by default, `--regex` for regular
 expressions). Both are repeatable and OR'd, case-sensitive, and error if nothing
 matches. They are mutually exclusive with `-l` and with each other.
 
-Line selection accepts any subset of a pure addition, pure deletion, or
-one-for-one replacement. Selecting one side of a one-for-one replacement
-applies just that half, leaving a deletion-only or addition-only change. A
-grouped replacement with multiple deleted or added lines must be selected as a
-whole or not selected. Numeric range endpoints are checked against the Hunk
-before expansion, and no-newline state is preserved for each patch side.
-Submodule pointer changes and whole-file Hunks do not support line selection.
-Select the Hunk as a whole.
+Line selection accepts any subset of a pure addition or pure deletion. Selecting
+one side of a one-for-one replacement is rejected, because it would leave a
+deletion-only or addition-only half; select both lines, match text they share,
+or pass `--allow-one-sided` when that half is what you want. A grouped
+replacement with multiple deleted or added lines must be selected as a whole or
+not selected, and `--allow-one-sided` does not relax that. Numeric range
+endpoints are checked against the Hunk before expansion, and no-newline state is
+preserved for each patch side. Submodule pointer changes and whole-file Hunks do
+not support line selection. Select the Hunk as a whole.
 
 A binary, mode-only, type, or empty tracked file change is a whole-file Hunk.
 Plain output labels empty tracked changes as `Empty file (added)` or
@@ -192,7 +193,8 @@ git-hunk commit d161935 --exclude-matching debug -m "..."  # commit all but matc
 
 `commit` aborts if anything is already staged, so the commit contains exactly
 the selected hunks. It accepts the same `-l`, `--include-matching`,
-`--exclude-matching`, and `--regex` selection options as `stage`.
+`--exclude-matching`, `--regex`, and `--allow-one-sided` selection options as
+`stage`.
 
 ### JSON output
 

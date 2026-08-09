@@ -31,10 +31,10 @@
   Hunk group. It can change when the group changes.
 
 - **Change group**: a maximal run of changed `-` and `+` lines with no context line
-  between them. Partial line selection is unrestricted for pure additions, pure
-  deletions, and one-for-one replacements; a one-sided selection of a one-for-one
-  replacement applies only that half. A larger grouped replacement is selected
-  as a whole or not selected.
+  between them. Partial line selection is unrestricted for pure additions and pure
+  deletions. A one-for-one replacement is selected whole, or one-sided only with
+  `--allow-one-sided`, which then applies just that half. A larger grouped
+  replacement is selected as a whole or not selected, whatever the flag says.
 
 - **Whole-file hunk**: a tracked Hunk with no `@@` text range: a binary change, a mode-only
   (chmod) change, a type change (e.g. file to symlink), or an empty tracked addition
