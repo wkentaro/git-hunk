@@ -12,6 +12,10 @@ and this project adheres to
 
 ### Added
 
+- README Eval section recording the qualifying run's per-task comparison —
+  the same agent, model, and eight tasks attempted with git-hunk's bundled
+  skills versus bare Git — with the checked-in harness linked for reproduction
+  (#255).
 - Agent eval task and grader criterion for a partial selection that would
   commit syntactically broken code: one hunk interleaves the change to keep
   with debug scaffolding, so every tempting whole-noise selection stages

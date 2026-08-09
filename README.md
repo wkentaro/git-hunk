@@ -24,6 +24,35 @@ Conditional IDs.
 `git-hunk` solves this by assigning each staged or unstaged Hunk a durable ID
 and exposing simple stage/unstage/discard commands.
 
+## Eval
+
+One agent (Claude Code 2.1.226, `claude-sonnet-5`, reasoning effort `high`)
+attempted the same eight tasks twice from identical repository state: organize a
+dirty working tree into correct, focused commits, once following git-hunk's
+bundled skills and once restricted to bare Git. The
+[checked-in eval harness](https://github.com/wkentaro/git-hunk/tree/5a05866e801d9d379fd79f3c117fb383b1056acf/eval)
+grades the exact resulting repository state — commit partition and order, final
+tree, index, and leftovers. This table records the qualifying run; `make eval`
+reruns the protocol and prints a table in the same format.
+
+| Task                                                                                                                                                    | git-hunk                    | bare Git                           |
+| ------------------------------------------------------------------------------------------------------------------------------------------------------- | --------------------------- | ---------------------------------- |
+| [split_refactor_vs_feature](https://github.com/wkentaro/git-hunk/blob/5a05866e801d9d379fd79f3c117fb383b1056acf/eval/tasks/split_refactor_vs_feature.py) | PASS · 3c · 4t · $0.04      | PASS · 2c · 3t · $0.02             |
+| [separate_mixed_hunks](https://github.com/wkentaro/git-hunk/blob/5a05866e801d9d379fd79f3c117fb383b1056acf/eval/tasks/separate_mixed_hunks.py)           | PASS · 4c · 5t · $0.05      | FAIL partition · 10c · 11t · $0.11 |
+| [drop_debug_lines](https://github.com/wkentaro/git-hunk/blob/5a05866e801d9d379fd79f3c117fb383b1056acf/eval/tasks/drop_debug_lines.py)                   | PASS · 3c · 4t · $0.05      | PASS · 8c · 9t · $0.07             |
+| [protect_unrelated_work](https://github.com/wkentaro/git-hunk/blob/5a05866e801d9d379fd79f3c117fb383b1056acf/eval/tasks/protect_unrelated_work.py)       | PASS · 3c · 4t · $0.04      | PASS · 4c · 5t · $0.02             |
+| [split_single_hunk](https://github.com/wkentaro/git-hunk/blob/5a05866e801d9d379fd79f3c117fb383b1056acf/eval/tasks/split_single_hunk.py)                 | PASS · 4c · 5t · $0.06      | PASS · 9c · 10t · $0.10            |
+| [separate_formatter_noise](https://github.com/wkentaro/git-hunk/blob/5a05866e801d9d379fd79f3c117fb383b1056acf/eval/tasks/separate_formatter_noise.py)   | PASS · 4c · 5t · $0.08      | PASS · 25c · 26t · $0.26           |
+| [pick_duplicate_hunk](https://github.com/wkentaro/git-hunk/blob/5a05866e801d9d379fd79f3c117fb383b1056acf/eval/tasks/pick_duplicate_hunk.py)             | PASS · 3c · 4t · $0.04      | PASS · 9c · 10t · $0.09            |
+| [commit_parseable_subset](https://github.com/wkentaro/git-hunk/blob/5a05866e801d9d379fd79f3c117fb383b1056acf/eval/tasks/commit_parseable_subset.py)     | PASS · 5c · 6t · $0.08      | PASS · 11c · 12t · $0.13           |
+| **total**                                                                                                                                               | **8/8 · 29c · 37t · $0.45** | **7/8 · 78c · 86t · $0.80**        |
+
+`c` = tool calls, `t` = turns; `partition` = wrong commit partition. Costs
+include a small amount of harness-internal `claude-haiku-4-5` spend. Bare Git
+ran second in each pair, so its cost partly reads the prompt cache the git-hunk
+run warmed; the gap in tool calls is the sturdier signal. Single sample per
+task, dated 2026-08-09 at commit `5a05866`.
+
 ## Install
 
 Requires Git 2.28 or later. `git-hunk` forces canonical diff paths with
