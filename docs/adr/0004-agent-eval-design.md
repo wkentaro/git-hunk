@@ -36,7 +36,8 @@ distribution metadata.
 
 ### Compare git-hunk with bare Git
 
-Every selected task runs twice, first with `git-hunk` and then with bare Git.
+Every selected task runs both variants, first with `git-hunk` and then with bare
+Git, once per repeat.
 Both variants use the same initial Repository state, model, task-specific
 prompt, and grader. The task is built once, then its complete repository is
 copied back to the same temporary checkout path before each variant so Git
@@ -166,13 +167,14 @@ not `passed`, because it reports the exit-code gate below rather than every
 graded outcome.
 
 The run ends with one Markdown table: a row per task, a column per variant, and
-a cell holding that variant's outcome, turn count, and cost. A multi-task run
-adds a total row whose per-variant count is how many of those distinct tasks
-that variant got right. Because each cell is one sample, that count is a
-demonstration tally and not a success rate over repeated trials. Grading is the
-headline, so a failed cell names the grader's failure reason verbatim and a
-legend below the table glosses only the reasons that occurred. That keeps one
-vocabulary across grader, manifest, transcript, and table. The legend is a
+a cell holding that variant's outcome, tool-call count, turn count, and cost. A
+multi-task run adds a total row whose per-variant count is how many of those
+distinct tasks that variant got right. That count is a demonstration tally and
+not a success rate over repeated trials, whether the run sampled each cell once
+or the several times the next section allows. Grading is the headline, so a
+failed cell names the grader's failure reason verbatim and a legend below the
+table glosses only the reasons that occurred. That keeps one vocabulary across
+grader, manifest, transcript, and table. The legend is a
 Markdown list: consecutive bare lines collapse into one rendered paragraph,
 which would make a pasted legend unreadable. A cell whose run reported no usage
 shows the outcome with its metrics collapsed, and the total then states how many
@@ -193,6 +195,65 @@ infrastructure rather than a graded result. Each selected task is an independent
 paired comparison; passing it does not depend on running any other task in the
 same invocation.
 
+### Sample each task variant a chosen number of times
+
+`--repeat N` samples every selected task variant N times. The task is built
+once, so every repeat starts from the same prepared initial state and differs
+only in the model run. The repeats of one task are consecutive and each keeps
+the fixed git-hunk-then-bare-Git order, so the prompt-cache caveat holds within
+every repeat. It also compounds across them: only the first repeat starts cold,
+so a cost range mixes cache warmup with run-to-run noise. The runner prints that
+second caveat next to the first whenever a run repeated anything. Each repeat
+writes its own trace and transcript, under an `.rN` artifact name when the run
+repeats at all.
+
+A repeated cell reports the median of its repeats with the observed range in
+brackets, for tool calls, turns, and cost alike. The range is dropped when the
+minimum and maximum render identically, so a cell widens only where there is
+noise a reader could see: two costs that both round to the same cent report one
+figure rather than a range from it to itself. The median is the central value
+because a handful of repeats is too few for a standard deviation to mean
+anything, and the minimum and maximum are the whole of what was observed rather
+than a summary of it. The range separator is ASCII, so the range adds no
+ambiguous-width character to a row. The total row sums the per-task medians and
+brackets the sum of the per-task minima and maxima: an envelope for the
+selection rather than an observed run.
+
+The pass column reports how many repeats passed. A variant that passed every
+repeat reads `PASS k/k`, and one that passed some or none reads `MIXED j/k` or
+`FAIL 0/k` followed by every failure reason that occurred, in grader order. The
+word itself changes rather than only the fraction beside it, so a variant that
+failed a repeat cannot be skimmed as a clean pass. The total row counts a task
+only when every one of its repeats passed, and states separately how many tasks
+were mixed. A cell whose repeats did not all report usage says so, so a median
+over the repeats that did report cannot pass for a median over all of them. The
+metrics cover every repeat, passed or failed, because they report what the runs
+cost rather than what a success costs; a mixed cell's median therefore mixes
+both outcomes and is read next to its `MIXED j/k`. A repeat that failed before
+grading counts in the fraction and names `solver-error` like any other reason,
+because the fraction reports repeats rather than grades; the gate still fails
+the whole run on it, so it never reads as a tolerable flake.
+
+The exit-code gate reads every repeat, so a mixed subject variant exits nonzero
+just as a failed one does. Repeating therefore makes the gate strictly harder to
+pass: it asks the subject to succeed every time rather than once. That is the
+intended reading, because the gate answers whether git-hunk works and a variant
+that fails one repeat in three has not shown that.
+
+The run manifest records every repeat as its own task entry carrying its repeat
+index, trace, transcript, graded outcome, and usage, next to a run-level repeat
+count. Nothing is collapsed into the summary, so a surprising cell can be traced
+back to the individual run that produced it.
+
+A repeated run reports how stable one pinned agent, model, and checkout are over
+consecutive attempts at the same prepared state. It still does not claim a
+success rate: the repeats share a session's warm cache rather than being
+independent, N is chosen for cost rather than for statistical power, no interval
+is computed, and no difference between the two variants is tested for
+significance. It remains an agent demonstration. `--repeat 1` is the default and
+produces the single-sample run this ADR described before this section, output
+and artifact names included.
+
 ### Keep this ADR Proposed in the integration ticket
 
 This integration adds the deterministic evaluation and the model-pinned runner.
@@ -210,8 +271,12 @@ gates pass.
 - A line-set collision cannot hide an incorrect final tree.
 - Staged, tracked, and untracked leftovers have separate diagnoses.
 - A bare-Git failure is a published result, not a red run.
-- The table reports one sample per cell. It is an agent demonstration, not a
+- The table reports one sample per cell by default and a median with its
+  observed range when a cell was repeated. It is an agent demonstration, not a
   statistical benchmark, so its totals count distinct tasks rather than repeated
   trials of one task.
+- Repeating separates run-to-run noise from a real workflow change in one
+  invocation, at N times the model usage of a single-sample run, and at a gate
+  that the subject variant must clear on every repeat.
 - A later change to the CLI, either skill, an eval task, the runner, or the
   Claude Code version makes an earlier model result stale.
