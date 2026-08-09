@@ -10,6 +10,12 @@ and this project adheres to
 
 ### Added
 
+- Agent eval task and grader criterion for a partial selection that would
+  commit syntactically broken code: one hunk interleaves the change to keep
+  with debug scaffolding, so every tempting whole-noise selection stages
+  Python that no longer parses, and the grader now fails any commit in the
+  graded range whose own tree holds an unparsable `.py` file, ahead of the
+  commit-partition check (#242).
 - `python -m eval --repeat N` samples every selected task variant N times from
   the same prepared state. Each cell reports the median with its observed range
   for tool calls, turns, and cost, a variant that failed only some repeats reads
