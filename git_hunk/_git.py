@@ -1,4 +1,6 @@
+import os
 import subprocess
+from collections.abc import Mapping
 from dataclasses import dataclass
 from typing import Final
 
@@ -16,25 +18,49 @@ class UnsupportedChange:
     destination: str
 
 
-def run_git(*args: str, worktree_root: str | None, input: str | None = None) -> str:
+def run_git_bytes(
+    *args: str,
+    worktree_root: str | None,
+    input: bytes | None = None,
+    env: Mapping[str, str] | None = None,
+) -> bytes:
     # worktree_root=None is for bootstrap only: the rev-parse that discovers
     # the root runs in the invocation directory. Every other call anchors there.
-    # Git output and input may contain bytes that are not valid UTF-8 (e.g. a
-    # Latin-1 source file). surrogateescape round-trips those bytes losslessly
-    # so a rebuilt patch hands git back exactly what it emitted.
+    # env holds overrides layered onto the ambient environment (e.g. the
+    # GIT_INDEX_FILE that points a command at a scratch index), never a
+    # replacement for it: git still needs PATH, HOME, and the caller's config.
     try:
         result = subprocess.run(
             ["git", "-c", "core.quotePath=false"] + list(args),
             capture_output=True,
             cwd=worktree_root,
-            input=input.encode(errors="surrogateescape") if input is not None else None,
+            input=input,
+            env={**os.environ, **env} if env is not None else None,
         )
     except FileNotFoundError as exc:
         raise RuntimeError("git executable not found on PATH") from exc
     if result.returncode != 0:
         stderr = result.stderr.decode(errors="surrogateescape").strip()
         raise GitCommandError(args, stderr)
-    return result.stdout.decode(errors="surrogateescape")
+    return result.stdout
+
+
+def run_git(
+    *args: str,
+    worktree_root: str | None,
+    input: str | None = None,
+    env: Mapping[str, str] | None = None,
+) -> str:
+    # Git output and input may contain bytes that are not valid UTF-8 (e.g. a
+    # Latin-1 source file). surrogateescape round-trips those bytes losslessly
+    # so a rebuilt patch hands git back exactly what it emitted.
+    stdout = run_git_bytes(
+        *args,
+        worktree_root=worktree_root,
+        input=input.encode(errors="surrogateescape") if input is not None else None,
+        env=env,
+    )
+    return stdout.decode(errors="surrogateescape")
 
 
 def get_diff(*, worktree_root: str, staged: bool) -> str:
@@ -135,6 +161,7 @@ def apply_patch(
     cached: bool,
     reverse: bool,
     dry_run: bool,
+    env: Mapping[str, str] | None = None,
 ) -> None:
     args = ["apply", "--whitespace=nowarn"]
     if cached:
@@ -143,7 +170,7 @@ def apply_patch(
         args.append("--reverse")
     if dry_run:
         args.append("--check")
-    run_git(*args, worktree_root=worktree_root, input=patch)
+    run_git(*args, worktree_root=worktree_root, input=patch, env=env)
 
 
 # These file-level commands hand git paths as pathspecs, so they ask for literal
