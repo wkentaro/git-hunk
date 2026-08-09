@@ -12,6 +12,7 @@ from typing import Final
 from typing import TextIO
 from typing import cast
 
+from eval.config import EFFORT
 from eval.config import MODEL
 from eval.grader import Result
 from eval.repo import GitRepo
@@ -149,6 +150,8 @@ def build_command_flags(*, variant: EvalVariant) -> list[str]:
     return [
         "--model",
         MODEL,
+        "--effort",
+        EFFORT,
         "--tools",
         "Bash",
         "--allowedTools",

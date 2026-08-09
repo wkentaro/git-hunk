@@ -230,7 +230,8 @@ def test_run_reports_context_usage_and_artifacts(
     assert exit_code == 0
     assert output.err == ""
     expected_lines = [
-        "eval: model=claude-sonnet-5 claude=2.1.226 commit=61e2c19 dirty=true",
+        "eval: model=claude-sonnet-5 effort=high "
+        "claude=2.1.226 commit=61e2c19 dirty=true",
     ]
     for index, scenario in enumerate(SCENARIOS[:scenario_count], start=1):
         progress = f" {index}/{scenario_count}" if scenario_count > 1 else ""
