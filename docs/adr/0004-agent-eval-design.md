@@ -306,6 +306,18 @@ package gates, first passed on the frozen candidate, were then re-run on
 [issue #192](https://github.com/wkentaro/git-hunk/issues/192), and this ADR is
 Accepted on that evidence.
 
+After the release-candidate branch merged, the publication bar decided in
+[#231](https://github.com/wkentaro/git-hunk/issues/231) (ADR 0005) required a
+published table to report three repeats per variant, so the qualifier was
+re-run with `--repeat 3` on 2026-08-09 at commit
+`328392eae2856b38426e4918ac258edabc313201` — the merged candidate tip, whose
+diff from `5a05866` is doc-only, leaving the CLI, both skills, the tasks, and
+the runner unchanged. One uninterrupted invocation passed all eight subject
+variants on all three repeats with exit code 0, after the deterministic and
+lint gates passed on the same clean checkout. Its summary is recorded the same
+way, and the README's published table reports that run without its cost
+column, per the publication bar.
+
 ## Consequences
 
 - Normal tests stay deterministic and model-free.
@@ -326,5 +338,8 @@ Accepted on that evidence.
 - Repeating separates run-to-run noise from a real workflow change in one
   invocation, at N times the model usage of a single-sample run, and at a gate
   that the subject variant must clear on every repeat.
-- A later change to the CLI, either skill, an eval task, the runner, or the
-  Claude Code version makes an earlier model result stale.
+- A later change to the CLI, either skill, an eval task, or the runner makes
+  an earlier model result stale. The Claude Code version is provenance, not a
+  freshness constraint: an automatic update after a completed study does not
+  retroactively invalidate it, and a new study records the version it ran
+  under.
