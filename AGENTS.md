@@ -6,6 +6,11 @@ User-facing changes go in `CHANGELOG.md` under `## [Unreleased]`
 ([Keep a Changelog](https://keepachangelog.com/) format), with the PR number.
 At release, that section is promoted to the new version.
 
+Documentation-only changes (README, CONTEXT.md, ADRs, `docs/`) get no
+changelog entry. The changelog records changes to the tool itself; docs that
+ship inside the package (`--help` text, bundled skills) still count as the
+tool.
+
 ## Tests
 
 The suite removes inherited `GIT_*` variables that can make Git use the outer

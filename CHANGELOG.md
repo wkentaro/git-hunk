@@ -7,16 +7,10 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 
 ## [Unreleased]
 
-### Changed
-
-- The README's published eval table reports five repeats per task variant instead of three, after three separate studies — two of them on byte-identical bundled skills — reported medians four tool calls apart, and one of those differences was briefly read as a real effect. A qualifying run now costs five repeats and must pass every one of them (#267).
-- The eval's invalidation rule tracks what the agent is given and how its result is judged — the composed prompt, the tools offered, the repository state prepared, the bytes read back, and the grader — rather than which file a change lives in, so harness plumbing that cannot alter any of those records a note instead of forcing a re-qualification (#267).
-
 ## [0.3.0] - 2026-08-10
 
 ### Added
 
-- README Eval section recording the qualifying run's per-task comparison — the same agent, model, and eight tasks attempted three times per variant with git-hunk's bundled skills versus bare Git, each cell reporting the median with its observed range and the cost column omitted because raw costs are not order-neutral (#224) — with the checked-in harness linked for reproduction (#255, #259, #263).
 - Agent eval task and grader criterion for a partial selection that would commit syntactically broken code: one hunk interleaves the change to keep with debug scaffolding, so every tempting whole-noise selection stages Python that no longer parses, and the grader now fails any commit in the graded range whose own tree holds an unparsable `.py` file, ahead of the commit-partition check (#242).
 - `python -m eval --repeat N` samples every selected task variant N times from the same prepared state. Each cell reports the median with its observed range for tool calls, turns, and cost, a variant that failed only some repeats reads `MIXED j/k` instead of a pass, and the run manifest keeps every individual repeat. `--repeat 1` stays the default and is unchanged (#237).
 - Three hard agent eval tasks covering the cases where non-interactive bare Git has no per-hunk answer: splitting two intents inside one hunk, lifting a fix out of formatter churn that shares its hunk, and committing one member of a Duplicate Hunk group while its identical twin stays in the worktree (#226).
