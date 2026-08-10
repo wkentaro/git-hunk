@@ -242,5 +242,34 @@ and this project adheres to
   working across multiple hunks when they share the same single-hunk
   constraint as `-l` (#155).
 
+## [0.2.0] - 2026-04-16
+
+### Changed
+
+- `show` no longer requires Hunk IDs. Running it bare prints every hunk, staged
+  and unstaged, the same set `list` reports. The `--all` flag is removed;
+  passing specific IDs still works (#4).
+
+### Fixed
+
+- Windows: git subprocess calls use binary mode, so CRLF translation no longer
+  mangles diffs. CI covers macOS and Windows alongside Linux (#2).
+
+## [0.1.0] - 2026-04-04
+
+### Added
+
+- Initial release. `git add -p` is interactive, so scripts and AI agents cannot
+  drive it; git-hunk parses `git diff` into individual Hunks and stages,
+  unstages, or discards them by ID from the command line.
+- Content-based Hunk IDs (SHA-256 prefix) that do not shift as other hunks are
+  staged.
+- `list`, `show`, `stage`, `unstage`, and `discard` commands.
+- Line-level selection with `-l 3,5-7`.
+- JSON output via `--json`.
+- Binary and untracked file handling.
+
+[0.1.0]: https://github.com/wkentaro/git-hunk/releases/tag/v0.1.0
+[0.2.0]: https://github.com/wkentaro/git-hunk/compare/v0.1.0...v0.2.0
 [0.3.0]: https://github.com/wkentaro/git-hunk/compare/v0.2.0...v0.3.0
 [unreleased]: https://github.com/wkentaro/git-hunk/compare/v0.3.0...HEAD
