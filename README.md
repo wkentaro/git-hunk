@@ -24,7 +24,15 @@ Conditional IDs.
 `git-hunk` solves this by assigning each staged or unstaged Hunk a durable ID
 and exposing simple stage/unstage/discard commands.
 
-## Eval
+## Comparison
+
+|                  | Interactive | Programmatic | Hunk IDs | Line-level control | JSON output |
+| ---------------- | ----------- | ------------ | -------- | ------------------ | ----------- |
+| `git add -p`     | Yes         | No           | No       | Yes                | No          |
+| `git add <file>` | No          | Yes          | No       | No                 | No          |
+| **`git-hunk`**   | **No**      | **Yes**      | **Yes**  | **Yes**            | **Yes**     |
+
+### Eval
 
 One agent (Claude Code 2.1.226, `claude-sonnet-5`, reasoning effort `high`)
 attempted the same eight tasks from identical repository state, five times per
@@ -310,14 +318,6 @@ have one code path and strict JSON parsers never see a lone surrogate.
 Adding a new field is backward-compatible and does not change `schema_version`;
 renaming, removing, or changing the type of an existing field bumps it. (Before
 `schema_version` existed, `list --json` returned a bare array.)
-
-## Comparison
-
-|                  | Interactive | Programmatic | Hunk IDs | Line-level control | JSON output |
-| ---------------- | ----------- | ------------ | -------- | ------------------ | ----------- |
-| `git add -p`     | Yes         | No           | No       | Yes                | No          |
-| `git add <file>` | No          | Yes          | No       | No                 | No          |
-| **`git-hunk`**   | **No**      | **Yes**      | **Yes**  | **Yes**            | **Yes**     |
 
 ## How it works
 
