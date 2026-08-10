@@ -13,6 +13,9 @@ Conditional IDs.
 
 <img src="assets/teaser.png" alt="git-hunk teaser" width="800">
 
+[Comparison](#comparison) • [Install](#install) • [For AI agents](#for-ai-agents) •
+[Quick start](#quick-start) • [Usage](#usage) • [JSON output](#json-output)
+
 ## Why?
 
 `git add -p` requires interactive input. That makes it unusable for:
