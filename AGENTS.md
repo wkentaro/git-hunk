@@ -6,10 +6,16 @@ User-facing changes go in `CHANGELOG.md` under `## [Unreleased]`
 ([Keep a Changelog](https://keepachangelog.com/) format), with the PR number.
 At release, that section is promoted to the new version.
 
-Documentation-only changes (README, CONTEXT.md, ADRs, `docs/`) get no
-changelog entry. The changelog records changes to the tool itself; docs that
-ship inside the package (`--help` text, bundled skills) still count as the
-tool.
+The changelog records changes to the tool as installed. If a change cannot
+reach a user through the published package, it gets no entry. That excludes
+documentation-only changes (README, CONTEXT.md, ADRs, `docs/`) and
+repository-only tooling (`tests/`, `eval/`, CI config, `Makefile` targets).
+Docs that ship inside the package (`--help` text, bundled skills) still count
+as the tool.
+
+An excluded change can still appear inside an entry as context for a
+user-facing one — an eval run that uncovered a bug belongs in the entry for
+the fix, not in an entry of its own.
 
 ## Tests
 
