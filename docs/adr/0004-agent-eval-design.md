@@ -338,8 +338,14 @@ column, per the publication bar.
 - Repeating separates run-to-run noise from a real workflow change in one
   invocation, at N times the model usage of a single-sample run, and at a gate
   that the subject variant must clear on every repeat.
-- A later change to the CLI, either skill, an eval task, or the runner makes
-  an earlier model result stale. The Claude Code version is provenance, not a
-  freshness constraint: an automatic update after a completed study does not
-  retroactively invalidate it, and a new study records the version it ran
-  under.
+- A later change to the CLI, either skill, an eval task, or the grader makes an
+  earlier model result stale, because each of those changes what the agent is
+  given or how its result is judged. Harness plumbing that cannot change either
+  — the composed prompt, the tools offered, the repository state prepared, or
+  the bytes the agent reads back — does not invalidate a completed study; the
+  change records a note saying why instead. A change that alters any of those
+  four does invalidate, whatever file it lives in. When it is unclear, re-run:
+  the rule exists to keep published numbers honest, not to avoid a run.
+- The Claude Code version is provenance, not a freshness constraint: an
+  automatic update after a completed study does not retroactively invalidate
+  it, and a new study records the version it ran under.
