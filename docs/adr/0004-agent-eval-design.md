@@ -315,8 +315,9 @@ diff from `5a05866` is doc-only, leaving the CLI, both skills, the tasks, and
 the runner unchanged. One uninterrupted invocation passed all eight subject
 variants on all three repeats with exit code 0, after the deterministic and
 lint gates passed on the same clean checkout. Its summary is recorded the same
-way, and the README's published table reports that run without its cost
-column, per the publication bar.
+way. That run's table was the README's published table for v0.3.0; ADR 0005
+later raised the bar to five repeats, and the README now reports a `--repeat 5`
+study in its place.
 
 ## Consequences
 
