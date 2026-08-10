@@ -11,14 +11,6 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 
 ### Added
 
-- Agent eval task and grader criterion for a partial selection that would commit syntactically broken code: one hunk interleaves the change to keep with debug scaffolding, so every tempting whole-noise selection stages Python that no longer parses, and the grader now fails any commit in the graded range whose own tree holds an unparsable `.py` file, ahead of the commit-partition check (#242).
-- `python -m eval --repeat N` samples every selected task variant N times from the same prepared state. Each cell reports the median with its observed range for tool calls, turns, and cost, a variant that failed only some repeats reads `MIXED j/k` instead of a pass, and the run manifest keeps every individual repeat. `--repeat 1` stays the default and is unchanged (#237).
-- Three hard agent eval tasks covering the cases where non-interactive bare Git has no per-hunk answer: splitting two intents inside one hunk, lifting a fix out of formatter churn that shares its hunk, and committing one member of a Duplicate Hunk group while its identical twin stays in the worktree (#226).
-- Agent evals end with a Markdown summary table comparing git-hunk and bare Git per task, with outcome, turns, and cost per cell, a legend for the failure reasons that occurred, and the prompt-cache caveat that makes the cost column readable. The exit code now reports the subject under test (the git-hunk variant) and solver errors, so a graded bare-Git failure is evidence instead of a red run (#221).
-- Agent eval summary tables, usage lines, and run manifests count the tool calls each task variant made, so the workflow comparison reports the metric it is about (#220).
-- Agent evals run every task with git-hunk and bare Git from equivalent initial state for direct workflow and cost comparison, and `--help` lists the available tasks (#216).
-- Agent evals stream composed prompts and Bash calls, report normalized token and cost usage, and write human-readable transcripts (#215).
-- A repository-only agent eval (`python -m eval`): synthetic logical-commit tasks solved by a pinned model and graded from the exact resulting Repository state, with deterministic golden and adversarial coverage in the normal test suite and nothing added to the installed package (#203), plus a `make eval` entry point that forwards optional `EVAL_ARGS` to the evaluator (#207).
 - `skills` subcommand (`git-hunk skills list|get|path`) serving the bundled, version-matched core usage guide for AI agents (#8).
 - Examples section in `--help` for every subcommand (#7).
 - Accept a file path as shorthand for all hunks in a file, so `git-hunk stage src/foo.py` stages every hunk in that file (#43).
@@ -32,7 +24,6 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 
 ### Changed
 
-- Agent evals pin the solver's reasoning effort to `high` instead of relying on the claude CLI's default, and report the requested effort in the startup line and the run manifest (#257).
 - **Breaking:** Selecting exactly one side of a one-for-one replacement now exits 1 with an error naming the pair's line numbers, instead of exiting 0 after silently staging, committing, or discarding the deletion-only or addition-only half. `-l`, `--include-matching`, and `--exclude-matching` share the guard, and nothing is mutated when it fires. `stage`, `unstage`, `discard`, and `commit` take a new `--allow-one-sided` flag for the deliberate lone-half case; it requires one of the selection options and does not relax the wider grouped-replacement rule. An eval run first caught the silent half, and the core skill, README, and domain glossary documented the hazard (#226) before this release made it an error (#251).
 - Ask for a one-line-per-commit close in the core skill, so the agent's final report stops restating the diff it just committed (#220).
 - Condense the core skill to the rules an agent acts on, trimming the text it loads before its first inspection call (#220).
