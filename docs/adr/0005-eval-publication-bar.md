@@ -26,14 +26,25 @@ for a release record versus an adoption claim: the README table, the frozen
 PyPI page it becomes, and any announcement or post cite the same numbers held
 to the same bar.
 
-### Three repeats per task variant
+### Five repeats per task variant
 
-A published table reports `--repeat 3` output in ADR 0004's repeated-run
+A published table reports `--repeat 5` output in ADR 0004's repeated-run
 format: median with the observed range in brackets, a pass column counting
 passing repeats, and qualification only when the subject variant passes every
-repeat. Three repeats show run-to-run stability without claiming statistical
+repeat. Five repeats show run-to-run stability without claiming statistical
 power; ADR 0004's demonstration framing is unchanged, and no success rate is
 claimed at any repeat count.
+
+The bar was three until three separate studies showed three was not enough to
+read. Two of them ran byte-identical bundled skills and still reported medians
+four tool calls apart, and the study between them was briefly read as evidence
+that a documentation sentence had cost those four calls — a verdict the next
+run overturned
+([#240](https://github.com/wkentaro/git-hunk/issues/240#issuecomment-5232789862)).
+A median over five samples moves less between studies, which is what a
+published number needs. The observed range will widen as more samples are
+drawn; that is the measurement becoming more honest, not the tool becoming
+less stable.
 
 ### Cost is order-neutral or absent
 
@@ -65,8 +76,9 @@ requires.
 
 - v0.3.0 ships the `## Eval` section rewritten from an N=3 re-qualification;
   the single-sample table it replaces did not meet the bar.
-- A qualifying run costs three times a single-sample run, and its gate is
-  strictly harder: the subject variant must pass every repeat.
+- A qualifying run costs five times a single-sample run — roughly 50 minutes and
+  $6 at the rates observed for v0.3.0 — and its gate is strictly harder: the
+  subject variant must pass all five repeats, so forty subject runs must succeed.
 - The cost column stays out of published tables;
   [#224](https://github.com/wkentaro/git-hunk/issues/224) is closed as not
   planned, and making cost order-neutral is the path to bringing it back.

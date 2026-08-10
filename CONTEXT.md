@@ -114,7 +114,7 @@
   compares git-hunk with bare Git from the same prepared state, and pins the
   model.
 - **ADR 0005** — eval publication bar. One bar for every publicly visible eval
-  number: three repeats reported as median with observed range, cost omitted,
+  number: five repeats reported as median with observed range, cost omitted,
   the pinned model named, and the README as the published table's home.
 
 ## Invariants
