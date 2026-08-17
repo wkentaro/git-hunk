@@ -7,6 +7,21 @@ from git_hunk._hunk import parse_hunk_range
 from ..conftest import GitHunkCLI
 
 
+def _commit_prefixed_duplicate_blocks(cli: GitHunkCLI) -> list[str]:
+    # Room ahead of the first block, which the shared duplicate-group fixture
+    # does not leave: its file starts at the block, so a change at the top falls
+    # inside the first member's context and merges into it, dissolving the
+    # group. Callers make their own edit on top of the returned lines.
+    prefix = [f"prefix {number}" for number in range(10)]
+    block = ["A", "B", "C", "target", "D", "E", "F"]
+    separator = [f"separator {number}" for number in range(30)]
+    original = prefix + block + separator + block
+    cli.repo.write_file("f.txt", "\n".join(original) + "\n")
+    cli.repo.git("add", "f.txt")
+    cli.repo.git("commit", "-m", "init")
+    return original
+
+
 def test_duplicate_hunks_have_unique_conditional_ids(
     duplicate_hunks: GitHunkCLI,
 ) -> None:
@@ -150,13 +165,7 @@ def test_staged_duplicate_member_ignores_unstaged_hunks_in_other_files(
 def test_duplicate_member_keeps_id_across_different_diff_coordinates(
     cli: GitHunkCLI, ordinal: int
 ) -> None:
-    prefix = [f"prefix {number}" for number in range(10)]
-    block = ["A", "B", "C", "target", "D", "E", "F"]
-    separator = [f"separator {number}" for number in range(30)]
-    original = prefix + block + separator + block
-    cli.repo.write_file("f.txt", "\n".join(original) + "\n")
-    cli.repo.git("add", "f.txt")
-    cli.repo.git("commit", "-m", "init")
+    original = _commit_prefixed_duplicate_blocks(cli)
     insertion = [f"inserted {number}" for number in range(100)]
     changed = insertion + [line.replace("target", "TARGET") for line in original]
     cli.repo.write_file("f.txt", "\n".join(changed) + "\n")
