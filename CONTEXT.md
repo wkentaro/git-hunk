@@ -138,4 +138,6 @@
   the group are committed.
 - Ordering a Duplicate Hunk group's members counts only the unstaged Hunks with the
   same Repository path, so an unstaged change elsewhere cannot renumber the group.
+- Ordering a Duplicate Hunk group's members places each unstaged Hunk by its pre-image
+  start, because a staged member's own position is still in index coordinates.
 - Each Hunk ID in an inventory addresses exactly one Hunk.

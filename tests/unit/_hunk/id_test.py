@@ -3,6 +3,7 @@ import re
 from git_hunk._hunk import Hunk
 from git_hunk._hunk import _compute_text_hunk_id
 from git_hunk._hunk import _compute_whole_file_hunk_id
+from git_hunk._hunk import _hash_id
 from git_hunk._hunk import assign_hunk_ids
 from git_hunk._hunk import count_changes
 
@@ -118,6 +119,26 @@ def test_conditional_ids_follow_duplicate_order_across_status_changes() -> None:
     )
 
     assert [hunk.id for hunk in after] == [hunk.id for hunk in before]
+
+
+def test_staged_position_reads_a_peer_start_from_its_pre_image_side() -> None:
+    # A staged member's own position is still in index coordinates, so the walk must
+    # place each unstaged peer by its pre-image start. The last peer straddles the
+    # staged member's start (pre-image 20 < 25 < post-image 30), so only the correct
+    # reading counts its +5: the staged member lands at 25 + 10 + 5 = 40, behind its
+    # group peer at 37, instead of at 35, ahead of it.
+    group_id = "a" * 64
+    staged = _make_hunk(hunk_id=group_id, header="@@ -25 +25 @@", status="staged")
+    peer_in_group = _make_hunk(hunk_id=group_id, header="@@ -22 +37 @@")
+    earlier_peer = _make_hunk(hunk_id="b" * 64, header="@@ -5 +5,11 @@")
+    straddling_peer = _make_hunk(hunk_id="c" * 64, header="@@ -20 +30,6 @@")
+
+    result = assign_hunk_ids([staged, peer_in_group, earlier_peer, straddling_peer])
+
+    # Ordinals spelled out, not reread from a second assignment run: an oracle that
+    # shares the sort cancels out the ordering under test.
+    assert result[0].id == _hash_id("conditional", group_id, "1")
+    assert result[1].id == _hash_id("conditional", group_id, "0")
 
 
 def test_single_group_member_uses_stable_base_id() -> None:
