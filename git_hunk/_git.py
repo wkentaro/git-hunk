@@ -44,8 +44,11 @@ def get_diff(*, worktree_root: str, staged: bool) -> str:
     # --src-prefix/--dst-prefix override diff.noprefix and diff.mnemonicPrefix
     # the same way --default-prefix does, but predate it, so the supported git
     # floor stays at --no-relative's 2.28 instead of --default-prefix's 2.41.
+    # --no-color: a color.diff or color.ui set to always emits ANSI escapes
+    # even into a pipe, and the parse would find nothing.
     args = [
         "diff",
+        "--no-color",
         "--no-relative",
         "--src-prefix=a/",
         "--dst-prefix=b/",

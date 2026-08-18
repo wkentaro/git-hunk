@@ -177,11 +177,14 @@ def get_target(
 
 
 def set_hostile_diff_config(cli: GitHunkCLI) -> None:
-    # Each of these shifts git's own diff path basis. git-hunk must ignore all
-    # three and still report stable Repository paths and Hunk IDs.
+    # The diff.* keys shift git's own diff path basis; the color.* ones make it
+    # colorize even into a pipe. git-hunk must ignore every one of them and
+    # still report stable Repository paths and Hunk IDs.
     cli.repo.git("config", "diff.relative", "true")
     cli.repo.git("config", "diff.noprefix", "true")
     cli.repo.git("config", "diff.mnemonicprefix", "true")
+    cli.repo.git("config", "color.ui", "always")
+    cli.repo.git("config", "color.diff", "always")
 
 
 @pytest.fixture

@@ -7,6 +7,10 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 
 ## [Unreleased]
 
+### Fixed
+
+- Read the diff with color disabled, so `color.ui` or `color.diff` set to `always` no longer hides every tracked hunk — `list` reported `No hunks.` on a dirty tree, and mutation commands could not resolve their targets (#275).
+
 ## [0.3.0] - 2026-08-10
 
 ### Added
