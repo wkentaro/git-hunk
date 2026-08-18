@@ -7,6 +7,21 @@ from git_hunk._hunk import parse_hunk_range
 from ..conftest import GitHunkCLI
 
 
+def _commit_prefixed_duplicate_blocks(cli: GitHunkCLI) -> list[str]:
+    # Room ahead of the first block, which the shared duplicate-group fixture
+    # does not leave: its file starts at the block, so a change at the top falls
+    # inside the first member's context and merges into it, dissolving the
+    # group. Callers make their own edit on top of the returned lines.
+    prefix = [f"prefix {number}" for number in range(10)]
+    block = ["A", "B", "C", "target", "D", "E", "F"]
+    separator = [f"separator {number}" for number in range(30)]
+    original = prefix + block + separator + block
+    cli.repo.write_file("f.txt", "\n".join(original) + "\n")
+    cli.repo.git("add", "f.txt")
+    cli.repo.git("commit", "-m", "init")
+    return original
+
+
 def test_duplicate_hunks_have_unique_conditional_ids(
     duplicate_hunks: GitHunkCLI,
 ) -> None:
@@ -146,17 +161,48 @@ def test_staged_duplicate_member_ignores_unstaged_hunks_in_other_files(
     ] == [staged_id, unstaged_id]
 
 
+def test_staged_duplicate_member_ignores_staged_hunks_ahead_of_it(
+    cli: GitHunkCLI,
+) -> None:
+    # Ordering a Duplicate Hunk group's members adds the net line delta of the
+    # unstaged Hunks ahead of a staged member. A staged Hunk's delta is already
+    # in the staged member's own coordinates, so counting it again would drag
+    # the member past its twin and renumber the group.
+    original = _commit_prefixed_duplicate_blocks(cli)
+    # 100 lines exceed the two members' separation, so a double-counted delta
+    # actually reorders them instead of leaving the ordinals intact.
+    insertion = [f"inserted {number}" for number in range(100)]
+    edited = [line.replace("target", "TARGET") for line in original]
+    cli.repo.write_file("f.txt", "\n".join(insertion + edited) + "\n")
+
+    hunks = cli.run_list_json("list", "--json")
+    # The insertion has to stay a Hunk of its own ahead of both members: merged
+    # into the first member, the group would never form.
+    assert [hunk["id_stability"] for hunk in hunks] == [
+        "stable",
+        "conditional",
+        "conditional",
+    ]
+    # --json reports canonical IDs, so no prefix length can hide a renumbering.
+    insertion_id, first_id, second_id = (hunk["id"] for hunk in hunks)
+
+    # Staging the insertion together with the earlier member is the point: it
+    # puts a staged delta ahead of the member for a peer walk that stopped
+    # filtering on unstaged to double-count.
+    cli.run_ok("stage", insertion_id, first_id)
+
+    staged = cli.run_list_json("list", "--staged", "--json")
+    unstaged = cli.run_list_json("list", "--unstaged", "--json")
+    # Lists, not sets: the two members swapping IDs is a renumbering too.
+    assert [hunk["id"] for hunk in staged] == [insertion_id, first_id]
+    assert [hunk["id"] for hunk in unstaged] == [second_id]
+
+
 @pytest.mark.parametrize("ordinal", [0, 1])
 def test_duplicate_member_keeps_id_across_different_diff_coordinates(
     cli: GitHunkCLI, ordinal: int
 ) -> None:
-    prefix = [f"prefix {number}" for number in range(10)]
-    block = ["A", "B", "C", "target", "D", "E", "F"]
-    separator = [f"separator {number}" for number in range(30)]
-    original = prefix + block + separator + block
-    cli.repo.write_file("f.txt", "\n".join(original) + "\n")
-    cli.repo.git("add", "f.txt")
-    cli.repo.git("commit", "-m", "init")
+    original = _commit_prefixed_duplicate_blocks(cli)
     insertion = [f"inserted {number}" for number in range(100)]
     changed = insertion + [line.replace("target", "TARGET") for line in original]
     cli.repo.write_file("f.txt", "\n".join(changed) + "\n")
