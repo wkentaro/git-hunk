@@ -90,4 +90,4 @@ force-single-line = true
 "__init__.py" = ["F401"]
 
 [tool.gruff.lint]
-select = ["GR001", "GR002"]
+select = ["GR001", "GR002", "GR003"]

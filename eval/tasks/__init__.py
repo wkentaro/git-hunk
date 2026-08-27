@@ -10,6 +10,8 @@ from eval.tasks import separate_mixed_hunks
 from eval.tasks import split_refactor_vs_feature
 from eval.tasks import split_single_hunk
 
+__all__ = ["SCENARIOS"]
+
 SCENARIOS: Final[tuple[Scenario, ...]] = (
     split_refactor_vs_feature.SCENARIO,
     separate_mixed_hunks.SCENARIO,
