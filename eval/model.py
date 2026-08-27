@@ -243,6 +243,7 @@ def run_claude(
         started_at=started_at,
         duration_seconds=duration_seconds,
         exit_code=result.returncode,
+        incomplete_output=None,
     )
     if result.returncode != 0:
         raise RuntimeError(
@@ -541,7 +542,7 @@ def _write_trace(
     started_at: datetime.datetime,
     duration_seconds: float,
     exit_code: int,
-    incomplete_output: str | None = None,
+    incomplete_output: str | None,
 ) -> None:
     metadata = {
         "type": "eval_metadata",

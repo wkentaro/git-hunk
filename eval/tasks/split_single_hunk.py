@@ -35,7 +35,7 @@ def _build(repo: GitRepo) -> None:  # noqa: GR001 -- eval callback
     repo.write_file(name="total.py", content=_FINAL)
 
 
-def _commit_fix(*, repo: GitRepo, match: str, allow_one_sided: bool = False) -> None:
+def _commit_fix(*, repo: GitRepo, match: str, allow_one_sided: bool) -> None:
     (hunk,) = list_hunks(repo, "total.py")
     run_git_hunk(
         repo,
@@ -50,7 +50,7 @@ def _commit_fix(*, repo: GitRepo, match: str, allow_one_sided: bool = False) -> 
 
 
 def _golden(repo: GitRepo) -> None:  # noqa: GR001 -- eval callback
-    _commit_fix(repo=repo, match="item.price")
+    _commit_fix(repo=repo, match="item.price", allow_one_sided=False)
     run_git_hunk(repo, "commit", "total.py", "-m", "Round the returned total")
 
 

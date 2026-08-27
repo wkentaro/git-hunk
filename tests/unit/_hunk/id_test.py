@@ -11,8 +11,8 @@ from git_hunk._hunk import count_changes
 def _make_hunk(
     *,
     hunk_id: str,
-    header: str = "@@ -1 +1 @@",
-    status: str = "unstaged",
+    header: str,
+    status: str,
 ) -> Hunk:
     return Hunk(
         id="",
@@ -95,8 +95,8 @@ def test_whole_file_id_includes_modes_and_object_ids() -> None:
 def test_duplicate_group_gets_unique_conditional_ids() -> None:
     base_id = "a" * 64
     hunks = [
-        _make_hunk(hunk_id=base_id),
-        _make_hunk(hunk_id=base_id, header="@@ -20 +20 @@"),
+        _make_hunk(hunk_id=base_id, header="@@ -1 +1 @@", status="unstaged"),
+        _make_hunk(hunk_id=base_id, header="@@ -20 +20 @@", status="unstaged"),
     ]
 
     result = assign_hunk_ids(hunks)
@@ -109,8 +109,8 @@ def test_conditional_ids_follow_duplicate_order_across_status_changes() -> None:
     base_id = "a" * 64
     before = assign_hunk_ids(
         [
-            _make_hunk(hunk_id=base_id),
-            _make_hunk(hunk_id=base_id, header="@@ -20 +20 @@"),
+            _make_hunk(hunk_id=base_id, header="@@ -1 +1 @@", status="unstaged"),
+            _make_hunk(hunk_id=base_id, header="@@ -20 +20 @@", status="unstaged"),
         ]
     )
     after = assign_hunk_ids(
@@ -120,7 +120,7 @@ def test_conditional_ids_follow_duplicate_order_across_status_changes() -> None:
                 header="@@ -1 +1 @@",
                 status="staged",
             ),
-            _make_hunk(hunk_id=base_id, header="@@ -21 +21 @@"),
+            _make_hunk(hunk_id=base_id, header="@@ -21 +21 @@", status="unstaged"),
         ]
     )
 
@@ -135,9 +135,15 @@ def test_staged_position_reads_a_peer_start_from_its_pre_image_side() -> None:
     # group peer at 37, instead of at 35, ahead of it.
     group_id = "a" * 64
     staged = _make_hunk(hunk_id=group_id, header="@@ -25 +25 @@", status="staged")
-    peer_in_group = _make_hunk(hunk_id=group_id, header="@@ -22 +37 @@")
-    earlier_peer = _make_hunk(hunk_id="b" * 64, header="@@ -5 +5,11 @@")
-    straddling_peer = _make_hunk(hunk_id="c" * 64, header="@@ -20 +30,6 @@")
+    peer_in_group = _make_hunk(
+        hunk_id=group_id, header="@@ -22 +37 @@", status="unstaged"
+    )
+    earlier_peer = _make_hunk(
+        hunk_id="b" * 64, header="@@ -5 +5,11 @@", status="unstaged"
+    )
+    straddling_peer = _make_hunk(
+        hunk_id="c" * 64, header="@@ -20 +30,6 @@", status="unstaged"
+    )
 
     result = assign_hunk_ids([staged, peer_in_group, earlier_peer, straddling_peer])
 
@@ -149,7 +155,7 @@ def test_staged_position_reads_a_peer_start_from_its_pre_image_side() -> None:
 
 def test_single_group_member_uses_stable_base_id() -> None:
     base_id = "a" * 64
-    hunk = _make_hunk(hunk_id=base_id)
+    hunk = _make_hunk(hunk_id=base_id, header="@@ -1 +1 @@", status="unstaged")
 
     [result] = assign_hunk_ids([hunk])
 
@@ -159,9 +165,15 @@ def test_single_group_member_uses_stable_base_id() -> None:
 
 def test_human_prefix_extends_until_ids_are_unique() -> None:
     hunks = [
-        _make_hunk(hunk_id="abcdefg0" + "0" * 56),
-        _make_hunk(hunk_id="abcdefg1" + "1" * 56, header="@@ -20 +20 @@"),
-        _make_hunk(hunk_id="1234567" + "2" * 57, header="@@ -40 +40 @@"),
+        _make_hunk(
+            hunk_id="abcdefg0" + "0" * 56, header="@@ -1 +1 @@", status="unstaged"
+        ),
+        _make_hunk(
+            hunk_id="abcdefg1" + "1" * 56, header="@@ -20 +20 @@", status="unstaged"
+        ),
+        _make_hunk(
+            hunk_id="1234567" + "2" * 57, header="@@ -40 +40 @@", status="unstaged"
+        ),
     ]
 
     result = assign_hunk_ids(hunks)

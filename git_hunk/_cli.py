@@ -118,7 +118,7 @@ def _echo_json(*, data: object) -> None:
     click.echo(json.dumps(data, indent=2))
 
 
-def _echo_hunks_json(*, hunks: list[Hunk], include_lines: bool = False) -> None:
+def _echo_hunks_json(*, hunks: list[Hunk], include_lines: bool) -> None:
     _echo_json(
         data={
             "schema_version": JSON_SCHEMA_VERSION,
@@ -371,7 +371,7 @@ def _apply_selection(
     cached: bool,
     reverse: bool,
     dry_run: bool,
-    inventory: _Inventory | None = None,
+    inventory: _Inventory | None,
 ) -> list[Hunk]:
     inventory = inventory or _get_inventory(worktree_root=worktree_root)
     status = "staged" if staged else "unstaged"
@@ -487,6 +487,7 @@ def _run_patch_command(
         cached=cached,
         reverse=reverse,
         dry_run=dry_run,
+        inventory=None,
     )
     print_applied(selected, verb=f"would {command_name}" if dry_run else verb)
 
@@ -586,7 +587,7 @@ def cmd_list(
         hunks = [hunk for hunk in hunks if hunk.file in selected_paths]
 
     if force_json:
-        _echo_hunks_json(hunks=hunks)
+        _echo_hunks_json(hunks=hunks, include_lines=False)
     else:
         print_hunk_list(hunks)
 

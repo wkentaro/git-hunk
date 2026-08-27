@@ -92,7 +92,7 @@ class _Metrics:
             (
                 _format_spread(spread=self.tool_calls, render=_format_count, unit="c"),
                 _format_spread(spread=self.turns, render=_format_count, unit="t"),
-                _format_spread(spread=self.cost_usd, render=_format_cost),
+                _format_spread(spread=self.cost_usd, render=_format_cost, unit=""),
             )
         )
 
@@ -223,7 +223,7 @@ def _failure_reasons(*, runs: list[TaskRun]) -> list[FailureReason]:
 
 
 def _format_spread(
-    *, spread: _Spread, render: Callable[[float], str], unit: str = ""
+    *, spread: _Spread, render: Callable[[float], str], unit: str
 ) -> str:
     center = f"{render(spread.median)}{unit}"
     minimum = render(spread.minimum)

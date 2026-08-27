@@ -44,9 +44,9 @@ def _make_run(
     scenario: Scenario,
     variant_index: int,
     passed: bool,
-    reason: FailureReason | None = None,
+    reason: FailureReason | None,
     usage: TraceUsage | None,
-    repeat: int = 1,
+    repeat: int,
 ) -> TaskRun:
     return TaskRun(
         scenario=scenario,
@@ -87,6 +87,8 @@ def test_render_summary_pairs_variants_and_totals_reported_metrics() -> None:
             variant_index=0,
             passed=True,
             usage=_make_usage(turns=12, cost_usd=0.21),
+            reason=None,
+            repeat=1,
         ),
         _make_run(
             scenario=SCENARIOS[0],
@@ -94,12 +96,15 @@ def test_render_summary_pairs_variants_and_totals_reported_metrics() -> None:
             passed=False,
             reason="order",
             usage=_make_usage(turns=9, cost_usd=0.18),
+            repeat=1,
         ),
         _make_run(
             scenario=SCENARIOS[1],
             variant_index=0,
             passed=True,
             usage=_make_usage(turns=10, cost_usd=0.19),
+            reason=None,
+            repeat=1,
         ),
         _make_run(
             scenario=SCENARIOS[1],
@@ -107,6 +112,7 @@ def test_render_summary_pairs_variants_and_totals_reported_metrics() -> None:
             passed=False,
             reason="leftover-worktree",
             usage=_make_usage(turns=8, cost_usd=0.15),
+            repeat=1,
         ),
     ]
 
@@ -136,12 +142,16 @@ def test_render_summary_omits_total_row_for_a_single_task() -> None:
             variant_index=0,
             passed=True,
             usage=_make_usage(turns=12, cost_usd=0.21),
+            reason=None,
+            repeat=1,
         ),
         _make_run(
             scenario=SCENARIOS[0],
             variant_index=1,
             passed=True,
             usage=_make_usage(turns=9, cost_usd=0.18),
+            reason=None,
+            repeat=1,
         ),
     ]
 
@@ -166,6 +176,8 @@ def test_render_summary_marks_missing_usage_and_counts_reported_runs() -> None:
             variant_index=0,
             passed=True,
             usage=_make_usage(turns=12, cost_usd=0.21),
+            reason=None,
+            repeat=1,
         ),
         _make_run(
             scenario=SCENARIOS[0],
@@ -173,18 +185,23 @@ def test_render_summary_marks_missing_usage_and_counts_reported_runs() -> None:
             passed=False,
             reason="solver-error",
             usage=None,
+            repeat=1,
         ),
         _make_run(
             scenario=SCENARIOS[1],
             variant_index=0,
             passed=True,
             usage=_make_usage(turns=10, cost_usd=0.19),
+            reason=None,
+            repeat=1,
         ),
         _make_run(
             scenario=SCENARIOS[1],
             variant_index=1,
             passed=True,
             usage=_make_usage(turns=8, cost_usd=0.15),
+            reason=None,
+            repeat=1,
         ),
     ]
 
@@ -196,10 +213,38 @@ def test_render_summary_marks_missing_usage_and_counts_reported_runs() -> None:
 
 def test_render_summary_states_the_reported_count_when_no_run_reported() -> None:
     runs = [
-        _make_run(scenario=SCENARIOS[0], variant_index=0, passed=True, usage=None),
-        _make_run(scenario=SCENARIOS[0], variant_index=1, passed=True, usage=None),
-        _make_run(scenario=SCENARIOS[1], variant_index=0, passed=True, usage=None),
-        _make_run(scenario=SCENARIOS[1], variant_index=1, passed=True, usage=None),
+        _make_run(
+            scenario=SCENARIOS[0],
+            variant_index=0,
+            passed=True,
+            usage=None,
+            reason=None,
+            repeat=1,
+        ),
+        _make_run(
+            scenario=SCENARIOS[0],
+            variant_index=1,
+            passed=True,
+            usage=None,
+            reason=None,
+            repeat=1,
+        ),
+        _make_run(
+            scenario=SCENARIOS[1],
+            variant_index=0,
+            passed=True,
+            usage=None,
+            reason=None,
+            repeat=1,
+        ),
+        _make_run(
+            scenario=SCENARIOS[1],
+            variant_index=1,
+            passed=True,
+            usage=None,
+            reason=None,
+            repeat=1,
+        ),
     ]
 
     lines = render_summary(runs=runs).splitlines()
@@ -217,12 +262,16 @@ def test_render_summary_never_reports_a_sub_cent_cost_as_zero() -> None:
             variant_index=0,
             passed=True,
             usage=_make_usage(turns=1, cost_usd=0.0012),
+            reason=None,
+            repeat=1,
         ),
         _make_run(
             scenario=SCENARIOS[0],
             variant_index=1,
             passed=True,
             usage=_make_usage(turns=1, cost_usd=0.0),
+            reason=None,
+            repeat=1,
         ),
     ]
 
@@ -240,6 +289,7 @@ def test_render_summary_lists_only_reasons_that_occurred_in_grader_order() -> No
             passed=False,
             reason="leftover-untracked",
             usage=_make_usage(turns=9, cost_usd=0.18),
+            repeat=1,
         ),
         _make_run(
             scenario=SCENARIOS[1],
@@ -247,6 +297,7 @@ def test_render_summary_lists_only_reasons_that_occurred_in_grader_order() -> No
             passed=False,
             reason="partition",
             usage=_make_usage(turns=9, cost_usd=0.18),
+            repeat=1,
         ),
     ]
 
@@ -398,7 +449,12 @@ def test_render_summary_says_when_only_some_repeats_reported_usage() -> None:
             samples=[(True, None, 10, 0.19), (True, None, 10, 0.19)],
         ),
         _make_run(
-            scenario=SCENARIOS[0], variant_index=0, passed=True, usage=None, repeat=3
+            scenario=SCENARIOS[0],
+            variant_index=0,
+            passed=True,
+            usage=None,
+            repeat=3,
+            reason=None,
         ),
     ]
 
@@ -456,7 +512,12 @@ def test_render_summary_counts_reported_repeats_rather_than_task_variants() -> N
         ),
     ]
     runs[1] = _make_run(
-        scenario=SCENARIOS[0], variant_index=0, passed=True, usage=None, repeat=2
+        scenario=SCENARIOS[0],
+        variant_index=0,
+        passed=True,
+        usage=None,
+        repeat=2,
+        reason=None,
     )
 
     total = render_summary(runs=runs).splitlines()[4]

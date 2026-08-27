@@ -59,7 +59,7 @@ def _header_text(*, hunk: Hunk) -> str:
     return hunk.header if hunk.header is not None else _whole_file_label(hunk=hunk)
 
 
-def _append_hunk_id(*, text: Text, hunk: Hunk, style: str = "cyan") -> None:
+def _append_hunk_id(*, text: Text, hunk: Hunk, style: str) -> None:
     text.append(format_hunk_id(hunk), style=style)
     if hunk.id_stability == "conditional":
         text.append(" conditional", style="yellow")
@@ -80,7 +80,7 @@ def _append_context_and_stats(*, text: Text, hunk: Hunk) -> None:
 def _print_hunk_line(*, out: Console, hunk: Hunk) -> None:
     line = Text()
     line.append("  ")
-    _append_hunk_id(text=line, hunk=hunk)
+    _append_hunk_id(text=line, hunk=hunk, style="cyan")
     line.append("  ")
     line.append(_safe(text=_header_text(hunk=hunk)), style="dim")
     _append_context_and_stats(text=line, hunk=hunk)
@@ -101,7 +101,7 @@ def _print_status_section(
     hunks: list[Hunk],
     header: str,
     color: str,
-    show_hunks: bool = True,
+    show_hunks: bool,
 ) -> None:
     out.print(f"[dim]{header}[/dim]")
     by_file: dict[str, list[Hunk]] = defaultdict(list)
@@ -201,7 +201,7 @@ def print_applied(hunks: list[Hunk], *, verb: str) -> None:
     for hunk in hunks:
         line = Text()
         line.append(f"  {verb} ", style="bold green")
-        _append_hunk_id(text=line, hunk=hunk)
+        _append_hunk_id(text=line, hunk=hunk, style="cyan")
         line.append("  ")
         line.append(_safe(text=hunk.file), style="bold")
         line.append(f"  {_safe(text=_header_text(hunk=hunk))}", style="dim")
