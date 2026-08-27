@@ -247,7 +247,7 @@ def test_run_claude_writes_partial_trace_on_timeout(
         '{"type":"assistant","message":{"model":"partial"}}\n{"type":"assistant"'
     )
 
-    def raise_timeout(*args: str, **kwargs: object) -> NoReturn:
+    def raise_timeout(*_args: str, **_kwargs: object) -> NoReturn:
         raise subprocess.TimeoutExpired(
             cmd="claude",
             timeout=1800,

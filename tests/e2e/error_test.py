@@ -278,7 +278,7 @@ def test_git_apply_failure_becomes_clean_error(
 
     hunk_id = cli.run_list_json("list", "--unstaged", "--json")[0]["id"]
 
-    def _fail(*args: object, **kwargs: object) -> None:
+    def _fail(*_args: object, **_kwargs: object) -> None:
         raise RuntimeError("git apply refused the patch")
 
     monkeypatch.setattr("git_hunk._cli.apply_patch", _fail)

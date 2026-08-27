@@ -154,7 +154,7 @@ def _install_fake_run(
             prepared_tasks.append(task.name)
         return contextlib.nullcontext(PreparedTask())
 
-    monkeypatch.setattr(eval_main.tempfile, "mkdtemp", lambda **kwargs: str(run_dir))
+    monkeypatch.setattr(eval_main.tempfile, "mkdtemp", lambda **_kwargs: str(run_dir))
     monkeypatch.setattr(eval_main, "make_claude_solver", make_solver)
     monkeypatch.setattr(eval_main, "prepare_task", prepare_task)
     monkeypatch.setattr(eval_main.time, "monotonic", monotonic)
