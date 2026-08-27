@@ -1,3 +1,5 @@
+from typing import Final
+
 import pytest
 
 from git_hunk._hunk import Hunk
@@ -5,7 +7,7 @@ from git_hunk._hunk import whole_file_hunk
 from git_hunk._patch import _extract_file_headers
 from git_hunk._patch import build_patch
 
-DIFF_SINGLE = (
+DIFF_SINGLE: Final = (
     "diff --git a/f.py b/f.py\n"
     "index abc..def 100644\n"
     "--- a/f.py\n"
@@ -17,7 +19,7 @@ DIFF_SINGLE = (
     " line3\n"
 )
 
-DIFF_TWO_FILES = (
+DIFF_TWO_FILES: Final = (
     "diff --git a/a.py b/a.py\n"
     "index 111..222 100644\n"
     "--- a/a.py\n"

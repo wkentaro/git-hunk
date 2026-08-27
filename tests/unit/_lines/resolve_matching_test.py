@@ -1,4 +1,5 @@
 from collections.abc import Callable
+from typing import Final
 
 import pytest
 
@@ -6,7 +7,7 @@ from git_hunk._hunk import NO_NEWLINE_MARKER
 from git_hunk._hunk import Hunk
 from git_hunk._lines import resolve_matching_lines
 
-_TWO_GROUP = "@@ -1,4 +1,4 @@\n a\n-b\n+B\n c\n-d\n+D"
+_TWO_GROUP: Final = "@@ -1,4 +1,4 @@\n a\n-b\n+B\n c\n-d\n+D"
 
 
 def test_literal_matches_changed_line_content(

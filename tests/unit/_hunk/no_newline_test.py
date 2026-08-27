@@ -1,7 +1,9 @@
+from typing import Final
+
 from git_hunk._hunk import NO_NEWLINE_MARKER
 from git_hunk._hunk import parse_diff
 
-_DIFF = (
+_DIFF: Final = (
     "diff --git a/f.txt b/f.txt\n"
     "index 1c943a9..5de31a1 100644\n"
     "--- a/f.txt\n"

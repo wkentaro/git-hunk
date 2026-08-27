@@ -1,4 +1,5 @@
 from pathlib import Path
+from typing import Final
 from typing import get_args
 
 from eval.grader import FailureReason
@@ -12,11 +13,11 @@ from eval.summary import REASON_LEGEND
 from eval.summary import render_summary
 from eval.tasks import SCENARIOS
 
-_CACHE_CAVEAT = (
+_CACHE_CAVEAT: Final = (
     "bare-git runs second and may read cache written by the git-hunk run; "
     "costs are not order-neutral."
 )
-_REPEAT_CAVEAT = (
+_REPEAT_CAVEAT: Final = (
     "Only the first repeat starts cold, so a cost range mixes cache warmup with "
     "run-to-run noise."
 )

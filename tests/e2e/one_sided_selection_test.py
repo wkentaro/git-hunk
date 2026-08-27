@@ -1,4 +1,5 @@
 from pathlib import Path
+from typing import Final
 
 import pytest
 
@@ -9,17 +10,17 @@ from .conftest import GitHunkCLI
 # body lines are 1=" def fetch(...)", 2="-...session.get(url)",
 # 3="+...session.get(url, timeout=30)": a one-for-one replacement pair.
 
-_HEAD: str = "def fetch(session, url):\n    return session.get(url)\n"
-_WORKING: str = "def fetch(session, url):\n    return session.get(url, timeout=30)\n"
+_HEAD: Final = "def fetch(session, url):\n    return session.get(url)\n"
+_WORKING: Final = "def fetch(session, url):\n    return session.get(url, timeout=30)\n"
 
 # `session.get(url)` matches only the deleted line: the added line continues
 # with a comma, so it has no `url)` substring. That is exactly the trap #225
 # describes.
-_ONE_SIDED_PATTERN: str = "session.get(url)"
+_ONE_SIDED_PATTERN: Final = "session.get(url)"
 # `session.get(url` matches both sides of the pair.
-_BOTH_SIDES_PATTERN: str = "session.get(url"
+_BOTH_SIDES_PATTERN: Final = "session.get(url"
 
-_ONE_SIDED_SELECTORS = pytest.mark.parametrize(
+_ONE_SIDED_SELECTORS: Final = pytest.mark.parametrize(
     "selector",
     [
         ("-l", "2"),

@@ -1,10 +1,12 @@
+from typing import Final
+
 import pytest
 
 from git_hunk._cli import cli as cli_group
 
 from .conftest import GitHunkCLI
 
-SUBCOMMAND_HELP = [
+SUBCOMMAND_HELP: Final = [
     ("list", "List hunks"),
     ("show", "Show the diff for one or more hunks"),
     ("stage", "Stage one or more specific hunks"),

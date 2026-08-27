@@ -1,12 +1,13 @@
 import os
 import sys
 from pathlib import Path
+from typing import Final
 
 import pytest
 
 from git_hunk._skills import load_skills
 
-_VALID = b"---\nname: good\ndescription: ok\n---\nbody\n"
+_VALID: Final = b"---\nname: good\ndescription: ok\n---\nbody\n"
 
 
 def _write_skill(*, root: Path, name: str, content: bytes) -> None:

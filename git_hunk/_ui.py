@@ -238,10 +238,10 @@ def print_version(version: str) -> None:
     _err().print(f"git-hunk [dim]{version}[/dim]")
 
 
-_LINE_SELECT_EXAMPLE = """\
+_LINE_SELECT_EXAMPLE: Final = """\
              e.g.: -l 3,5-7  (include)   -l ^3,^5-7  (exclude)"""
 
-_LINE_OPT_ROW = f"""\
+_LINE_OPT_ROW: Final = f"""\
   [bold cyan]-l[/bold cyan] [cyan]<lines>[/cyan]  Select specific lines within a hunk
 {_LINE_SELECT_EXAMPLE}
   [bold cyan]--include-matching[/bold cyan] [cyan]<pattern>[/cyan]  Select changed lines containing <pattern> (repeatable, OR'd)
@@ -250,7 +250,7 @@ _LINE_OPT_ROW = f"""\
   [bold cyan]--regex[/bold cyan]    Treat matching patterns as regular expressions (default: literal substring)
   [bold cyan]--allow-one-sided[/bold cyan]  Permit selecting one side of a one-for-one replacement (rejected by default)"""  # noqa: E501
 
-_LINE_OPTS = f"""\
+_LINE_OPTS: Final = f"""\
 [bold green]Options:[/bold green]
 {_LINE_OPT_ROW}
   [bold cyan]--dry-run[/bold cyan]   Report what would change without touching the index or working tree"""  # noqa: E501
@@ -267,14 +267,14 @@ other kind of operand is a Hunk ID.
 {_ID_HELP}
 {_EXACT_PATH_HELP}"""
 
-USAGE = "[bold green]Usage:[/bold green] [bold cyan]git-hunk[/bold cyan] [cyan]<COMMAND>[/cyan]"  # noqa: E501
-USAGE_LIST = "[bold green]Usage:[/bold green] [bold cyan]git-hunk list[/bold cyan] [cyan][OPTIONS][/cyan] [cyan][<Repository-path>...][/cyan]"  # noqa: E501
-USAGE_SHOW = "[bold green]Usage:[/bold green] [bold cyan]git-hunk show[/bold cyan] [cyan][<id>...][/cyan] [cyan][OPTIONS][/cyan]"  # noqa: E501
-USAGE_STAGE = "[bold green]Usage:[/bold green] [bold cyan]git-hunk stage[/bold cyan] [cyan]<id|Repository-path>[/cyan] [cyan][<id|Repository-path>...][/cyan] [cyan][OPTIONS][/cyan]"  # noqa: E501
-USAGE_UNSTAGE = "[bold green]Usage:[/bold green] [bold cyan]git-hunk unstage[/bold cyan] [cyan]<id|Repository-path>[/cyan] [cyan][<id|Repository-path>...][/cyan] [cyan][OPTIONS][/cyan]"  # noqa: E501
-USAGE_DISCARD = "[bold green]Usage:[/bold green] [bold cyan]git-hunk discard[/bold cyan] [cyan]<id|Repository-path>[/cyan] [cyan][<id|Repository-path>...][/cyan] [cyan][OPTIONS][/cyan]"  # noqa: E501
-USAGE_COMMIT = "[bold green]Usage:[/bold green] [bold cyan]git-hunk commit[/bold cyan] [cyan]<id|Repository-path>[/cyan] [cyan][<id|Repository-path>...][/cyan] [bold cyan]-m[/bold cyan] [cyan]<msg>[/cyan] [cyan][OPTIONS][/cyan]"  # noqa: E501
-USAGE_SKILLS = "[bold green]Usage:[/bold green] [bold cyan]git-hunk skills[/bold cyan] [cyan][SUBCOMMAND][/cyan] [cyan][<name>...][/cyan]"  # noqa: E501
+USAGE: Final = "[bold green]Usage:[/bold green] [bold cyan]git-hunk[/bold cyan] [cyan]<COMMAND>[/cyan]"  # noqa: E501
+USAGE_LIST: Final = "[bold green]Usage:[/bold green] [bold cyan]git-hunk list[/bold cyan] [cyan][OPTIONS][/cyan] [cyan][<Repository-path>...][/cyan]"  # noqa: E501
+USAGE_SHOW: Final = "[bold green]Usage:[/bold green] [bold cyan]git-hunk show[/bold cyan] [cyan][<id>...][/cyan] [cyan][OPTIONS][/cyan]"  # noqa: E501
+USAGE_STAGE: Final = "[bold green]Usage:[/bold green] [bold cyan]git-hunk stage[/bold cyan] [cyan]<id|Repository-path>[/cyan] [cyan][<id|Repository-path>...][/cyan] [cyan][OPTIONS][/cyan]"  # noqa: E501
+USAGE_UNSTAGE: Final = "[bold green]Usage:[/bold green] [bold cyan]git-hunk unstage[/bold cyan] [cyan]<id|Repository-path>[/cyan] [cyan][<id|Repository-path>...][/cyan] [cyan][OPTIONS][/cyan]"  # noqa: E501
+USAGE_DISCARD: Final = "[bold green]Usage:[/bold green] [bold cyan]git-hunk discard[/bold cyan] [cyan]<id|Repository-path>[/cyan] [cyan][<id|Repository-path>...][/cyan] [cyan][OPTIONS][/cyan]"  # noqa: E501
+USAGE_COMMIT: Final = "[bold green]Usage:[/bold green] [bold cyan]git-hunk commit[/bold cyan] [cyan]<id|Repository-path>[/cyan] [cyan][<id|Repository-path>...][/cyan] [bold cyan]-m[/bold cyan] [cyan]<msg>[/cyan] [cyan][OPTIONS][/cyan]"  # noqa: E501
+USAGE_SKILLS: Final = "[bold green]Usage:[/bold green] [bold cyan]git-hunk skills[/bold cyan] [cyan][SUBCOMMAND][/cyan] [cyan][<name>...][/cyan]"  # noqa: E501
 
 
 def _format_examples(*, rows: list[tuple[str, str]]) -> str:
@@ -343,7 +343,7 @@ _EXAMPLES_ALL: Final = (
     + _EXAMPLES_COMMIT
 )
 
-HELP = f"""\
+HELP: Final = f"""\
 Non-interactive git hunk staging for AI agents.
 
 {USAGE}
@@ -370,7 +370,7 @@ Non-interactive git hunk staging for AI agents.
 
 {_format_examples(rows=_EXAMPLES_ALL)}"""
 
-HELP_LIST = f"""\
+HELP_LIST: Final = f"""\
 List hunks (unstaged, staged, and untracked by default).
 File operands are exact Repository paths relative to the worktree root.
 {_EXACT_PATH_HELP}
@@ -384,7 +384,7 @@ File operands are exact Repository paths relative to the worktree root.
 
 {_format_examples(rows=_EXAMPLES_LIST)}"""  # noqa: E501
 
-HELP_SHOW = f"""\
+HELP_SHOW: Final = f"""\
 Show the diff for one or more hunks. Shows all hunks when no IDs given.
 {_ID_HELP}
 
@@ -397,7 +397,7 @@ Show the diff for one or more hunks. Shows all hunks when no IDs given.
 
 {_format_examples(rows=_EXAMPLES_SHOW)}"""
 
-HELP_STAGE = f"""\
+HELP_STAGE: Final = f"""\
 Stage one or more specific hunks.
 {_TARGET_HELP}
 
@@ -407,7 +407,7 @@ Stage one or more specific hunks.
 
 {_format_examples(rows=_EXAMPLES_STAGE)}"""
 
-HELP_DISCARD = f"""\
+HELP_DISCARD: Final = f"""\
 Discard unstaged changes for one or more specific hunks (restore from the index).
 {_TARGET_HELP}
 
@@ -417,7 +417,7 @@ Discard unstaged changes for one or more specific hunks (restore from the index)
 
 {_format_examples(rows=_EXAMPLES_DISCARD)}"""
 
-HELP_UNSTAGE = f"""\
+HELP_UNSTAGE: Final = f"""\
 Unstage one or more specific hunks (move from index back to working tree).
 {_TARGET_HELP}
 
@@ -427,7 +427,7 @@ Unstage one or more specific hunks (move from index back to working tree).
 
 {_format_examples(rows=_EXAMPLES_UNSTAGE)}"""
 
-HELP_COMMIT = f"""\
+HELP_COMMIT: Final = f"""\
 Stage one or more specific hunks and commit them in one step. Aborts if anything
 is already staged, so the commit contains exactly the selected hunks. If the
 commit is rejected (e.g. by a pre-commit hook) the hunks are left staged so you
@@ -442,7 +442,7 @@ can retry with [bold cyan]git commit[/bold cyan].
 
 {_format_examples(rows=_EXAMPLES_COMMIT)}"""  # noqa: E501
 
-HELP_SKILLS = f"""\
+HELP_SKILLS: Final = f"""\
 List and retrieve bundled skill content. Skills always match the installed
 git-hunk version, so prefer them over guessing commands from flags alone.
 

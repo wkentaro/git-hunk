@@ -2,6 +2,7 @@ import os
 import sys
 from pathlib import Path
 from typing import Any
+from typing import Final
 from typing import cast
 
 import pytest
@@ -10,7 +11,7 @@ from git_hunk._cli import JSON_SCHEMA_VERSION
 
 from .conftest import GitHunkCLI
 
-_REQUIRED_HUNK_KEYS = {
+_REQUIRED_HUNK_KEYS: Final = {
     "id",
     "id_stability",
     "file",
@@ -24,7 +25,7 @@ _REQUIRED_HUNK_KEYS = {
     "additions",
     "deletions",
 }
-_STATUSES = {"staged", "unstaged", "untracked"}
+_STATUSES: Final = {"staged", "unstaged", "untracked"}
 
 
 def test_json_envelope_contract(cli: GitHunkCLI) -> None:
