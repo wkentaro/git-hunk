@@ -52,7 +52,7 @@ def test_adversarial_solver_fails_at_expected_boundary(
 
 
 def test_solver_error_is_a_failed_result() -> None:
-    def fail(repo: GitRepo) -> None:
+    def fail(_repo: GitRepo) -> None:
         raise RuntimeError("solver stopped")
 
     result = run_and_grade(task=SCENARIOS[0].task, solver=fail)

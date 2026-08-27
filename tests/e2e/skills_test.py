@@ -67,12 +67,14 @@ def two_skills(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.setenv("GIT_HUNK_SKILLS_DIR", str(tmp_path))
 
 
-def test_get_multiple_joins_bodies(cli: GitHunkCLI, two_skills: None) -> None:
+@pytest.mark.usefixtures("two_skills")
+def test_get_multiple_joins_bodies(cli: GitHunkCLI) -> None:
     out = cli.run_ok("skills", "get", "alpha", "beta")
     assert "Alpha body line\n---\nname: beta" in out
 
 
-def test_get_multiple_json(cli: GitHunkCLI, two_skills: None) -> None:
+@pytest.mark.usefixtures("two_skills")
+def test_get_multiple_json(cli: GitHunkCLI) -> None:
     skills = cli.run_json("skills", "get", "alpha", "beta", "--json")
     assert [s["name"] for s in skills] == ["alpha", "beta"]
     assert "Beta body line" in skills[1]["content"]

@@ -49,7 +49,7 @@ def test_grade_accepts_exact_repository_state(eval_repo: GitRepo) -> None:
     expected_file = make_file(path="a.py", content="new\n")
     task = Task(
         name="exact-state",
-        build=lambda repo: None,
+        build=lambda _repo: None,
         commits=(
             CommitSpec(
                 label="update",
@@ -74,7 +74,7 @@ def _single_commit_task(*, path: str, content: str) -> Task:
     expected_file = make_file(path=path, content=content)
     return Task(
         name="single-commit",
-        build=lambda repo: None,
+        build=lambda _repo: None,
         commits=(
             CommitSpec(
                 label="update",

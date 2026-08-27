@@ -101,7 +101,7 @@ def test_run_stream_timeout_kills_descendant_holding_only_stderr(
             "-c",
             script,
             timeout_seconds=0.5,
-            on_stdout_line=lambda line: None,
+            on_stdout_line=lambda _line: None,
         )
 
     assert time.monotonic() - started_at < 5
@@ -135,7 +135,7 @@ def test_run_stream_interrupt_kills_descendants(tmp_path: Path) -> None:
         ]
     )
 
-    def interrupt(line: str) -> None:
+    def interrupt(_line: str) -> None:
         raise KeyboardInterrupt
 
     with pytest.raises(KeyboardInterrupt):
