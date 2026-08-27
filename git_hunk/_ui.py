@@ -30,18 +30,18 @@ def _err() -> Console:
     return Console(stderr=True, highlight=False)
 
 
-def _safe(text: str) -> str:
+def _safe(*, text: str) -> str:
     # git output decoded with surrogateescape (see _git.run_git) may carry lone
     # surrogates for non-UTF-8 bytes; backslash-escape them so writing to a
     # strict stdout does not raise UnicodeEncodeError.
     return text.encode("utf-8", errors="backslashreplace").decode("utf-8")
 
 
-def _safe_escape(text: str) -> str:
-    return escape(_safe(text))
+def _safe_escape(*, text: str) -> str:
+    return escape(_safe(text=text))
 
 
-def _whole_file_label(hunk: Hunk) -> str:
+def _whole_file_label(*, hunk: Hunk) -> str:
     # Human label for a hunk with no @@ range, derived from its typed fields
     # (the data layer no longer stores the label string).
     if hunk.change_kind == "T":
@@ -55,19 +55,19 @@ def _whole_file_label(hunk: Hunk) -> str:
     return f"Mode {hunk.a_mode} -> {hunk.b_mode}"
 
 
-def _header_text(hunk: Hunk) -> str:
-    return hunk.header if hunk.header is not None else _whole_file_label(hunk)
+def _header_text(*, hunk: Hunk) -> str:
+    return hunk.header if hunk.header is not None else _whole_file_label(hunk=hunk)
 
 
-def _append_hunk_id(text: Text, hunk: Hunk, *, style: str = "cyan") -> None:
+def _append_hunk_id(*, text: Text, hunk: Hunk, style: str) -> None:
     text.append(format_hunk_id(hunk), style=style)
     if hunk.id_stability == "conditional":
         text.append(" conditional", style="yellow")
 
 
-def _append_context_and_stats(text: Text, hunk: Hunk) -> None:
+def _append_context_and_stats(*, text: Text, hunk: Hunk) -> None:
     if hunk.context_before:
-        text.append(f"  {_safe(hunk.context_before)}", style="dim italic")
+        text.append(f"  {_safe(text=hunk.context_before)}", style="dim italic")
     text.append("  ")
     if hunk.additions:
         text.append(f"+{hunk.additions}", style="green")
@@ -77,31 +77,31 @@ def _append_context_and_stats(text: Text, hunk: Hunk) -> None:
         text.append(f"-{hunk.deletions}", style="red")
 
 
-def _print_hunk_line(out: Console, hunk: Hunk) -> None:
+def _print_hunk_line(*, out: Console, hunk: Hunk) -> None:
     line = Text()
     line.append("  ")
-    _append_hunk_id(line, hunk)
+    _append_hunk_id(text=line, hunk=hunk, style="cyan")
     line.append("  ")
-    line.append(_safe(_header_text(hunk)), style="dim")
+    line.append(_safe(text=_header_text(hunk=hunk)), style="dim")
     _append_context_and_stats(text=line, hunk=hunk)
     out.print(line)
 
 
 def _print_file_group(
-    out: Console, filepath: str, file_hunks: list[Hunk], *, color: str
+    *, out: Console, filepath: str, file_hunks: list[Hunk], color: str
 ) -> None:
-    out.print(f"[{color}]{_safe_escape(filepath)}[/{color}]")
+    out.print(f"[{color}]{_safe_escape(text=filepath)}[/{color}]")
     for hunk in file_hunks:
-        _print_hunk_line(out, hunk)
+        _print_hunk_line(out=out, hunk=hunk)
 
 
 def _print_status_section(
+    *,
     out: Console,
     hunks: list[Hunk],
-    *,
     header: str,
     color: str,
-    show_hunks: bool = True,
+    show_hunks: bool,
 ) -> None:
     out.print(f"[dim]{header}[/dim]")
     by_file: dict[str, list[Hunk]] = defaultdict(list)
@@ -109,11 +109,13 @@ def _print_status_section(
         by_file[hunk.file].append(hunk)
     for i, (filepath, file_hunks) in enumerate(by_file.items()):
         if show_hunks:
-            _print_file_group(out, filepath, file_hunks, color=color)
+            _print_file_group(
+                out=out, filepath=filepath, file_hunks=file_hunks, color=color
+            )
             if i < len(by_file) - 1:
                 out.print()
         else:
-            out.print(f"[{color}]{_safe_escape(filepath)}[/{color}]")
+            out.print(f"[{color}]{_safe_escape(text=filepath)}[/{color}]")
 
 
 def print_hunk_list(hunks: list[Hunk]) -> None:
@@ -138,23 +140,27 @@ def print_hunk_list(hunks: list[Hunk]) -> None:
         if sections_printed > 0:
             out.print()
         _print_status_section(
-            out, section_hunks, header=header, color=color, show_hunks=show_hunks
+            out=out,
+            hunks=section_hunks,
+            header=header,
+            color=color,
+            show_hunks=show_hunks,
         )
         sections_printed += 1
 
 
-def _print_hunk_diff(out: Console, hunk: Hunk) -> None:
-    heading = Text(_safe(hunk.file), style="bold")
+def _print_hunk_diff(*, out: Console, hunk: Hunk) -> None:
+    heading = Text(_safe(text=hunk.file), style="bold")
     heading.append("  ")
-    _append_hunk_id(heading, hunk, style="dim cyan")
+    _append_hunk_id(text=heading, hunk=hunk, style="dim cyan")
     out.print(heading)
     if is_whole_file_hunk(hunk):
-        out.print(Text(_safe(_header_text(hunk)), style="dim"))
+        out.print(Text(_safe(text=_header_text(hunk=hunk)), style="dim"))
         return
     line_num = 0
     for line in hunk.diff.split("\n"):
         if line.startswith("@@"):
-            out.print(Text(_safe(line), style="cyan"))
+            out.print(Text(_safe(text=line), style="cyan"))
         elif is_no_newline_marker(line):
             out.print(Text("    " + line, style="dim"))
         else:
@@ -166,7 +172,7 @@ def _print_hunk_diff(out: Console, hunk: Hunk) -> None:
                 style = "red"
             else:
                 style = ""
-            out.print(Text.assemble(prefix, Text(_safe(line), style=style)))
+            out.print(Text.assemble(prefix, Text(_safe(text=line), style=style)))
 
 
 def print_skill_list(skills: list[Skill]) -> None:
@@ -187,7 +193,7 @@ def print_hunk_diffs(hunks: list[Hunk]) -> None:
     for i, hunk in enumerate(hunks):
         if i > 0:
             out.print(Rule(style="dim"))
-        _print_hunk_diff(out, hunk)
+        _print_hunk_diff(out=out, hunk=hunk)
 
 
 def print_applied(hunks: list[Hunk], *, verb: str) -> None:
@@ -195,10 +201,10 @@ def print_applied(hunks: list[Hunk], *, verb: str) -> None:
     for hunk in hunks:
         line = Text()
         line.append(f"  {verb} ", style="bold green")
-        _append_hunk_id(line, hunk)
+        _append_hunk_id(text=line, hunk=hunk, style="cyan")
         line.append("  ")
-        line.append(_safe(hunk.file), style="bold")
-        line.append(f"  {_safe(_header_text(hunk))}", style="dim")
+        line.append(_safe(text=hunk.file), style="bold")
+        line.append(f"  {_safe(text=_header_text(hunk=hunk))}", style="dim")
         _append_context_and_stats(text=line, hunk=hunk)
         err.print(line)
 
@@ -209,7 +215,7 @@ def print_committed(hunks: list[Hunk], *, message: str) -> None:
     line = Text()
     line.append("  committed ", style="bold green")
     line.append(f"{count} hunk{'s' if count != 1 else ''}", style="bold")
-    line.append(f"  {_safe(summary)}", style="dim")
+    line.append(f"  {_safe(text=summary)}", style="dim")
     _err().print(line)
 
 
@@ -220,9 +226,9 @@ def print_error(
     usage: str | None = None,
 ) -> None:
     err = _err()
-    err.print(f"[bold red]error[/bold red]: {_safe_escape(msg)}")
+    err.print(f"[bold red]error[/bold red]: {_safe_escape(text=msg)}")
     if tip:
-        err.print(f"\n  [green]tip[/green]: {_safe_escape(tip)}")
+        err.print(f"\n  [green]tip[/green]: {_safe_escape(text=tip)}")
     if usage:
         err.print(f"\n{usage}")
         err.print("\nFor more information, try '[bold cyan]--help[/bold cyan]'.")
@@ -232,10 +238,10 @@ def print_version(version: str) -> None:
     _err().print(f"git-hunk [dim]{version}[/dim]")
 
 
-_LINE_SELECT_EXAMPLE = """\
+_LINE_SELECT_EXAMPLE: Final = """\
              e.g.: -l 3,5-7  (include)   -l ^3,^5-7  (exclude)"""
 
-_LINE_OPT_ROW = f"""\
+_LINE_OPT_ROW: Final = f"""\
   [bold cyan]-l[/bold cyan] [cyan]<lines>[/cyan]  Select specific lines within a hunk
 {_LINE_SELECT_EXAMPLE}
   [bold cyan]--include-matching[/bold cyan] [cyan]<pattern>[/cyan]  Select changed lines containing <pattern> (repeatable, OR'd)
@@ -244,7 +250,7 @@ _LINE_OPT_ROW = f"""\
   [bold cyan]--regex[/bold cyan]    Treat matching patterns as regular expressions (default: literal substring)
   [bold cyan]--allow-one-sided[/bold cyan]  Permit selecting one side of a one-for-one replacement (rejected by default)"""  # noqa: E501
 
-_LINE_OPTS = f"""\
+_LINE_OPTS: Final = f"""\
 [bold green]Options:[/bold green]
 {_LINE_OPT_ROW}
   [bold cyan]--dry-run[/bold cyan]   Report what would change without touching the index or working tree"""  # noqa: E501
@@ -261,17 +267,17 @@ other kind of operand is a Hunk ID.
 {_ID_HELP}
 {_EXACT_PATH_HELP}"""
 
-USAGE = "[bold green]Usage:[/bold green] [bold cyan]git-hunk[/bold cyan] [cyan]<COMMAND>[/cyan]"  # noqa: E501
-USAGE_LIST = "[bold green]Usage:[/bold green] [bold cyan]git-hunk list[/bold cyan] [cyan][OPTIONS][/cyan] [cyan][<Repository-path>...][/cyan]"  # noqa: E501
-USAGE_SHOW = "[bold green]Usage:[/bold green] [bold cyan]git-hunk show[/bold cyan] [cyan][<id>...][/cyan] [cyan][OPTIONS][/cyan]"  # noqa: E501
-USAGE_STAGE = "[bold green]Usage:[/bold green] [bold cyan]git-hunk stage[/bold cyan] [cyan]<id|Repository-path>[/cyan] [cyan][<id|Repository-path>...][/cyan] [cyan][OPTIONS][/cyan]"  # noqa: E501
-USAGE_UNSTAGE = "[bold green]Usage:[/bold green] [bold cyan]git-hunk unstage[/bold cyan] [cyan]<id|Repository-path>[/cyan] [cyan][<id|Repository-path>...][/cyan] [cyan][OPTIONS][/cyan]"  # noqa: E501
-USAGE_DISCARD = "[bold green]Usage:[/bold green] [bold cyan]git-hunk discard[/bold cyan] [cyan]<id|Repository-path>[/cyan] [cyan][<id|Repository-path>...][/cyan] [cyan][OPTIONS][/cyan]"  # noqa: E501
-USAGE_COMMIT = "[bold green]Usage:[/bold green] [bold cyan]git-hunk commit[/bold cyan] [cyan]<id|Repository-path>[/cyan] [cyan][<id|Repository-path>...][/cyan] [bold cyan]-m[/bold cyan] [cyan]<msg>[/cyan] [cyan][OPTIONS][/cyan]"  # noqa: E501
-USAGE_SKILLS = "[bold green]Usage:[/bold green] [bold cyan]git-hunk skills[/bold cyan] [cyan][SUBCOMMAND][/cyan] [cyan][<name>...][/cyan]"  # noqa: E501
+USAGE: Final = "[bold green]Usage:[/bold green] [bold cyan]git-hunk[/bold cyan] [cyan]<COMMAND>[/cyan]"  # noqa: E501
+USAGE_LIST: Final = "[bold green]Usage:[/bold green] [bold cyan]git-hunk list[/bold cyan] [cyan][OPTIONS][/cyan] [cyan][<Repository-path>...][/cyan]"  # noqa: E501
+USAGE_SHOW: Final = "[bold green]Usage:[/bold green] [bold cyan]git-hunk show[/bold cyan] [cyan][<id>...][/cyan] [cyan][OPTIONS][/cyan]"  # noqa: E501
+USAGE_STAGE: Final = "[bold green]Usage:[/bold green] [bold cyan]git-hunk stage[/bold cyan] [cyan]<id|Repository-path>[/cyan] [cyan][<id|Repository-path>...][/cyan] [cyan][OPTIONS][/cyan]"  # noqa: E501
+USAGE_UNSTAGE: Final = "[bold green]Usage:[/bold green] [bold cyan]git-hunk unstage[/bold cyan] [cyan]<id|Repository-path>[/cyan] [cyan][<id|Repository-path>...][/cyan] [cyan][OPTIONS][/cyan]"  # noqa: E501
+USAGE_DISCARD: Final = "[bold green]Usage:[/bold green] [bold cyan]git-hunk discard[/bold cyan] [cyan]<id|Repository-path>[/cyan] [cyan][<id|Repository-path>...][/cyan] [cyan][OPTIONS][/cyan]"  # noqa: E501
+USAGE_COMMIT: Final = "[bold green]Usage:[/bold green] [bold cyan]git-hunk commit[/bold cyan] [cyan]<id|Repository-path>[/cyan] [cyan][<id|Repository-path>...][/cyan] [bold cyan]-m[/bold cyan] [cyan]<msg>[/cyan] [cyan][OPTIONS][/cyan]"  # noqa: E501
+USAGE_SKILLS: Final = "[bold green]Usage:[/bold green] [bold cyan]git-hunk skills[/bold cyan] [cyan][SUBCOMMAND][/cyan] [cyan][<name>...][/cyan]"  # noqa: E501
 
 
-def _format_examples(rows: list[tuple[str, str]]) -> str:
+def _format_examples(*, rows: list[tuple[str, str]]) -> str:
     width = max(len(command) for command, _ in rows)
     lines = ["[bold green]Examples:[/bold green]"]
     for command, comment in rows:
@@ -337,7 +343,7 @@ _EXAMPLES_ALL: Final = (
     + _EXAMPLES_COMMIT
 )
 
-HELP = f"""\
+HELP: Final = f"""\
 Non-interactive git hunk staging for AI agents.
 
 {USAGE}
@@ -362,9 +368,9 @@ Non-interactive git hunk staging for AI agents.
   [bold cyan]-h[/bold cyan], [bold cyan]--help[/bold cyan]     Print help
   [bold cyan]-V[/bold cyan], [bold cyan]--version[/bold cyan]  Print version
 
-{_format_examples(_EXAMPLES_ALL)}"""
+{_format_examples(rows=_EXAMPLES_ALL)}"""
 
-HELP_LIST = f"""\
+HELP_LIST: Final = f"""\
 List hunks (unstaged, staged, and untracked by default).
 File operands are exact Repository paths relative to the worktree root.
 {_EXACT_PATH_HELP}
@@ -376,9 +382,9 @@ File operands are exact Repository paths relative to the worktree root.
   [bold cyan]--unstaged[/bold cyan]    Show only unstaged hunks
   [bold cyan]--json[/bold cyan]        Output as JSON
 
-{_format_examples(_EXAMPLES_LIST)}"""  # noqa: E501
+{_format_examples(rows=_EXAMPLES_LIST)}"""  # noqa: E501
 
-HELP_SHOW = f"""\
+HELP_SHOW: Final = f"""\
 Show the diff for one or more hunks. Shows all hunks when no IDs given.
 {_ID_HELP}
 
@@ -389,9 +395,9 @@ Show the diff for one or more hunks. Shows all hunks when no IDs given.
   [bold cyan]--unstaged[/bold cyan]   Show only unstaged hunks
   [bold cyan]--json[/bold cyan]       Output as JSON (with a structured per-line body)
 
-{_format_examples(_EXAMPLES_SHOW)}"""
+{_format_examples(rows=_EXAMPLES_SHOW)}"""
 
-HELP_STAGE = f"""\
+HELP_STAGE: Final = f"""\
 Stage one or more specific hunks.
 {_TARGET_HELP}
 
@@ -399,9 +405,9 @@ Stage one or more specific hunks.
 
 {_LINE_OPTS}
 
-{_format_examples(_EXAMPLES_STAGE)}"""
+{_format_examples(rows=_EXAMPLES_STAGE)}"""
 
-HELP_DISCARD = f"""\
+HELP_DISCARD: Final = f"""\
 Discard unstaged changes for one or more specific hunks (restore from the index).
 {_TARGET_HELP}
 
@@ -409,9 +415,9 @@ Discard unstaged changes for one or more specific hunks (restore from the index)
 
 {_LINE_OPTS}
 
-{_format_examples(_EXAMPLES_DISCARD)}"""
+{_format_examples(rows=_EXAMPLES_DISCARD)}"""
 
-HELP_UNSTAGE = f"""\
+HELP_UNSTAGE: Final = f"""\
 Unstage one or more specific hunks (move from index back to working tree).
 {_TARGET_HELP}
 
@@ -419,9 +425,9 @@ Unstage one or more specific hunks (move from index back to working tree).
 
 {_LINE_OPTS}
 
-{_format_examples(_EXAMPLES_UNSTAGE)}"""
+{_format_examples(rows=_EXAMPLES_UNSTAGE)}"""
 
-HELP_COMMIT = f"""\
+HELP_COMMIT: Final = f"""\
 Stage one or more specific hunks and commit them in one step. Aborts if anything
 is already staged, so the commit contains exactly the selected hunks. If the
 commit is rejected (e.g. by a pre-commit hook) the hunks are left staged so you
@@ -434,9 +440,9 @@ can retry with [bold cyan]git commit[/bold cyan].
   [bold cyan]-m[/bold cyan] [cyan]<msg>[/cyan]    Commit message (required)
 {_LINE_OPT_ROW}
 
-{_format_examples(_EXAMPLES_COMMIT)}"""  # noqa: E501
+{_format_examples(rows=_EXAMPLES_COMMIT)}"""  # noqa: E501
 
-HELP_SKILLS = f"""\
+HELP_SKILLS: Final = f"""\
 List and retrieve bundled skill content. Skills always match the installed
 git-hunk version, so prefer them over guessing commands from flags alone.
 
@@ -450,7 +456,7 @@ git-hunk version, so prefer them over guessing commands from flags alone.
 [bold green]Options:[/bold green]
   [bold cyan]--json[/bold cyan]        Output as JSON
 
-{_format_examples(_EXAMPLES_SKILLS)}"""
+{_format_examples(rows=_EXAMPLES_SKILLS)}"""
 
 
 def print_help(text: str) -> None:

@@ -24,7 +24,7 @@ _FINAL: Final = _TEMPLATE.format(
 )
 
 
-def _build(repo: GitRepo) -> None:
+def _build(repo: GitRepo) -> None:  # noqa: GR001 -- eval callback
     BASE: Final = _TEMPLATE.format(
         accumulate="        result += item.price",
         return_line="    return result + tax",
@@ -35,7 +35,7 @@ def _build(repo: GitRepo) -> None:
     repo.write_file(name="total.py", content=_FINAL)
 
 
-def _commit_fix(repo: GitRepo, *, match: str, allow_one_sided: bool = False) -> None:
+def _commit_fix(*, repo: GitRepo, match: str, allow_one_sided: bool) -> None:
     (hunk,) = list_hunks(repo, "total.py")
     run_git_hunk(
         repo,
@@ -49,20 +49,20 @@ def _commit_fix(repo: GitRepo, *, match: str, allow_one_sided: bool = False) -> 
     )
 
 
-def _golden(repo: GitRepo) -> None:
-    _commit_fix(repo, match="item.price")
+def _golden(repo: GitRepo) -> None:  # noqa: GR001 -- eval callback
+    _commit_fix(repo=repo, match="item.price", allow_one_sided=False)
     run_git_hunk(repo, "commit", "total.py", "-m", "Round the returned total")
 
 
-def _squash_into_one_commit(repo: GitRepo) -> None:
+def _squash_into_one_commit(repo: GitRepo) -> None:  # noqa: GR001 -- eval callback
     run_git_hunk(repo, "stage", "total.py")
     repo.git("commit", "-m", "Fix totals")
 
 
-def _commit_one_sided_match(repo: GitRepo) -> None:
+def _commit_one_sided_match(repo: GitRepo) -> None:  # noqa: GR001 -- eval callback
     # The guard rejects a lone half by default, so the adversarial solver has to
     # ask for it explicitly to still reproduce the broken partition.
-    _commit_fix(repo, match="item.price * item.qty", allow_one_sided=True)
+    _commit_fix(repo=repo, match="item.price * item.qty", allow_one_sided=True)
     run_git_hunk(repo, "commit", "total.py", "-m", "Round the returned total")
 
 

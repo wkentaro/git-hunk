@@ -110,7 +110,7 @@ def _install_fake_run(
     run_dir: Path,
     next_result: Callable[[], Result],
     monotonic: Callable[[], float],
-    prepared_tasks: list[str] | None = None,
+    prepared_tasks: list[str] | None,
 ) -> EvalEnvironment:
     """Drive `_run_scenarios` without a model: fake solver, grade, and clock.
 
@@ -214,6 +214,7 @@ def test_run_reports_context_usage_and_artifacts(
         run_dir=run_dir,
         next_result=lambda: Result(passed=True),
         monotonic=lambda: next(monotonic_values),
+        prepared_tasks=None,
     )
 
     exit_code = eval_main._run_scenarios(
@@ -365,6 +366,7 @@ def test_run_gates_on_every_repeat_of_the_subject_variant(
         run_dir=run_dir,
         next_result=lambda: pending.pop(0),
         monotonic=lambda: 0.0,
+        prepared_tasks=None,
     )
 
     exit_code = eval_main._run_scenarios(
@@ -406,6 +408,7 @@ def test_run_gates_on_subject_variant_outcomes_and_solver_errors(
         run_dir=run_dir,
         next_result=lambda: pending.pop(0),
         monotonic=lambda: 0.0,
+        prepared_tasks=None,
     )
 
     exit_code = eval_main._run_scenarios(

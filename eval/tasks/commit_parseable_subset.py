@@ -59,30 +59,30 @@ _FINAL: Final = (
 )
 
 
-def _build(repo: GitRepo) -> None:
+def _build(repo: GitRepo) -> None:  # noqa: GR001 -- eval callback
     repo.write_file(name=_PATH, content=_BASE)
     repo.git("add", _PATH)
     repo.git("commit", "-m", "Initial state")
     repo.write_file(name=_PATH, content=_DIRTY)
 
 
-def _single_hunk_id(repo: GitRepo) -> str:
+def _single_hunk_id(*, repo: GitRepo) -> str:
     # The trap only exists while both intents share one hunk.
     (hunk,) = list_hunks(repo, _PATH)
     return str(hunk["id"])
 
 
-def _commit_selection(repo: GitRepo, *selection: str) -> None:
-    hunk_id = _single_hunk_id(repo)
+def _commit_selection(*selection: str, repo: GitRepo) -> None:
+    hunk_id = _single_hunk_id(repo=repo)
     run_git_hunk(repo, "commit", hunk_id, *selection, "-m", _MESSAGE)
 
 
-def _golden(repo: GitRepo) -> None:
+def _golden(repo: GitRepo) -> None:  # noqa: GR001 -- eval callback
     # Stage, read back what the index now holds, and only commit once it parses
     # — the check an agent has to perform by hand today, and the one #58 wants
     # to fold into `stage --verify`. Committing from the verified index means
     # nothing can change between the check and the commit.
-    hunk_id = _single_hunk_id(repo)
+    hunk_id = _single_hunk_id(repo=repo)
     run_git_hunk(repo, "stage", hunk_id, "-l", _KEEP_LINES)
     try:
         ast.parse(repo.git("show", f":{_PATH}"))
@@ -93,21 +93,33 @@ def _golden(repo: GitRepo) -> None:
     run_git_hunk(repo, "discard", _PATH)
 
 
-def _commit_without_matching_debug_lines(repo: GitRepo) -> None:
-    _commit_selection(repo, "--exclude-matching", _DEBUG_PATTERN)
+def _commit_without_matching_debug_lines(repo: GitRepo) -> None:  # noqa: GR001 -- eval callback
+    _commit_selection(
+        "--exclude-matching",
+        _DEBUG_PATTERN,
+        repo=repo,
+    )
 
 
-def _commit_without_the_debug_range(repo: GitRepo) -> None:
-    _commit_selection(repo, "-l", _STRANDING_RANGE)
+def _commit_without_the_debug_range(repo: GitRepo) -> None:  # noqa: GR001 -- eval callback
+    _commit_selection(
+        "-l",
+        _STRANDING_RANGE,
+        repo=repo,
+    )
 
 
-def _commit_everything(repo: GitRepo) -> None:
+def _commit_everything(repo: GitRepo) -> None:  # noqa: GR001 -- eval callback
     run_git_hunk(repo, "stage", _PATH)
     repo.git("commit", "-m", _MESSAGE)
 
 
-def _forget_to_drop_the_scaffolding(repo: GitRepo) -> None:
-    _commit_selection(repo, "-l", _KEEP_LINES)
+def _forget_to_drop_the_scaffolding(repo: GitRepo) -> None:  # noqa: GR001 -- eval callback
+    _commit_selection(
+        "-l",
+        _KEEP_LINES,
+        repo=repo,
+    )
 
 
 _SKIP_VOIDED: Final = CommitSpec(

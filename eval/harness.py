@@ -24,7 +24,7 @@ def _remove_readonly(
     function: Callable[..., object],
     path: str,
     exc_info: tuple[type[BaseException], BaseException, TracebackType],
-) -> None:
+) -> None:  # noqa: GR001 -- shutil.rmtree callback
     error = exc_info[1]
     if not isinstance(error, PermissionError):
         raise error

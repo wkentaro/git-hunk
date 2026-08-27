@@ -62,7 +62,7 @@ def grade(repo: GitRepo, task: Task, base: str) -> Result:
         changes = _extract_changes(repo=repo, sha=sha)
         spec = spec_by_changes.get(changes)
         if spec is None:
-            formatted_changes = _format_changes(changes)
+            formatted_changes = _format_changes(changes=changes)
             return _fail(
                 reason="partition",
                 detail=f"commit {sha} has unexpected changes: {formatted_changes}",
@@ -160,12 +160,12 @@ def _iter_python_blobs(*, repo: GitRepo, sha: str) -> Iterator[tuple[str, str]]:
         yield path, object_id.decode()
 
 
-def _extract_changes(repo: GitRepo, sha: str) -> frozenset[ChangedLine]:
+def _extract_changes(*, repo: GitRepo, sha: str) -> frozenset[ChangedLine]:
     diff = repo.git("diff", "--no-color", "--no-renames", f"{sha}^", sha)
-    return _parse_changes(diff)
+    return _parse_changes(diff=diff)
 
 
-def _parse_changes(diff: str) -> frozenset[ChangedLine]:
+def _parse_changes(*, diff: str) -> frozenset[ChangedLine]:
     changes: set[ChangedLine] = set()
     file_path = ""
     in_hunk = False
@@ -187,7 +187,7 @@ def _parse_changes(diff: str) -> frozenset[ChangedLine]:
     return frozenset(changes)
 
 
-def _read_head(repo: GitRepo) -> frozenset[FileState]:
+def _read_head(*, repo: GitRepo) -> frozenset[FileState]:
     listing = repo.git_bytes("ls-tree", "-rz", "--full-tree", "HEAD")
     files: set[FileState] = set()
     for record in listing.rstrip(b"\0").split(b"\0"):
@@ -202,14 +202,14 @@ def _read_head(repo: GitRepo) -> frozenset[FileState]:
             FileState(
                 path=os.fsdecode(raw_path),
                 content=content,
-                mode=_parse_mode(raw_mode),
+                mode=_parse_mode(raw_mode=raw_mode),
             )
         )
     return frozenset(files)
 
 
 def _read_tracked_worktree(
-    repo: GitRepo, head: frozenset[FileState]
+    *, repo: GitRepo, head: frozenset[FileState]
 ) -> frozenset[FileState]:
     files = {
         state
@@ -219,7 +219,7 @@ def _read_tracked_worktree(
     return frozenset(files)
 
 
-def _read_index_paths(repo: GitRepo) -> frozenset[str]:
+def _read_index_paths(*, repo: GitRepo) -> frozenset[str]:
     listing = repo.git_bytes("ls-files", "-z")
     return frozenset(
         os.fsdecode(raw_path)
@@ -228,7 +228,7 @@ def _read_index_paths(repo: GitRepo) -> frozenset[str]:
     )
 
 
-def _read_untracked(repo: GitRepo) -> frozenset[FileState]:
+def _read_untracked(*, repo: GitRepo) -> frozenset[FileState]:
     listing = repo.git_bytes("ls-files", "--others", "-z")
     files: set[FileState] = set()
     for raw_path in listing.rstrip(b"\0").split(b"\0"):
@@ -241,7 +241,7 @@ def _read_untracked(repo: GitRepo) -> frozenset[FileState]:
     return frozenset(files)
 
 
-def _read_worktree_file(repo: GitRepo, path: str) -> FileState | None:
+def _read_worktree_file(*, repo: GitRepo, path: str) -> FileState | None:
     file_path = repo.path / path
     try:
         file_stat = file_path.lstat()
@@ -259,7 +259,7 @@ def _read_worktree_file(repo: GitRepo, path: str) -> FileState | None:
     return FileState(path=path, content=file_path.read_bytes(), mode=mode)
 
 
-def _parse_mode(raw_mode: bytes) -> FileMode:
+def _parse_mode(*, raw_mode: bytes) -> FileMode:
     mode = raw_mode.decode()
     if mode not in {"100644", "100755", "120000"}:
         raise RuntimeError(f"unsupported Git mode {mode!r}")
@@ -278,15 +278,18 @@ def _state_failure(
 ) -> Result:
     return _fail(
         reason=reason,
-        detail=f"expected {_format_files(expected)}, got {_format_files(actual)}",
+        detail=(
+            f"expected {_format_files(files=expected)}, "
+            f"got {_format_files(files=actual)}"
+        ),
     )
 
 
-def _format_changes(changes: frozenset[ChangedLine]) -> str:
+def _format_changes(*, changes: frozenset[ChangedLine]) -> str:
     return repr(
         sorted(changes, key=lambda change: (change.path, change.op, change.content))
     )
 
 
-def _format_files(files: frozenset[FileState]) -> str:
+def _format_files(*, files: frozenset[FileState]) -> str:
     return repr(sorted(files, key=lambda file: file.path))

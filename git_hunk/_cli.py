@@ -114,13 +114,13 @@ def _require_worktree_root() -> str:
         raise CliError(str(exc)) from exc
 
 
-def _echo_json(data: object) -> None:
+def _echo_json(*, data: object) -> None:
     click.echo(json.dumps(data, indent=2))
 
 
-def _echo_hunks_json(hunks: list[Hunk], *, include_lines: bool = False) -> None:
+def _echo_hunks_json(*, hunks: list[Hunk], include_lines: bool) -> None:
     _echo_json(
-        {
+        data={
             "schema_version": JSON_SCHEMA_VERSION,
             "hunks": [h.to_dict(include_lines=include_lines) for h in hunks],
         }
@@ -176,7 +176,7 @@ def _get_inventory(*, worktree_root: str) -> _Inventory:
     )
 
 
-def _find_hunks_by_ids(hunks: list[Hunk], ids: list[str]) -> list[Hunk]:
+def _find_hunks_by_ids(*, hunks: list[Hunk], ids: list[str]) -> list[Hunk]:
     def format_candidate(hunk: Hunk) -> str:
         marker = " (conditional)" if hunk.id_stability == "conditional" else ""
         return format_hunk_id(hunk) + marker
@@ -200,7 +200,7 @@ def _find_hunks_by_ids(hunks: list[Hunk], ids: list[str]) -> list[Hunk]:
     return found
 
 
-def _make_repository_path(arg: str, *, worktree_root: str) -> str:
+def _make_repository_path(*, arg: str, worktree_root: str) -> str:
     tip = f"repository paths are relative to the worktree root ({worktree_root})"
     if not arg:
         raise CliError("repository path must not be empty", tip=tip)
@@ -225,7 +225,7 @@ class _Target:
 
 
 def _make_targets(
-    args: list[str], *, worktree_root: str, command_name: str, usage: str
+    *, args: list[str], worktree_root: str, command_name: str, usage: str
 ) -> list[_Target]:
     if not args:
         raise CliError(
@@ -235,14 +235,14 @@ def _make_targets(
     return [
         _Target(
             arg=arg,
-            path=_make_repository_path(arg, worktree_root=worktree_root),
+            path=_make_repository_path(arg=arg, worktree_root=worktree_root),
         )
         for arg in args
     ]
 
 
 def _select_hunks(
-    hunks: list[Hunk], targets: list[_Target], *, inventory_hunks: list[Hunk]
+    *, hunks: list[Hunk], targets: list[_Target], inventory_hunks: list[Hunk]
 ) -> list[Hunk]:
     files = {h.file for h in hunks}
     eligible_ids = {hunk.id for hunk in hunks}
@@ -254,7 +254,7 @@ def _select_hunks(
         if target.path in files:
             matches = [h for h in hunks if h.file == target.path]
         elif re.fullmatch(r"[0-9a-fA-F]+", target.arg):
-            matches = _find_hunks_by_ids(inventory_hunks, [target.arg])
+            matches = _find_hunks_by_ids(hunks=inventory_hunks, ids=[target.arg])
             if matches[0].id not in eligible_ids:
                 raise CliError(f"hunk '{target.arg}' is not eligible for this command")
         else:
@@ -297,10 +297,10 @@ class _Selection:
 
 
 def _build_selection(
+    *,
     line_spec: str | None,
     include_matching: tuple[str, ...],
     exclude_matching: tuple[str, ...],
-    *,
     regex: bool,
     allow_one_sided: bool,
     usage: str,
@@ -331,7 +331,7 @@ def _build_selection(
 
 
 def _apply_line_filter(
-    hunks: list[Hunk], selection: _Selection, *, reverse: bool
+    *, hunks: list[Hunk], selection: _Selection, reverse: bool
 ) -> list[Hunk]:
     if not selection.is_active():
         return hunks
@@ -363,22 +363,24 @@ def _apply_line_filter(
 
 
 def _apply_selection(
+    *,
     targets: list[_Target],
     selection: _Selection,
-    *,
     worktree_root: str,
     staged: bool,
     cached: bool,
     reverse: bool,
     dry_run: bool,
-    inventory: _Inventory | None = None,
+    inventory: _Inventory | None,
 ) -> list[Hunk]:
     inventory = inventory or _get_inventory(worktree_root=worktree_root)
     status = "staged" if staged else "unstaged"
     hunks = [hunk for hunk in inventory.hunks if hunk.status == status]
     diff_output = inventory.staged_diff if staged else inventory.unstaged_diff
-    selected = _select_hunks(hunks, targets, inventory_hunks=inventory.hunks)
-    selected = _apply_line_filter(selected, selection, reverse=reverse)
+    selected = _select_hunks(
+        hunks=hunks, targets=targets, inventory_hunks=inventory.hunks
+    )
+    selected = _apply_line_filter(hunks=selected, selection=selection, reverse=reverse)
 
     patch_hunks = [
         hunk for hunk in selected if not hunk.binary and hunk.change_kind != "T"
@@ -459,9 +461,9 @@ def _apply_selection(
 
 
 def _run_patch_command(
+    *,
     args: list[str],
     selection: _Selection,
-    *,
     usage: str,
     command_name: str,
     staged: bool,
@@ -472,19 +474,20 @@ def _run_patch_command(
 ) -> None:
     worktree_root = _require_worktree_root()
     targets = _make_targets(
-        args,
+        args=args,
         worktree_root=worktree_root,
         command_name=command_name,
         usage=usage,
     )
     selected = _apply_selection(
-        targets,
-        selection,
+        targets=targets,
+        selection=selection,
         worktree_root=worktree_root,
         staged=staged,
         cached=cached,
         reverse=reverse,
         dry_run=dry_run,
+        inventory=None,
     )
     print_applied(selected, verb=f"would {command_name}" if dry_run else verb)
 
@@ -502,7 +505,7 @@ def cli(ctx: click.Context, show_help: bool, show_version: bool) -> None:
         ctx.exit()
 
 
-def _working_tree_mode(path: str) -> str:
+def _working_tree_mode(*, path: str) -> str:
     mode = os.lstat(path).st_mode
     if stat.S_ISLNK(mode):
         return "120000"
@@ -518,7 +521,7 @@ def _get_untracked_entries(*, worktree_root: str) -> list[Hunk]:
             p,
             change_kind="A",
             a_mode=None,
-            b_mode=_working_tree_mode(posixpath.join(worktree_root, p)),
+            b_mode=_working_tree_mode(path=posixpath.join(worktree_root, p)),
             binary=False,
             a_object_id=None,
             b_object_id=None,
@@ -529,8 +532,8 @@ def _get_untracked_entries(*, worktree_root: str) -> list[Hunk]:
 
 
 def _filter_inventory_hunks(
-    inventory: _Inventory,
     *,
+    inventory: _Inventory,
     worktree_root: str,
     staged: bool,
     unstaged: bool,
@@ -568,12 +571,12 @@ def cmd_list(
 
     worktree_root = _require_worktree_root()
     selected_paths = {
-        _make_repository_path(path, worktree_root=worktree_root) for path in files
+        _make_repository_path(arg=path, worktree_root=worktree_root) for path in files
     }
 
     inventory = _get_inventory(worktree_root=worktree_root)
     hunks = _filter_inventory_hunks(
-        inventory,
+        inventory=inventory,
         worktree_root=worktree_root,
         staged=staged,
         unstaged=unstaged,
@@ -584,7 +587,7 @@ def cmd_list(
         hunks = [hunk for hunk in hunks if hunk.file in selected_paths]
 
     if force_json:
-        _echo_hunks_json(hunks)
+        _echo_hunks_json(hunks=hunks, include_lines=False)
     else:
         print_hunk_list(hunks)
 
@@ -609,7 +612,7 @@ def cmd_show(
     worktree_root = _require_worktree_root()
     inventory = _get_inventory(worktree_root=worktree_root)
     hunks = _filter_inventory_hunks(
-        inventory,
+        inventory=inventory,
         worktree_root=worktree_root,
         staged=staged,
         unstaged=unstaged,
@@ -618,7 +621,7 @@ def cmd_show(
     )
 
     if ids:
-        matched = _find_hunks_by_ids(inventory.hunks, list(ids))
+        matched = _find_hunks_by_ids(hunks=inventory.hunks, ids=list(ids))
         visible_ids = {hunk.id for hunk in hunks}
         if any(hunk.id not in visible_ids for hunk in matched):
             raise CliError("requested hunk is outside the selected status")
@@ -626,12 +629,12 @@ def cmd_show(
         matched = hunks
 
     if force_json:
-        _echo_hunks_json(matched, include_lines=True)
+        _echo_hunks_json(hunks=matched, include_lines=True)
     else:
         print_hunk_diffs(matched)
 
 
-def _find_skill(skills: list[Skill], name: str) -> Skill:
+def _find_skill(*, skills: list[Skill], name: str) -> Skill:
     for skill in skills:
         if skill.name == name:
             return skill
@@ -660,7 +663,7 @@ def cmd_skills(args: tuple[str, ...], force_json: bool, show_help: bool) -> None
         skills = load_skills()
         if force_json:
             data = [{"name": s.name, "description": s.description} for s in skills]
-            _echo_json(data)
+            _echo_json(data=data)
         else:
             print_skill_list(skills)
         return
@@ -669,10 +672,10 @@ def cmd_skills(args: tuple[str, ...], force_json: bool, show_help: bool) -> None
         if not rest:
             raise CliError("skills get requires a skill name", usage=USAGE_SKILLS)
         skills = load_skills()
-        selected = [_find_skill(skills, name) for name in rest]
+        selected = [_find_skill(skills=skills, name=name) for name in rest]
         if force_json:
             data = [{"name": s.name, "content": s.content} for s in selected]
-            _echo_json(data)
+            _echo_json(data=data)
         else:
             click.echo("\n".join(s.content.rstrip("\n") for s in selected))
         return
@@ -682,9 +685,13 @@ def cmd_skills(args: tuple[str, ...], force_json: bool, show_help: bool) -> None
             raise CliError(
                 "skills path takes at most one skill name", usage=USAGE_SKILLS
             )
-        path = _find_skill(load_skills(), rest[0]).path if rest else skills_root()
+        path = (
+            _find_skill(skills=load_skills(), name=rest[0]).path
+            if rest
+            else skills_root()
+        )
         if force_json:
-            _echo_json({"path": str(path)})
+            _echo_json(data={"path": str(path)})
         else:
             click.echo(str(path))
         return
@@ -692,7 +699,7 @@ def cmd_skills(args: tuple[str, ...], force_json: bool, show_help: bool) -> None
     raise CliError(f"unrecognized skills subcommand '{subcommand}'", usage=USAGE_SKILLS)
 
 
-def _add_patch_selection_options(command: Callable[..., None]) -> Callable[..., None]:
+def _add_patch_selection_options(command: Callable[..., None]) -> Callable[..., None]:  # noqa: GR001 -- Click decorator callback
     options = [
         click.option("-l", "line_spec", default=None),
         click.option("--include-matching", "include_matching", multiple=True),
@@ -724,16 +731,16 @@ def cmd_stage(
         print_help(HELP_STAGE)
         return
     selection = _build_selection(
-        line_spec,
-        include_matching,
-        exclude_matching,
+        line_spec=line_spec,
+        include_matching=include_matching,
+        exclude_matching=exclude_matching,
         regex=use_regex,
         allow_one_sided=allow_one_sided,
         usage=USAGE_STAGE,
     )
     _run_patch_command(
-        list(targets),
-        selection,
+        args=list(targets),
+        selection=selection,
         usage=USAGE_STAGE,
         command_name="stage",
         staged=False,
@@ -760,16 +767,16 @@ def cmd_unstage(
         print_help(HELP_UNSTAGE)
         return
     selection = _build_selection(
-        line_spec,
-        include_matching,
-        exclude_matching,
+        line_spec=line_spec,
+        include_matching=include_matching,
+        exclude_matching=exclude_matching,
         regex=use_regex,
         allow_one_sided=allow_one_sided,
         usage=USAGE_UNSTAGE,
     )
     _run_patch_command(
-        list(targets),
-        selection,
+        args=list(targets),
+        selection=selection,
         usage=USAGE_UNSTAGE,
         command_name="unstage",
         staged=True,
@@ -796,16 +803,16 @@ def cmd_discard(
         print_help(HELP_DISCARD)
         return
     selection = _build_selection(
-        line_spec,
-        include_matching,
-        exclude_matching,
+        line_spec=line_spec,
+        include_matching=include_matching,
+        exclude_matching=exclude_matching,
         regex=use_regex,
         allow_one_sided=allow_one_sided,
         usage=USAGE_DISCARD,
     )
     _run_patch_command(
-        list(targets),
-        selection,
+        args=list(targets),
+        selection=selection,
         usage=USAGE_DISCARD,
         command_name="discard",
         staged=False,
@@ -843,7 +850,7 @@ def cmd_commit(
 
     worktree_root = _require_worktree_root()
     commit_targets = _make_targets(
-        list(targets),
+        args=list(targets),
         worktree_root=worktree_root,
         command_name="commit",
         usage=USAGE_COMMIT,
@@ -856,16 +863,16 @@ def cmd_commit(
         )
 
     selection = _build_selection(
-        line_spec,
-        include_matching,
-        exclude_matching,
+        line_spec=line_spec,
+        include_matching=include_matching,
+        exclude_matching=exclude_matching,
         regex=use_regex,
         allow_one_sided=allow_one_sided,
         usage=USAGE_COMMIT,
     )
     selected = _apply_selection(
-        commit_targets,
-        selection,
+        targets=commit_targets,
+        selection=selection,
         worktree_root=worktree_root,
         staged=False,
         cached=True,

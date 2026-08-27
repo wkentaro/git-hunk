@@ -30,37 +30,37 @@ def hunks() -> list[Hunk]:
 
 
 def test_unique_prefix_resolves_to_one_hunk(hunks: list[Hunk]) -> None:
-    assert _find_hunks_by_ids(hunks, ["ab12"]) == [hunks[0]]
+    assert _find_hunks_by_ids(hunks=hunks, ids=["ab12"]) == [hunks[0]]
 
 
 def test_multiple_ids_resolve_in_order(hunks: list[Hunk]) -> None:
-    assert _find_hunks_by_ids(hunks, ["ab12", "ab34"]) == [hunks[0], hunks[1]]
+    assert _find_hunks_by_ids(hunks=hunks, ids=["ab12", "ab34"]) == [hunks[0], hunks[1]]
 
 
 @pytest.mark.parametrize("query", ["AB12", "Ab12", "AB12CD0"])
 def test_uppercase_prefix_resolves_case_insensitively(
     hunks: list[Hunk], query: str
 ) -> None:
-    assert _find_hunks_by_ids(hunks, [query]) == [hunks[0]]
+    assert _find_hunks_by_ids(hunks=hunks, ids=[query]) == [hunks[0]]
 
 
 def test_ambiguous_prefix_raises_with_matches_tip(hunks: list[Hunk]) -> None:
     with pytest.raises(CliError) as exc_info:
-        _find_hunks_by_ids(hunks, ["ab"])
+        _find_hunks_by_ids(hunks=hunks, ids=["ab"])
     assert str(exc_info.value) == "ambiguous hunk id 'ab'"
     assert exc_info.value.tip == "matches: ab12cd0, ab34ef0"
 
 
 def test_unmatched_prefix_raises_not_found(hunks: list[Hunk]) -> None:
     with pytest.raises(CliError) as exc_info:
-        _find_hunks_by_ids(hunks, ["ff"])
+        _find_hunks_by_ids(hunks=hunks, ids=["ff"])
     assert str(exc_info.value) == "hunk 'ff' not found"
     assert exc_info.value.tip == "available hunk ids: ab12cd0, ab34ef0"
 
 
 def test_not_found_with_empty_pool_has_no_tip() -> None:
     with pytest.raises(CliError) as exc_info:
-        _find_hunks_by_ids([], ["ff"])
+        _find_hunks_by_ids(hunks=[], ids=["ff"])
     assert str(exc_info.value) == "hunk 'ff' not found"
     assert exc_info.value.tip is None
 
@@ -68,6 +68,6 @@ def test_not_found_with_empty_pool_has_no_tip() -> None:
 @pytest.mark.parametrize("blank", ["", "  "])
 def test_blank_id_rejected(hunks: list[Hunk], blank: str) -> None:
     with pytest.raises(CliError) as exc_info:
-        _find_hunks_by_ids(hunks, [blank])
+        _find_hunks_by_ids(hunks=hunks, ids=[blank])
     assert str(exc_info.value) == "hunk id must not be empty or whitespace"
     assert exc_info.value.tip is None

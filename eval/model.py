@@ -243,6 +243,7 @@ def run_claude(
         started_at=started_at,
         duration_seconds=duration_seconds,
         exit_code=result.returncode,
+        incomplete_output=None,
     )
     if result.returncode != 0:
         raise RuntimeError(
@@ -256,20 +257,20 @@ class TranscriptReporter:
         self._transcript = transcript
 
     def report_variant(self, *, variant: EvalVariant) -> None:
-        self._emit(f"variant: {variant.name}")
+        self._emit(line=f"variant: {variant.name}")
 
     def report_prompt(self, *, prompt: str) -> None:
-        self._emit("prompt:")
+        self._emit(line="prompt:")
         for line in prompt.splitlines():
-            self._emit(f"  {line}")
+            self._emit(line=f"  {line}")
 
     def report_tool_calls_header(self) -> None:
-        self._emit("tool calls:")
+        self._emit(line="tool calls:")
 
     def report_result(self, *, result_line: str, usage_line: str) -> None:
-        self._emit("result:")
-        self._emit(f"  {result_line}")
-        self._emit(f"  {usage_line}")
+        self._emit(line="result:")
+        self._emit(line=f"  {result_line}")
+        self._emit(line=f"  {usage_line}")
 
     def consume_line(self, line: str) -> None:
         try:
@@ -288,11 +289,11 @@ class TranscriptReporter:
         command_lines = command.rstrip().splitlines()
         if not command_lines:
             return
-        self._emit(f"  - {command_lines[0]}")
+        self._emit(line=f"  - {command_lines[0]}")
         for command_line in command_lines[1:]:
-            self._emit(f"    {command_line}")
+            self._emit(line=f"    {command_line}")
 
-    def _emit(self, line: str) -> None:
+    def _emit(self, *, line: str) -> None:
         print(line, flush=True)
         self._transcript.write(f"{line}\n")
         self._transcript.flush()
@@ -358,10 +359,10 @@ def _count_tool_calls(*, events: Iterable[Any]) -> int:
 def _parse_trace_usage(
     *, result_event: dict[str, Any], tool_calls: int
 ) -> TraceUsage | None:
-    duration_ms = _nonnegative_number(result_event.get("duration_ms"))
-    api_duration_ms = _nonnegative_number(result_event.get("duration_api_ms"))
-    turns = _nonnegative_int(result_event.get("num_turns"))
-    cost_usd = _nonnegative_number(result_event.get("total_cost_usd"))
+    duration_ms = _nonnegative_number(value=result_event.get("duration_ms"))
+    api_duration_ms = _nonnegative_number(value=result_event.get("duration_api_ms"))
+    turns = _nonnegative_int(value=result_event.get("num_turns"))
+    cost_usd = _nonnegative_number(value=result_event.get("total_cost_usd"))
     raw_usage = result_event.get("usage")
     if (
         duration_ms is None
@@ -380,7 +381,7 @@ def _parse_trace_usage(
     )
     if tokens is None:
         return None
-    models = _parse_model_usage(result_event.get("modelUsage"))
+    models = _parse_model_usage(raw_models=result_event.get("modelUsage"))
     return TraceUsage(
         duration_seconds=duration_ms / 1000,
         api_duration_seconds=api_duration_ms / 1000,
@@ -400,10 +401,12 @@ def _parse_token_usage(
     cache_read_key: str,
     output_key: str,
 ) -> TokenUsage | None:
-    input_tokens = _nonnegative_int(raw_usage.get(input_key))
-    cache_creation_input_tokens = _nonnegative_int(raw_usage.get(cache_creation_key))
-    cache_read_input_tokens = _nonnegative_int(raw_usage.get(cache_read_key))
-    output_tokens = _nonnegative_int(raw_usage.get(output_key))
+    input_tokens = _nonnegative_int(value=raw_usage.get(input_key))
+    cache_creation_input_tokens = _nonnegative_int(
+        value=raw_usage.get(cache_creation_key)
+    )
+    cache_read_input_tokens = _nonnegative_int(value=raw_usage.get(cache_read_key))
+    output_tokens = _nonnegative_int(value=raw_usage.get(output_key))
     if (
         input_tokens is None
         or cache_creation_input_tokens is None
@@ -419,7 +422,7 @@ def _parse_token_usage(
     )
 
 
-def _parse_model_usage(raw_models: object) -> dict[str, ModelUsage]:
+def _parse_model_usage(*, raw_models: object) -> dict[str, ModelUsage]:
     if not isinstance(raw_models, dict):
         return {}
     models: dict[str, ModelUsage] = {}
@@ -434,10 +437,10 @@ def _parse_model_usage(raw_models: object) -> dict[str, ModelUsage]:
             cache_read_key="cacheReadInputTokens",
             output_key="outputTokens",
         )
-        web_search_requests = _nonnegative_int(raw_usage.get("webSearchRequests"))
-        cost_usd = _nonnegative_number(raw_usage.get("costUSD"))
-        context_window = _nonnegative_int(raw_usage.get("contextWindow"))
-        max_output_tokens = _nonnegative_int(raw_usage.get("maxOutputTokens"))
+        web_search_requests = _nonnegative_int(value=raw_usage.get("webSearchRequests"))
+        cost_usd = _nonnegative_number(value=raw_usage.get("costUSD"))
+        context_window = _nonnegative_int(value=raw_usage.get("contextWindow"))
+        max_output_tokens = _nonnegative_int(value=raw_usage.get("maxOutputTokens"))
         canonical_model = raw_usage.get("canonicalModel")
         provider = raw_usage.get("provider")
         if (
@@ -462,13 +465,13 @@ def _parse_model_usage(raw_models: object) -> dict[str, ModelUsage]:
     return models
 
 
-def _nonnegative_int(value: object) -> int | None:
+def _nonnegative_int(*, value: object) -> int | None:
     if isinstance(value, bool) or not isinstance(value, int) or value < 0:
         return None
     return value
 
 
-def _nonnegative_number(value: object) -> float | None:
+def _nonnegative_number(*, value: object) -> float | None:
     if (
         isinstance(value, bool)
         or not isinstance(value, (int, float))
@@ -485,14 +488,16 @@ def format_usage(*, usage: TraceUsage) -> str:
     return (
         f"usage: {duration:.1f}s · {usage.turns} turns · "
         f"{usage.tool_calls} tool calls · tokens "
-        f"{_format_token_count(tokens.input_tokens)} input / "
-        f"{_format_token_count(tokens.cache_creation_input_tokens)} cache-write / "
-        f"{_format_token_count(tokens.cache_read_input_tokens)} cache-read / "
-        f"{_format_token_count(tokens.output_tokens)} output · ${usage.cost_usd:.4f}"
+        f"{_format_token_count(count=tokens.input_tokens)} input / "
+        f"{_format_token_count(count=tokens.cache_creation_input_tokens)} "
+        "cache-write / "
+        f"{_format_token_count(count=tokens.cache_read_input_tokens)} cache-read / "
+        f"{_format_token_count(count=tokens.output_tokens)} output · "
+        f"${usage.cost_usd:.4f}"
     )
 
 
-def _format_token_count(count: int) -> str:
+def _format_token_count(*, count: int) -> str:
     if count >= 1_000_000:
         return f"{count / 1_000_000:.1f}m"
     if count >= 1_000:
@@ -537,7 +542,7 @@ def _write_trace(
     started_at: datetime.datetime,
     duration_seconds: float,
     exit_code: int,
-    incomplete_output: str | None = None,
+    incomplete_output: str | None,
 ) -> None:
     metadata = {
         "type": "eval_metadata",

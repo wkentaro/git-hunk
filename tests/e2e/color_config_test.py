@@ -1,8 +1,10 @@
+from typing import Final
+
 import pytest
 
 from .conftest import GitHunkCLI
 
-REPORTS = (["list"], ["show"], ["list", "--json"])
+REPORTS: Final = (["list"], ["show"], ["list", "--json"])
 
 
 # color.ui and color.diff reach git's diff colorization through different

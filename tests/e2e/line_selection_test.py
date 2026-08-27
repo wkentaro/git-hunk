@@ -18,57 +18,147 @@ def two_group(cli: GitHunkCLI) -> GitHunkCLI:
     return cli
 
 
-def _only_id(cli: GitHunkCLI, *flags: str) -> str:
+def _only_id(*flags: str, cli: GitHunkCLI) -> str:
     hunks = cli.run_list_json("list", *flags, "--json")
     assert len(hunks) == 1
     return hunks[0]["id"]
 
 
-def _working(cli: GitHunkCLI) -> str:
+def _working(*, cli: GitHunkCLI) -> str:
     return (Path(cli.repo.path) / "f.txt").read_text()
 
 
 def test_stage_include_first_group(two_group: GitHunkCLI) -> None:
-    two_group.run_ok("stage", _only_id(two_group, "--unstaged"), "-l", "2,3")
+    two_group.run_ok(
+        "stage",
+        _only_id(
+            "--unstaged",
+            cli=two_group,
+        ),
+        "-l",
+        "2,3",
+    )
     assert two_group.repo.git("show", ":f.txt") == "a\nB\nc\nd\n"
 
 
 def test_stage_exclude_first_group(two_group: GitHunkCLI) -> None:
-    two_group.run_ok("stage", _only_id(two_group, "--unstaged"), "-l", "^2,^3")
+    two_group.run_ok(
+        "stage",
+        _only_id(
+            "--unstaged",
+            cli=two_group,
+        ),
+        "-l",
+        "^2,^3",
+    )
     assert two_group.repo.git("show", ":f.txt") == "a\nb\nc\nD\n"
 
 
 def test_unstage_include_first_group(two_group: GitHunkCLI) -> None:
-    two_group.run_ok("stage", _only_id(two_group, "--unstaged"))
-    two_group.run_ok("unstage", _only_id(two_group, "--staged"), "-l", "2,3")
+    two_group.run_ok(
+        "stage",
+        _only_id(
+            "--unstaged",
+            cli=two_group,
+        ),
+    )
+    two_group.run_ok(
+        "unstage",
+        _only_id(
+            "--staged",
+            cli=two_group,
+        ),
+        "-l",
+        "2,3",
+    )
     assert two_group.repo.git("show", ":f.txt") == "a\nb\nc\nD\n"
 
 
 def test_unstage_exclude_first_group(two_group: GitHunkCLI) -> None:
-    two_group.run_ok("stage", _only_id(two_group, "--unstaged"))
-    two_group.run_ok("unstage", _only_id(two_group, "--staged"), "-l", "^2,^3")
+    two_group.run_ok(
+        "stage",
+        _only_id(
+            "--unstaged",
+            cli=two_group,
+        ),
+    )
+    two_group.run_ok(
+        "unstage",
+        _only_id(
+            "--staged",
+            cli=two_group,
+        ),
+        "-l",
+        "^2,^3",
+    )
     assert two_group.repo.git("show", ":f.txt") == "a\nB\nc\nd\n"
 
 
 def test_discard_include_first_group(two_group: GitHunkCLI) -> None:
-    two_group.run_ok("discard", _only_id(two_group, "--unstaged"), "-l", "2,3")
-    assert _working(two_group) == "a\nb\nc\nD\n"
+    two_group.run_ok(
+        "discard",
+        _only_id(
+            "--unstaged",
+            cli=two_group,
+        ),
+        "-l",
+        "2,3",
+    )
+    assert _working(cli=two_group) == "a\nb\nc\nD\n"
 
 
 def test_discard_exclude_first_group(two_group: GitHunkCLI) -> None:
-    two_group.run_ok("discard", _only_id(two_group, "--unstaged"), "-l", "^2,^3")
-    assert _working(two_group) == "a\nB\nc\nd\n"
+    two_group.run_ok(
+        "discard",
+        _only_id(
+            "--unstaged",
+            cli=two_group,
+        ),
+        "-l",
+        "^2,^3",
+    )
+    assert _working(cli=two_group) == "a\nB\nc\nd\n"
 
 
 def test_full_round_trip(two_group: GitHunkCLI) -> None:
-    two_group.run_ok("stage", _only_id(two_group, "--unstaged"), "-l", "2,3")
+    two_group.run_ok(
+        "stage",
+        _only_id(
+            "--unstaged",
+            cli=two_group,
+        ),
+        "-l",
+        "2,3",
+    )
     assert two_group.repo.git("show", ":f.txt") == "a\nB\nc\nd\n"
 
-    two_group.run_ok("stage", _only_id(two_group, "--unstaged"))
+    two_group.run_ok(
+        "stage",
+        _only_id(
+            "--unstaged",
+            cli=two_group,
+        ),
+    )
     assert two_group.repo.git("show", ":f.txt") == "a\nB\nc\nD\n"
 
-    two_group.run_ok("unstage", _only_id(two_group, "--staged"), "-l", "2,3")
+    two_group.run_ok(
+        "unstage",
+        _only_id(
+            "--staged",
+            cli=two_group,
+        ),
+        "-l",
+        "2,3",
+    )
     assert two_group.repo.git("show", ":f.txt") == "a\nb\nc\nD\n"
 
-    two_group.run_ok("discard", _only_id(two_group, "--unstaged"), "-l", "2,3")
-    assert _working(two_group) == "a\nb\nc\nD\n"
+    two_group.run_ok(
+        "discard",
+        _only_id(
+            "--unstaged",
+            cli=two_group,
+        ),
+        "-l",
+        "2,3",
+    )
+    assert _working(cli=two_group) == "a\nb\nc\nD\n"

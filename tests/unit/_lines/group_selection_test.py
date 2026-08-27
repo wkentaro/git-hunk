@@ -1,4 +1,5 @@
 from collections.abc import Callable
+from typing import Final
 
 import pytest
 
@@ -29,7 +30,7 @@ def test_allows_unambiguous_group_selection(
     assert result.additions + result.deletions > 0
 
 
-_ONE_FOR_ONE = "@@ -1,2 +1,2 @@\n a\n-b\n+B"
+_ONE_FOR_ONE: Final = "@@ -1,2 +1,2 @@\n a\n-b\n+B"
 
 
 @pytest.mark.parametrize("reverse", [False, True])

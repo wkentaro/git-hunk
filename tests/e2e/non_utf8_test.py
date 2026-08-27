@@ -1,13 +1,14 @@
 import subprocess
 from pathlib import Path
+from typing import Final
 
 import pytest
 
 from .conftest import GitHunkCLI
 
 # 0xe9 is "é" in Latin-1 and an invalid standalone UTF-8 byte.
-_BEFORE = b"pass\xe9\nline2\n"
-_AFTER = b"pass\xe9\nLINE2\n"
+_BEFORE: Final = b"pass\xe9\nline2\n"
+_AFTER: Final = b"pass\xe9\nLINE2\n"
 
 
 @pytest.fixture

@@ -92,7 +92,7 @@ class _Metrics:
             (
                 _format_spread(spread=self.tool_calls, render=_format_count, unit="c"),
                 _format_spread(spread=self.turns, render=_format_count, unit="t"),
-                _format_spread(spread=self.cost_usd, render=_format_cost),
+                _format_spread(spread=self.cost_usd, render=_format_cost, unit=""),
             )
         )
 
@@ -223,7 +223,7 @@ def _failure_reasons(*, runs: list[TaskRun]) -> list[FailureReason]:
 
 
 def _format_spread(
-    *, spread: _Spread, render: Callable[[float], str], unit: str = ""
+    *, spread: _Spread, render: Callable[[float], str], unit: str
 ) -> str:
     center = f"{render(spread.median)}{unit}"
     minimum = render(spread.minimum)
@@ -241,13 +241,13 @@ def _format_spread(
 # module, because `_format_spread` accepts one as a plain `Callable[[float], str]`.
 
 
-def _format_count(value: float) -> str:
+def _format_count(value: float) -> str:  # noqa: GR001 -- numeric formatter callback
     # An even number of repeats can put the median between two samples; keeping
     # the half shows that rather than rounding it away.
     return str(int(value)) if float(value).is_integer() else f"{value:.1f}"
 
 
-def _format_cost(value: float) -> str:
+def _format_cost(value: float) -> str:  # noqa: GR001 -- numeric formatter callback
     if 0 < value < _ROUNDS_TO_ZERO_USD:
         return "<$0.01"
     return f"${value:.2f}"

@@ -6,7 +6,7 @@ from git_hunk._cli import JSON_SCHEMA_VERSION
 from .conftest import GitHunkCLI
 
 
-def _two_group(cli: GitHunkCLI) -> str:
+def _two_group(*, cli: GitHunkCLI) -> str:
     cli.repo.write_file("f.txt", "a\nb\nc\nd\n")
     cli.repo.git("add", ".")
     cli.repo.git("commit", "-m", "init")
@@ -15,7 +15,7 @@ def _two_group(cli: GitHunkCLI) -> str:
 
 
 def test_show_json_envelope_and_structured_body(cli: GitHunkCLI) -> None:
-    hid = _two_group(cli)
+    hid = _two_group(cli=cli)
 
     envelope = cli.run_list_envelope("show", hid, "--unstaged", "--json")
     assert envelope["schema_version"] == JSON_SCHEMA_VERSION
@@ -30,7 +30,7 @@ def test_show_json_envelope_and_structured_body(cli: GitHunkCLI) -> None:
 
 
 def test_show_json_n_round_trips_with_line_selection(cli: GitHunkCLI) -> None:
-    hid = _two_group(cli)
+    hid = _two_group(cli=cli)
     lines = cli.run_list_json("show", hid, "--unstaged", "--json")[0]["lines"]
 
     # Select exactly the first change group (the b -> B pair) by its n indices.

@@ -1,10 +1,12 @@
+from typing import Final
+
 import pytest
 
 from .conftest import GitHunkCLI
 
 # A path like a Next.js/SvelteKit route; the brackets must not be read as Rich
 # markup tags.
-_PATH = "src/[id].tsx"
+_PATH: Final = "src/[id].tsx"
 
 
 @pytest.fixture

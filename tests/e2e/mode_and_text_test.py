@@ -37,7 +37,7 @@ def mode_and_two_text_changes(cli: GitHunkCLI) -> GitHunkCLI:
 
 
 def _get_hunks(
-    cli: GitHunkCLI, *status: str
+    *status: str, cli: GitHunkCLI
 ) -> tuple[dict[str, object], list[dict[str, object]]]:
     hunks = cli.run_list_json("list", *status, "--json")
     mode_hunk = next(hunk for hunk in hunks if hunk["header"] is None)
@@ -45,7 +45,7 @@ def _get_hunks(
     return mode_hunk, text_hunks
 
 
-def _get_repository_snapshot(cli: GitHunkCLI) -> tuple[str, str, int, str, str]:
+def _get_repository_snapshot(*, cli: GitHunkCLI) -> tuple[str, str, int, str, str]:
     path = Path(cli.repo.path) / "script.sh"
     return (
         cli.repo.git("ls-files", "--stage", "script.sh"),
@@ -59,7 +59,10 @@ def _get_repository_snapshot(cli: GitHunkCLI) -> tuple[str, str, int, str, str]:
 def test_list_separates_mode_and_two_text_hunks(
     mode_and_two_text_changes: GitHunkCLI,
 ) -> None:
-    mode_hunk, text_hunks = _get_hunks(mode_and_two_text_changes, "--unstaged")
+    mode_hunk, text_hunks = _get_hunks(
+        "--unstaged",
+        cli=mode_and_two_text_changes,
+    )
 
     assert mode_hunk["a_mode"] == "100644"
     assert mode_hunk["b_mode"] == "100755"
@@ -87,7 +90,10 @@ def test_stage_text_hunk_leaves_mode_and_other_text_unstaged(
     mode_and_two_text_changes: GitHunkCLI,
 ) -> None:
     cli = mode_and_two_text_changes
-    _, text_hunks = _get_hunks(cli, "--unstaged")
+    _, text_hunks = _get_hunks(
+        "--unstaged",
+        cli=cli,
+    )
 
     cli.run_ok("stage", str(text_hunks[0]["id"]))
 
@@ -102,11 +108,17 @@ def test_stage_text_hunk_keeps_unchanged_mode_hunk_id(
     mode_and_two_text_changes: GitHunkCLI,
 ) -> None:
     cli = mode_and_two_text_changes
-    mode_hunk, text_hunks = _get_hunks(cli, "--unstaged")
+    mode_hunk, text_hunks = _get_hunks(
+        "--unstaged",
+        cli=cli,
+    )
 
     cli.run_ok("stage", str(text_hunks[0]["id"]))
 
-    unchanged_mode_hunk, _ = _get_hunks(cli, "--unstaged")
+    unchanged_mode_hunk, _ = _get_hunks(
+        "--unstaged",
+        cli=cli,
+    )
     assert unchanged_mode_hunk["id"] == mode_hunk["id"]
 
 
@@ -114,7 +126,10 @@ def test_stage_mode_and_one_text_hunk_leaves_other_text_unstaged(
     mode_and_two_text_changes: GitHunkCLI,
 ) -> None:
     cli = mode_and_two_text_changes
-    mode_hunk, text_hunks = _get_hunks(cli, "--unstaged")
+    mode_hunk, text_hunks = _get_hunks(
+        "--unstaged",
+        cli=cli,
+    )
 
     cli.run_ok("stage", str(mode_hunk["id"]), str(text_hunks[0]["id"]))
 
@@ -141,7 +156,10 @@ def test_stage_file_path_applies_mode_and_all_text_hunks(
 def test_unstage_mode_hunk_leaves_text_staged(mode_and_text_change: GitHunkCLI) -> None:
     cli = mode_and_text_change
     cli.repo.git("add", "script.sh")
-    mode_hunk, _ = _get_hunks(cli, "--staged")
+    mode_hunk, _ = _get_hunks(
+        "--staged",
+        cli=cli,
+    )
 
     cli.run_ok("unstage", str(mode_hunk["id"]))
 
@@ -154,7 +172,10 @@ def test_discard_mode_hunk_leaves_text_unstaged(
     mode_and_text_change: GitHunkCLI,
 ) -> None:
     cli = mode_and_text_change
-    mode_hunk, _ = _get_hunks(cli, "--unstaged")
+    mode_hunk, _ = _get_hunks(
+        "--unstaged",
+        cli=cli,
+    )
 
     cli.run_ok("discard", str(mode_hunk["id"]))
 
@@ -168,7 +189,10 @@ def test_commit_text_hunk_leaves_mode_uncommitted(
     mode_and_text_change: GitHunkCLI,
 ) -> None:
     cli = mode_and_text_change
-    _, [text_hunk] = _get_hunks(cli, "--unstaged")
+    _, [text_hunk] = _get_hunks(
+        "--unstaged",
+        cli=cli,
+    )
 
     cli.run_ok("commit", str(text_hunk["id"]), "-m", "change text")
 
@@ -181,7 +205,10 @@ def test_commit_mode_hunk_leaves_text_uncommitted(
     mode_and_text_change: GitHunkCLI,
 ) -> None:
     cli = mode_and_text_change
-    mode_hunk, _ = _get_hunks(cli, "--unstaged")
+    mode_hunk, _ = _get_hunks(
+        "--unstaged",
+        cli=cli,
+    )
 
     cli.run_ok("commit", str(mode_hunk["id"]), "-m", "change mode")
 
@@ -200,12 +227,15 @@ def test_mode_hunk_dry_run_changes_nothing(
         status = ("--staged",)
     else:
         status = ("--unstaged",)
-    mode_hunk, _ = _get_hunks(cli, *status)
-    before = _get_repository_snapshot(cli)
+    mode_hunk, _ = _get_hunks(
+        *status,
+        cli=cli,
+    )
+    before = _get_repository_snapshot(cli=cli)
 
     cli.run_ok(command, str(mode_hunk["id"]), "--dry-run")
 
-    assert _get_repository_snapshot(cli) == before
+    assert _get_repository_snapshot(cli=cli) == before
 
 
 @pytest.mark.parametrize("command", ["stage", "unstage", "discard"])
@@ -218,8 +248,11 @@ def test_mode_and_text_hunks_dry_run_change_nothing(
         status = ("--staged",)
     else:
         status = ("--unstaged",)
-    mode_hunk, [text_hunk] = _get_hunks(cli, *status)
-    before = _get_repository_snapshot(cli)
+    mode_hunk, [text_hunk] = _get_hunks(
+        *status,
+        cli=cli,
+    )
+    before = _get_repository_snapshot(cli=cli)
 
     cli.run_ok(
         command,
@@ -228,4 +261,4 @@ def test_mode_and_text_hunks_dry_run_change_nothing(
         "--dry-run",
     )
 
-    assert _get_repository_snapshot(cli) == before
+    assert _get_repository_snapshot(cli=cli) == before

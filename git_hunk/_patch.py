@@ -12,7 +12,7 @@ from ._hunk import split_file_diffs
 _MODE_LINE_PREFIXES: Final = ("old mode ", "new mode ")
 
 
-def _extract_file_headers(diff_output: str) -> dict[str, str]:
+def _extract_file_headers(*, diff_output: str) -> dict[str, str]:
     headers: dict[str, str] = {}
     for file_diff in split_file_diffs(diff_output):
         filepath = extract_file_path(file_diff)
@@ -22,7 +22,7 @@ def _extract_file_headers(diff_output: str) -> dict[str, str]:
     return headers
 
 
-def _remove_mode_lines(header: str) -> str:
+def _remove_mode_lines(*, header: str) -> str:
     return "".join(
         line
         for line in header.splitlines(keepends=True)
@@ -30,7 +30,7 @@ def _remove_mode_lines(header: str) -> str:
     )
 
 
-def _make_mode_header(header: str) -> str:
+def _make_mode_header(*, header: str) -> str:
     lines = header.splitlines(keepends=True)
     return "".join(
         [lines[0]]
@@ -38,7 +38,7 @@ def _make_mode_header(header: str) -> str:
     )
 
 
-def _needs_modification_header(hunk: Hunk) -> bool:
+def _needs_modification_header(*, hunk: Hunk) -> bool:
     # Partial line selection turns unselected changes into context, so an added
     # file's patch gains an old side and a deleted file's patch gains a new one.
     # Its "/dev/null" header no longer describes the patch and git rejects it.
@@ -50,7 +50,7 @@ def _needs_modification_header(hunk: Hunk) -> bool:
     )
 
 
-def _make_modification_header(header: str) -> str:
+def _make_modification_header(*, header: str) -> str:
     lines = header.rstrip("\n").split("\n")
     diff_line = lines[0]
     old_line = next(line for line in lines if line.startswith("--- "))
@@ -69,7 +69,7 @@ def _make_modification_header(header: str) -> str:
     return "\n".join((diff_line, old_line, new_line)) + "\n"
 
 
-def _normalize_hunk_ranges(hunks: list[Hunk], *, reverse: bool) -> list[str]:
+def _normalize_hunk_ranges(*, hunks: list[Hunk], reverse: bool) -> list[str]:
     parsed = []
     for hunk in hunks:
         header, separator, body = hunk.diff.partition("\n")
@@ -100,7 +100,7 @@ def build_patch(hunks: list[Hunk], diff_output: str, *, reverse: bool) -> str:
     for hunk in hunks:
         files.setdefault(hunk.file, []).append(hunk)
 
-    headers = _extract_file_headers(diff_output)
+    headers = _extract_file_headers(diff_output=diff_output)
 
     patches = []
     for filepath, file_hunks in files.items():
@@ -109,15 +109,17 @@ def build_patch(hunks: list[Hunk], diff_output: str, *, reverse: bool) -> str:
         mode_selected = any(is_mode_hunk(hunk) for hunk in file_hunks)
         text_selected = any(hunk.diff for hunk in file_hunks)
         if mode_selected and not text_selected:
-            header = _make_mode_header(headers[filepath])
+            header = _make_mode_header(header=headers[filepath])
         elif not mode_selected:
-            header = _remove_mode_lines(headers[filepath])
+            header = _remove_mode_lines(header=headers[filepath])
         else:
             header = headers[filepath]
-        if any(_needs_modification_header(hunk) for hunk in file_hunks):
-            header = _make_modification_header(header)
+        if any(_needs_modification_header(hunk=hunk) for hunk in file_hunks):
+            header = _make_modification_header(header=header)
         text_hunks = [hunk for hunk in file_hunks if hunk.diff]
-        hunk_diffs = "\n".join(_normalize_hunk_ranges(text_hunks, reverse=reverse))
+        hunk_diffs = "\n".join(
+            _normalize_hunk_ranges(hunks=text_hunks, reverse=reverse)
+        )
         patches.append(header + hunk_diffs + ("\n" if hunk_diffs else ""))
 
     return "".join(patches)

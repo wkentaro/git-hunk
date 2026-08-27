@@ -1,4 +1,5 @@
 from collections.abc import Callable
+from typing import Final
 
 import pytest
 
@@ -79,7 +80,7 @@ def test_one_for_one_addition(make_hunk: Callable[[str], Hunk]) -> None:
     assert " old" in result.diff
 
 
-_TWO_GROUP = "@@ -1,4 +1,4 @@\n a\n-b\n+B\n c\n-d\n+D"
+_TWO_GROUP: Final = "@@ -1,4 +1,4 @@\n a\n-b\n+B\n c\n-d\n+D"
 
 
 def test_reverse_include_drops_unselected_deletion_keeps_addition(
@@ -107,7 +108,7 @@ def test_reverse_exclude_first_group(make_hunk: Callable[[str], Hunk]) -> None:
     assert "-b" not in result.diff  # excluded -b dropped
 
 
-_NO_NEWLINE_TO_NEWLINE = f"@@ -1,2 +1,2 @@\n a\n-b\n{NO_NEWLINE_MARKER}\n+B"
+_NO_NEWLINE_TO_NEWLINE: Final = f"@@ -1,2 +1,2 @@\n a\n-b\n{NO_NEWLINE_MARKER}\n+B"
 
 
 def test_keep_addition_splits_stale_no_newline_context(
@@ -135,7 +136,7 @@ def test_keep_deletion_drops_no_newline_marker_from_dropped_addition(
     assert result.deletions == 1
 
 
-_REVERSE_NEW_SIDE_NO_NEWLINE = (
+_REVERSE_NEW_SIDE_NO_NEWLINE: Final = (
     f"@@ -1,4 +1,4 @@\n a\n-b\n+B\n c\n-d\n+D\n{NO_NEWLINE_MARKER}"
 )
 

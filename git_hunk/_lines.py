@@ -12,7 +12,7 @@ from ._hunk import parse_hunk_range
 from ._hunk import split_diff_body
 
 
-def _parse_line_number(token: str) -> int:
+def _parse_line_number(*, token: str) -> int:
     token = token.strip()
     if not re.fullmatch(r"[0-9]+", token):
         raise ValueError(f"invalid line number: '{token}'")
@@ -48,8 +48,8 @@ def parse_line_spec(spec: str, *, total: int) -> tuple[set[int], bool]:
             bounds = raw.split("-")
             if len(bounds) != 2 or not all(b.strip() for b in bounds):
                 raise ValueError(f"invalid range: '{part}' (expected start-end)")
-            lo = _parse_line_number(bounds[0])
-            hi = _parse_line_number(bounds[1])
+            lo = _parse_line_number(token=bounds[0])
+            hi = _parse_line_number(token=bounds[1])
             if lo > hi:
                 raise ValueError(f"invalid range (start > end): {part}")
             if lo > total or hi > total:
@@ -58,7 +58,7 @@ def parse_line_spec(spec: str, *, total: int) -> tuple[set[int], bool]:
                 )
             lines.update(range(lo, hi + 1))
         else:
-            line = _parse_line_number(raw)
+            line = _parse_line_number(token=raw)
             if line > total:
                 raise ValueError(
                     f"line number out of range (hunk has {total} lines): {part}"
@@ -75,7 +75,7 @@ class _BodyLine(NamedTuple):
     new_no_newline: bool
 
 
-def _parse_body_lines(body: list[str]) -> list[_BodyLine]:
+def _parse_body_lines(*, body: list[str]) -> list[_BodyLine]:
     parsed: list[_BodyLine] = []
     for line in body:
         if not is_no_newline_marker(line):
@@ -99,13 +99,13 @@ def _parse_body_lines(body: list[str]) -> list[_BodyLine]:
 
 def count_hunk_body_lines(hunk: Hunk) -> int:
     body = split_diff_body(diff=hunk.diff)
-    return len(_parse_body_lines(body))
+    return len(_parse_body_lines(body=body))
 
 
 def _select_body_lines(
+    *,
     body: list[_BodyLine],
     selected: set[int],
-    *,
     keep_prefix: str,
 ) -> list[_BodyLine]:
     kept: list[_BodyLine] = []
@@ -131,7 +131,7 @@ def _select_body_lines(
     return kept
 
 
-def _render_body_lines(kept: list[_BodyLine]) -> list[str]:
+def _render_body_lines(*, kept: list[_BodyLine]) -> list[str]:
     # A no-newline marker is valid only while its line is last on the side it
     # belongs to: ' ' context on both, '-' on old, '+' on new. Filtering can
     # leave a marked line with a later kept line on the same side, which makes
@@ -166,7 +166,7 @@ def _render_body_lines(kept: list[_BodyLine]) -> list[str]:
 
 
 def _validate_group(
-    group: list[tuple[int, str]], selected: set[int], *, allow_one_sided: bool
+    *, group: list[tuple[int, str]], selected: set[int], allow_one_sided: bool
 ) -> None:
     """Reject a partial subset of a grouped replacement.
 
@@ -203,16 +203,16 @@ def _validate_group(
 
 
 def _validate_group_selection(
-    body: list[_BodyLine], selected: set[int], *, allow_one_sided: bool
+    *, body: list[_BodyLine], selected: set[int], allow_one_sided: bool
 ) -> None:
     group: list[tuple[int, str]] = []
     for line_num, line in enumerate(body, start=1):
         if line.prefix in ("+", "-"):
             group.append((line_num, line.prefix))
             continue
-        _validate_group(group, selected, allow_one_sided=allow_one_sided)
+        _validate_group(group=group, selected=selected, allow_one_sided=allow_one_sided)
         group = []
-    _validate_group(group, selected, allow_one_sided=allow_one_sided)
+    _validate_group(group=group, selected=selected, allow_one_sided=allow_one_sided)
 
 
 def resolve_matching_lines(
@@ -239,7 +239,7 @@ def resolve_matching_lines(
             raise ValueError(f"invalid regex: {exc}") from exc
 
     selected: set[int] = set()
-    body = _parse_body_lines(split_diff_body(diff=hunk.diff))
+    body = _parse_body_lines(body=split_diff_body(diff=hunk.diff))
     for line_num, line in enumerate(body, start=1):
         if line.prefix not in ("+", "-"):
             continue
@@ -272,7 +272,7 @@ def filter_hunk_lines(
     NEW content the index or working tree already holds.
     """
     header = hunk.diff.split("\n", 1)[0]
-    body = _parse_body_lines(split_diff_body(diff=hunk.diff))
+    body = _parse_body_lines(body=split_diff_body(diff=hunk.diff))
     total = len(body)
 
     out_of_range = [n for n in lines if n < 1 or n > total]
@@ -286,13 +286,15 @@ def filter_hunk_lines(
     else:
         selected = lines
 
-    _validate_group_selection(body, selected, allow_one_sided=allow_one_sided)
+    _validate_group_selection(
+        body=body, selected=selected, allow_one_sided=allow_one_sided
+    )
     # A forward apply matches OLD content, so unselected '-' lines become
     # context and unselected '+' lines drop. A reverse apply matches NEW
     # content, so the two sides swap.
     keep_prefix = "+" if reverse else "-"
-    kept = _select_body_lines(body, selected, keep_prefix=keep_prefix)
-    new_body = _render_body_lines(kept)
+    kept = _select_body_lines(body=body, selected=selected, keep_prefix=keep_prefix)
+    new_body = _render_body_lines(kept=kept)
 
     additions, deletions = count_changes(new_body)
     if additions == 0 and deletions == 0:

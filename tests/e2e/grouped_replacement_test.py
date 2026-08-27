@@ -14,7 +14,7 @@ def grouped_replacement(cli: GitHunkCLI) -> GitHunkCLI:
     return cli
 
 
-def _capture_repo_state(cli: GitHunkCLI) -> tuple[str, str, bytes, str]:
+def _capture_repo_state(*, cli: GitHunkCLI) -> tuple[str, str, bytes, str]:
     return (
         cli.repo.git("rev-parse", "HEAD"),
         cli.repo.git("show", ":f.txt"),
@@ -23,7 +23,7 @@ def _capture_repo_state(cli: GitHunkCLI) -> tuple[str, str, bytes, str]:
     )
 
 
-def _assert_group_error(returncode: int, stderr: str) -> None:
+def _assert_group_error(*, returncode: int, stderr: str) -> None:
     assert returncode == 1
     assert "grouped replacement" in stderr
     assert "lines 2-5" in stderr
@@ -32,38 +32,38 @@ def _assert_group_error(returncode: int, stderr: str) -> None:
 @pytest.mark.parametrize("spec", ["2,4", "^3,^5"])
 def test_stage_rejection_is_atomic(grouped_replacement: GitHunkCLI, spec: str) -> None:
     cli = grouped_replacement
-    before = _capture_repo_state(cli)
+    before = _capture_repo_state(cli=cli)
 
     result = cli.run("stage", cli.get_only_hunk_id("--unstaged"), "-l", spec)
 
-    _assert_group_error(result.returncode, result.stderr)
-    assert _capture_repo_state(cli) == before
+    _assert_group_error(returncode=result.returncode, stderr=result.stderr)
+    assert _capture_repo_state(cli=cli) == before
 
 
 def test_unstage_rejection_is_atomic(grouped_replacement: GitHunkCLI) -> None:
     cli = grouped_replacement
     cli.run_ok("stage", cli.get_only_hunk_id("--unstaged"))
-    before = _capture_repo_state(cli)
+    before = _capture_repo_state(cli=cli)
 
     result = cli.run("unstage", cli.get_only_hunk_id("--staged"), "-l", "3,5")
 
-    _assert_group_error(result.returncode, result.stderr)
-    assert _capture_repo_state(cli) == before
+    _assert_group_error(returncode=result.returncode, stderr=result.stderr)
+    assert _capture_repo_state(cli=cli) == before
 
 
 def test_discard_rejection_is_atomic(grouped_replacement: GitHunkCLI) -> None:
     cli = grouped_replacement
-    before = _capture_repo_state(cli)
+    before = _capture_repo_state(cli=cli)
 
     result = cli.run("discard", cli.get_only_hunk_id("--unstaged"), "-l", "2,4")
 
-    _assert_group_error(result.returncode, result.stderr)
-    assert _capture_repo_state(cli) == before
+    _assert_group_error(returncode=result.returncode, stderr=result.stderr)
+    assert _capture_repo_state(cli=cli) == before
 
 
 def test_commit_rejection_is_atomic(grouped_replacement: GitHunkCLI) -> None:
     cli = grouped_replacement
-    before = _capture_repo_state(cli)
+    before = _capture_repo_state(cli=cli)
 
     result = cli.run(
         "commit",
@@ -74,8 +74,8 @@ def test_commit_rejection_is_atomic(grouped_replacement: GitHunkCLI) -> None:
         "partial",
     )
 
-    _assert_group_error(result.returncode, result.stderr)
-    assert _capture_repo_state(cli) == before
+    _assert_group_error(returncode=result.returncode, stderr=result.stderr)
+    assert _capture_repo_state(cli=cli) == before
 
 
 @pytest.mark.parametrize("spec", ["2,4", "^3,^5"])
@@ -85,14 +85,14 @@ def test_allow_one_sided_does_not_relax_the_group_rule(
     # --allow-one-sided covers a one-for-one pair only; a wider grouped
     # replacement stays a hard error.
     cli = grouped_replacement
-    before = _capture_repo_state(cli)
+    before = _capture_repo_state(cli=cli)
 
     result = cli.run(
         "stage", cli.get_only_hunk_id("--unstaged"), "-l", spec, "--allow-one-sided"
     )
 
-    _assert_group_error(result.returncode, result.stderr)
-    assert _capture_repo_state(cli) == before
+    _assert_group_error(returncode=result.returncode, stderr=result.stderr)
+    assert _capture_repo_state(cli=cli) == before
 
 
 @pytest.mark.parametrize(
@@ -106,12 +106,12 @@ def test_matching_selection_uses_group_validation(
     grouped_replacement: GitHunkCLI, selector: tuple[str, ...]
 ) -> None:
     cli = grouped_replacement
-    before = _capture_repo_state(cli)
+    before = _capture_repo_state(cli=cli)
 
     result = cli.run("stage", cli.get_only_hunk_id("--unstaged"), *selector)
 
-    _assert_group_error(result.returncode, result.stderr)
-    assert _capture_repo_state(cli) == before
+    _assert_group_error(returncode=result.returncode, stderr=result.stderr)
+    assert _capture_repo_state(cli=cli) == before
 
 
 @pytest.mark.parametrize(
@@ -126,9 +126,9 @@ def test_unstage_matching_selection_uses_group_validation(
 ) -> None:
     cli = grouped_replacement
     cli.run_ok("stage", cli.get_only_hunk_id("--unstaged"))
-    before = _capture_repo_state(cli)
+    before = _capture_repo_state(cli=cli)
 
     result = cli.run("unstage", cli.get_only_hunk_id("--staged"), *selector)
 
-    _assert_group_error(result.returncode, result.stderr)
-    assert _capture_repo_state(cli) == before
+    _assert_group_error(returncode=result.returncode, stderr=result.stderr)
+    assert _capture_repo_state(cli=cli) == before

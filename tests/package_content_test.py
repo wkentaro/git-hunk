@@ -32,7 +32,7 @@ def test_wheel_and_source_distribution_contain_only_package_files(
     with zipfile.ZipFile(wheel_path) as wheel:
         wheel_members = [PurePosixPath(name) for name in wheel.namelist()]
     assert wheel_members
-    assert all(_is_allowed_wheel_member(member) for member in wheel_members)
+    assert all(_is_allowed_wheel_member(member=member) for member in wheel_members)
     assert {
         member for member in wheel_members if member.parts[0] == "git_hunk"
     } == tracked_package_files
@@ -41,7 +41,7 @@ def test_wheel_and_source_distribution_contain_only_package_files(
     with tarfile.open(source_path, mode="r:gz") as source:
         source_members = [PurePosixPath(name) for name in source.getnames()]
     assert source_members
-    assert all(_is_allowed_source_member(member) for member in source_members)
+    assert all(_is_allowed_source_member(member=member) for member in source_members)
     source_package_files = {
         PurePosixPath(*member.parts[1:])
         for member in source_members
@@ -50,11 +50,11 @@ def test_wheel_and_source_distribution_contain_only_package_files(
     assert source_package_files == tracked_package_files
 
 
-def _is_allowed_wheel_member(member: PurePosixPath) -> bool:
+def _is_allowed_wheel_member(*, member: PurePosixPath) -> bool:
     return member.parts[0] == "git_hunk" or member.parts[0].endswith(".dist-info")
 
 
-def _is_allowed_source_member(member: PurePosixPath) -> bool:
+def _is_allowed_source_member(*, member: PurePosixPath) -> bool:
     ALLOWED_ROOT_FILES: Final = {
         ".gitignore",
         "LICENSE",
