@@ -6,7 +6,7 @@ import pytest
 from .conftest import GitHunkCLI
 
 
-def _commit(cli: GitHunkCLI, content: str) -> None:
+def _commit(*, cli: GitHunkCLI, content: str) -> None:
     cli.repo.write_file("f.txt", content)
     cli.repo.git("add", "f.txt")
     cli.repo.git("commit", "-m", "init")
@@ -21,7 +21,7 @@ class _NewlineChange(NamedTuple):
 @pytest.fixture(params=[("b", "B\n"), ("b\n", "B"), ("b", "B")])
 def newline_change(cli: GitHunkCLI, request: pytest.FixtureRequest) -> _NewlineChange:
     old, new = request.param
-    _commit(cli, "a\n" + old)
+    _commit(cli=cli, content="a\n" + old)
     cli.repo.write_file("f.txt", "a\n" + new)
     return _NewlineChange(cli=cli, old_text=old, new_text=new)
 
@@ -34,7 +34,7 @@ def staged_newline_change(newline_change: _NewlineChange) -> _NewlineChange:
 
 
 def test_stage_edit_last_line_no_newline(cli: GitHunkCLI) -> None:
-    _commit(cli, "a\nb\nc")
+    _commit(cli=cli, content="a\nb\nc")
     cli.repo.write_file("f.txt", "a\nb\ncX")
 
     cli.run_ok("stage", cli.get_only_hunk_id("--unstaged"))
@@ -43,7 +43,7 @@ def test_stage_edit_last_line_no_newline(cli: GitHunkCLI) -> None:
 
 
 def test_stage_newline_to_no_newline_removes_trailing_newline(cli: GitHunkCLI) -> None:
-    _commit(cli, "a\nb\nc\n")
+    _commit(cli=cli, content="a\nb\nc\n")
     cli.repo.write_file("f.txt", "a\nb\nc")
 
     cli.run_ok("stage", cli.get_only_hunk_id("--unstaged"))
@@ -52,7 +52,7 @@ def test_stage_newline_to_no_newline_removes_trailing_newline(cli: GitHunkCLI) -
 
 
 def test_stage_no_newline_to_newline_adds_trailing_newline(cli: GitHunkCLI) -> None:
-    _commit(cli, "a\nb\nc")
+    _commit(cli=cli, content="a\nb\nc")
     cli.repo.write_file("f.txt", "a\nb\nc\n")
 
     cli.run_ok("stage", cli.get_only_hunk_id("--unstaged"))
@@ -61,7 +61,7 @@ def test_stage_no_newline_to_newline_adds_trailing_newline(cli: GitHunkCLI) -> N
 
 
 def test_unstage_round_trips_no_newline(cli: GitHunkCLI) -> None:
-    _commit(cli, "a\nb\nc")
+    _commit(cli=cli, content="a\nb\nc")
     cli.repo.write_file("f.txt", "a\nb\ncX")
 
     cli.run_ok("stage", cli.get_only_hunk_id("--unstaged"))
@@ -73,7 +73,7 @@ def test_unstage_round_trips_no_newline(cli: GitHunkCLI) -> None:
 
 
 def test_discard_round_trips_no_newline(cli: GitHunkCLI) -> None:
-    _commit(cli, "a\nb\nc")
+    _commit(cli=cli, content="a\nb\nc")
     cli.repo.write_file("f.txt", "a\nb\ncX")
 
     cli.run_ok("discard", cli.get_only_hunk_id("--unstaged"))
@@ -82,7 +82,7 @@ def test_discard_round_trips_no_newline(cli: GitHunkCLI) -> None:
 
 
 def test_stage_line_selection_on_no_newline_hunk(cli: GitHunkCLI) -> None:
-    _commit(cli, "a\nb\nc")
+    _commit(cli=cli, content="a\nb\nc")
     cli.repo.write_file("f.txt", "aX\nb\ncX")
 
     # Body lines (markers unnumbered): 1=-a 2=+aX 3= b 4=-c 5=+cX.
@@ -98,7 +98,7 @@ def test_stage_line_selection_on_no_newline_hunk(cli: GitHunkCLI) -> None:
 
 
 def test_list_counts_ignore_no_newline_marker(cli: GitHunkCLI) -> None:
-    _commit(cli, "a\nb\nc")
+    _commit(cli=cli, content="a\nb\nc")
     cli.repo.write_file("f.txt", "a\nb\ncX")
 
     hunks = cli.run_list_json("list", "--unstaged", "--json")
@@ -111,7 +111,7 @@ def test_stage_addition_of_no_newline_to_newline_keeps_lines_separate(
 ) -> None:
     # Regression for #54: staging only the addition of a no-newline -> newline
     # edit must not merge the old last line with the addition.
-    _commit(cli, "a\nb")
+    _commit(cli=cli, content="a\nb")
     cli.repo.write_file("f.txt", "a\nB\n")
 
     # Body lines: 1= a 2=-b 3=+B. Stage only the addition.
@@ -123,7 +123,7 @@ def test_stage_addition_of_no_newline_to_newline_keeps_lines_separate(
 
 
 def test_stage_addition_then_remainder_reaches_working_tree(cli: GitHunkCLI) -> None:
-    _commit(cli, "a\nb")
+    _commit(cli=cli, content="a\nb")
     cli.repo.write_file("f.txt", "a\nB\n")
 
     cli.run_ok(
@@ -140,7 +140,7 @@ def test_stage_addition_then_remainder_reaches_working_tree(cli: GitHunkCLI) -> 
 def test_stage_addition_both_sides_no_newline_keeps_lines_separate(
     cli: GitHunkCLI,
 ) -> None:
-    _commit(cli, "a\nb")
+    _commit(cli=cli, content="a\nb")
     cli.repo.write_file("f.txt", "a\nB")
 
     # Body lines: 1= a 2=-b 3=+B, both last lines lack a trailing newline.
@@ -154,7 +154,7 @@ def test_stage_addition_both_sides_no_newline_keeps_lines_separate(
 def test_discard_addition_of_no_newline_to_newline_keeps_lines_separate(
     cli: GitHunkCLI,
 ) -> None:
-    _commit(cli, "a\nb")
+    _commit(cli=cli, content="a\nb")
     cli.repo.write_file("f.txt", "a\nB\n")
 
     cli.run_ok(
@@ -168,7 +168,7 @@ def test_discard_addition_of_no_newline_to_newline_keeps_lines_separate(
 def test_unstage_addition_of_no_newline_to_newline_keeps_lines_separate(
     cli: GitHunkCLI,
 ) -> None:
-    _commit(cli, "a\nb")
+    _commit(cli=cli, content="a\nb")
     cli.repo.write_file("f.txt", "a\nB\n")
 
     cli.run_ok("stage", cli.get_only_hunk_id("--unstaged"))

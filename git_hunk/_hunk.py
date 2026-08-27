@@ -16,7 +16,7 @@ def is_no_newline_marker(line: str) -> bool:
     return line == NO_NEWLINE_MARKER
 
 
-def _byte_safe(text: str) -> dict[str, str]:
+def _byte_safe(*, text: str) -> dict[str, str]:
     # git output is decoded with surrogateescape (see _git.run_git), so non-UTF-8
     # bytes survive as lone surrogates. Emit valid UTF-8 as {"text": ...} and
     # anything else as {"bytes": base64}, so strict JSON parsers never choke on a
@@ -51,7 +51,7 @@ class Hunk:
         data: dict[str, Any] = {
             "id": self.id,
             "id_stability": self.id_stability,
-            "file": _byte_safe(self.file),
+            "file": _byte_safe(text=self.file),
             "status": self.status,
             "change_kind": self.change_kind,
             "a_mode": self.a_mode,
@@ -59,7 +59,7 @@ class Hunk:
             "binary": self.binary,
             "header": self.header,
             "context_before": (
-                _byte_safe(self.context_before)
+                _byte_safe(text=self.context_before)
                 if self.context_before is not None
                 else None
             ),
@@ -67,7 +67,7 @@ class Hunk:
             "deletions": self.deletions,
         }
         if include_lines:
-            data["lines"] = _body_lines(self.diff)
+            data["lines"] = _body_lines(diff=self.diff)
         return data
 
 
@@ -136,7 +136,7 @@ def is_submodule_hunk(hunk: Hunk) -> bool:
     return GITLINK_MODE in (hunk.a_mode, hunk.b_mode)
 
 
-def _body_lines(diff: str) -> list[dict[str, Any]]:
+def _body_lines(*, diff: str) -> list[dict[str, Any]]:
     lines: list[dict[str, Any]] = []
     for line in split_diff_body(diff=diff):
         if is_no_newline_marker(line):
@@ -144,7 +144,7 @@ def _body_lines(diff: str) -> list[dict[str, Any]]:
                 lines[-1]["no_newline"] = True
             continue
         lines.append(
-            {"n": len(lines) + 1, "op": line[:1], "content": _byte_safe(line[1:])}
+            {"n": len(lines) + 1, "op": line[:1], "content": _byte_safe(text=line[1:])}
         )
     return lines
 
@@ -171,7 +171,7 @@ def _hash_id(*parts: str) -> str:
     return digest.hexdigest()
 
 
-def _compute_text_hunk_id(filepath: str, diff_content: str) -> str:
+def _compute_text_hunk_id(*, filepath: str, diff_content: str) -> str:
     body = "\n".join(
         line for line in diff_content.split("\n") if not line.startswith("@@")
     )
@@ -179,8 +179,8 @@ def _compute_text_hunk_id(filepath: str, diff_content: str) -> str:
 
 
 def _compute_whole_file_hunk_id(
-    filepath: str,
     *,
+    filepath: str,
     change_kind: str,
     a_mode: str | None,
     b_mode: str | None,
@@ -198,7 +198,7 @@ def _compute_whole_file_hunk_id(
     )
 
 
-def _compute_worktree_position(hunk: Hunk, hunks: list[Hunk]) -> int:
+def _compute_worktree_position(*, hunk: Hunk, hunks: list[Hunk]) -> int:
     if hunk.header is None:
         return 0
     hunk_range = parse_hunk_range(hunk.header)
@@ -235,7 +235,7 @@ def assign_hunk_ids(hunks: list[Hunk]) -> list[Hunk]:
             continue
         ordered = sorted(
             members,
-            key=lambda member: _compute_worktree_position(member[1], hunks),
+            key=lambda member: _compute_worktree_position(hunk=member[1], hunks=hunks),
         )
         for ordinal, (index, hunk) in enumerate(ordered):
             result[index] = replace(
@@ -243,10 +243,10 @@ def assign_hunk_ids(hunks: list[Hunk]) -> list[Hunk]:
                 id=_hash_id("conditional", base_id, str(ordinal)),
                 id_stability="conditional",
             )
-    return _assign_id_prefix_lengths(result)
+    return _assign_id_prefix_lengths(hunks=result)
 
 
-def _assign_id_prefix_lengths(hunks: list[Hunk]) -> list[Hunk]:
+def _assign_id_prefix_lengths(*, hunks: list[Hunk]) -> list[Hunk]:
     result = []
     for hunk in hunks:
         if not hunk.id:
@@ -270,7 +270,7 @@ def split_at_hunk_headers(file_diff: str, *, maxsplit: int = 0) -> list[str]:
     return re.split(r"(?=^@@)", file_diff, maxsplit=maxsplit, flags=re.MULTILINE)
 
 
-def _unquote_c_path(path: str) -> str:
+def _unquote_c_path(*, path: str) -> str:
     C_ESCAPES: Final = {
         "a": "\a",
         "b": "\b",
@@ -306,7 +306,7 @@ def extract_file_path(file_diff: str) -> str | None:
     # halves are identical for non-renames; decode the logical path.
     m = re.match(r'diff --git "a/(.+)" "b/\1"$', first_line)
     if m:
-        return _unquote_c_path(m.group(1))
+        return _unquote_c_path(path=m.group(1))
     # For non-renames git emits `diff --git a/<path> b/<path>` with both halves
     # identical; the backreference resolves paths that contain " b/".
     m = re.match(r"diff --git a/(.+) b/\1$", first_line)
@@ -316,7 +316,7 @@ def extract_file_path(file_diff: str) -> str | None:
     return m.group(2) if m else None
 
 
-def _bare_header(at_line: str) -> str:
+def _bare_header(*, at_line: str) -> str:
     # "@@ -1,3 +1,3 @@ def foo():" -> "@@ -1,3 +1,3 @@" (strip git's heading; the
     # heading is carried separately in context_before).
     m = re.match(r"(@@ -\d+(?:,\d+)? \+\d+(?:,\d+)? @@)", at_line)
@@ -328,7 +328,7 @@ def _bare_header(at_line: str) -> str:
     return m.group(1)
 
 
-def _extract_context_before(header: str) -> str | None:
+def _extract_context_before(*, header: str) -> str | None:
     match = re.search(r"@@.*?@@\s*(.*)", header)
     if not match:
         return None
@@ -350,7 +350,7 @@ def whole_file_hunk(
         ""
         if status == "untracked"
         else _compute_whole_file_hunk_id(
-            filepath,
+            filepath=filepath,
             change_kind=change_kind,
             a_mode=a_mode,
             b_mode=b_mode,
@@ -375,7 +375,7 @@ def whole_file_hunk(
     )
 
 
-def _block_modes(file_diff: str) -> tuple[str, str | None, str | None]:
+def _block_modes(*, file_diff: str) -> tuple[str, str | None, str | None]:
     """Derive (change_kind, a_mode, b_mode) from one file diff's header lines."""
     new_file = re.search(r"^new file mode (\d+)", file_diff, flags=re.MULTILINE)
     if new_file:
@@ -395,7 +395,7 @@ def _block_modes(file_diff: str) -> tuple[str, str | None, str | None]:
     return "M", None, None
 
 
-def _extract_block_object_ids(file_diff: str) -> tuple[str | None, str | None]:
+def _extract_block_object_ids(*, file_diff: str) -> tuple[str | None, str | None]:
     match = re.search(
         r"^index ([0-9a-f]+)\.\.([0-9a-f]+)(?: |$)",
         file_diff,
@@ -404,7 +404,7 @@ def _extract_block_object_ids(file_diff: str) -> tuple[str | None, str | None]:
     return (match.group(1), match.group(2)) if match else (None, None)
 
 
-def _is_binary(file_diff: str) -> bool:
+def _is_binary(*, file_diff: str) -> bool:
     return (
         re.search(r"^Binary files .* differ$", file_diff, flags=re.MULTILINE)
         is not None
@@ -426,23 +426,24 @@ def parse_diff(diff_output: str) -> list[Hunk]:
             i += 1
             continue
 
-        change_kind, a_mode, b_mode = _block_modes(file_diff)
-        a_object_id, b_object_id = _extract_block_object_ids(file_diff)
+        change_kind, a_mode, b_mode = _block_modes(file_diff=file_diff)
+        a_object_id, b_object_id = _extract_block_object_ids(file_diff=file_diff)
 
         # git emits a type change (e.g. file -> symlink) as two consecutive blocks
         # for the same path: a delete of the old type then an add of the new one.
         next_diff = file_diffs[i + 1] if i + 1 < len(file_diffs) else None
         if change_kind == "D" and next_diff is not None:
-            next_kind, _, new_b_mode = _block_modes(next_diff)
+            next_kind, _, new_b_mode = _block_modes(file_diff=next_diff)
             if next_kind == "A" and extract_file_path(next_diff) == filepath:
-                _, new_object_id = _extract_block_object_ids(next_diff)
+                _, new_object_id = _extract_block_object_ids(file_diff=next_diff)
                 hunks.append(
                     whole_file_hunk(
                         filepath,
                         change_kind="T",
                         a_mode=a_mode,
                         b_mode=new_b_mode,
-                        binary=_is_binary(file_diff) or _is_binary(next_diff),
+                        binary=_is_binary(file_diff=file_diff)
+                        or _is_binary(file_diff=next_diff),
                         a_object_id=a_object_id,
                         b_object_id=new_object_id,
                     )
@@ -450,7 +451,7 @@ def parse_diff(diff_output: str) -> list[Hunk]:
                 i += 2
                 continue
 
-        if _is_binary(file_diff):
+        if _is_binary(file_diff=file_diff):
             hunks.append(
                 whole_file_hunk(
                     filepath,
@@ -512,12 +513,12 @@ def parse_diff(diff_output: str) -> list[Hunk]:
                     a_mode=a_mode,
                     b_mode=b_mode,
                     binary=False,
-                    header=_bare_header(header_line),
-                    context_before=_extract_context_before(header_line),
+                    header=_bare_header(at_line=header_line),
+                    context_before=_extract_context_before(header=header_line),
                     additions=additions,
                     deletions=deletions,
                     diff=header_line + "\n" + "\n".join(body_lines),
-                    base_id=_compute_text_hunk_id(filepath, part),
+                    base_id=_compute_text_hunk_id(filepath=filepath, diff_content=part),
                 )
             )
         i += 1

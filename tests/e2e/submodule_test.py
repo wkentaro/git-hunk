@@ -3,7 +3,7 @@ import pytest
 from .conftest import GitHunkCLI
 
 
-def _bump_submodule(cli: GitHunkCLI, content: str) -> None:
+def _bump_submodule(*, cli: GitHunkCLI, content: str) -> None:
     cli.repo.write_file("sub/f", content)
     cli.repo.git("-C", "sub", "add", "f")
     cli.repo.git("-C", "sub", "commit", "-m", content)
@@ -18,10 +18,10 @@ def bumped_submodule(cli: GitHunkCLI) -> GitHunkCLI:
     cli.repo.git("init", "sub")
     cli.repo.git("-C", "sub", "config", "user.email", "test@test.com")
     cli.repo.git("-C", "sub", "config", "user.name", "Test")
-    _bump_submodule(cli, "one")
+    _bump_submodule(cli=cli, content="one")
     cli.repo.git("add", "sub")
     cli.repo.git("commit", "-m", "init")
-    _bump_submodule(cli, "two")
+    _bump_submodule(cli=cli, content="two")
     return cli
 
 
@@ -79,7 +79,7 @@ def test_stage_then_unstage_round_trips_a_gitlink_bump(
     assert cli.repo.git("diff", "--cached").strip() == ""
 
 
-def _capture_gitlink_state(cli: GitHunkCLI) -> tuple[str, str, str, str]:
+def _capture_gitlink_state(*, cli: GitHunkCLI) -> tuple[str, str, str, str]:
     return (
         cli.repo.git("rev-parse", "HEAD"),
         cli.repo.git("ls-files", "--stage", "sub"),
@@ -88,7 +88,7 @@ def _capture_gitlink_state(cli: GitHunkCLI) -> tuple[str, str, str, str]:
     )
 
 
-def _assert_submodule_line_error(returncode: int, stderr: str) -> None:
+def _assert_submodule_line_error(*, returncode: int, stderr: str) -> None:
     assert returncode == 1
     assert "submodule" in stderr
     assert "select the hunk as a whole" in stderr
@@ -108,12 +108,12 @@ def test_stage_rejects_gitlink_line_selection(
     bumped_submodule: GitHunkCLI, selector: tuple[str, ...]
 ) -> None:
     cli = bumped_submodule
-    before = _capture_gitlink_state(cli)
+    before = _capture_gitlink_state(cli=cli)
 
     result = cli.run("stage", cli.get_only_hunk_id("--unstaged"), *selector)
 
-    _assert_submodule_line_error(result.returncode, result.stderr)
-    assert _capture_gitlink_state(cli) == before
+    _assert_submodule_line_error(returncode=result.returncode, stderr=result.stderr)
+    assert _capture_gitlink_state(cli=cli) == before
 
 
 def test_unstage_rejects_gitlink_line_selection(
@@ -121,31 +121,31 @@ def test_unstage_rejects_gitlink_line_selection(
 ) -> None:
     cli = bumped_submodule
     cli.run_ok("stage", cli.get_only_hunk_id("--unstaged"))
-    before = _capture_gitlink_state(cli)
+    before = _capture_gitlink_state(cli=cli)
 
     result = cli.run("unstage", cli.get_only_hunk_id("--staged"), "-l", "1")
 
-    _assert_submodule_line_error(result.returncode, result.stderr)
-    assert _capture_gitlink_state(cli) == before
+    _assert_submodule_line_error(returncode=result.returncode, stderr=result.stderr)
+    assert _capture_gitlink_state(cli=cli) == before
 
 
 def test_discard_rejects_gitlink_line_selection(
     bumped_submodule: GitHunkCLI,
 ) -> None:
     cli = bumped_submodule
-    before = _capture_gitlink_state(cli)
+    before = _capture_gitlink_state(cli=cli)
 
     result = cli.run("discard", cli.get_only_hunk_id("--unstaged"), "-l", "1")
 
-    _assert_submodule_line_error(result.returncode, result.stderr)
-    assert _capture_gitlink_state(cli) == before
+    _assert_submodule_line_error(returncode=result.returncode, stderr=result.stderr)
+    assert _capture_gitlink_state(cli=cli) == before
 
 
 def test_commit_rejects_gitlink_line_selection(
     bumped_submodule: GitHunkCLI,
 ) -> None:
     cli = bumped_submodule
-    before = _capture_gitlink_state(cli)
+    before = _capture_gitlink_state(cli=cli)
 
     result = cli.run(
         "commit",
@@ -156,5 +156,5 @@ def test_commit_rejects_gitlink_line_selection(
         "partial",
     )
 
-    _assert_submodule_line_error(result.returncode, result.stderr)
-    assert _capture_gitlink_state(cli) == before
+    _assert_submodule_line_error(returncode=result.returncode, stderr=result.stderr)
+    assert _capture_gitlink_state(cli=cli) == before

@@ -104,7 +104,7 @@ def assert_only_head_entry_changed(
     )
 
 
-def _parse_git_entries(cli: GitHunkCLI, output: bytes) -> dict[str, GitEntry]:
+def _parse_git_entries(*, cli: GitHunkCLI, output: bytes) -> dict[str, GitEntry]:
     entries = {}
     for record in output.rstrip(b"\0").split(b"\0"):
         if not record:
@@ -123,14 +123,14 @@ def _parse_git_entries(cli: GitHunkCLI, output: bytes) -> dict[str, GitEntry]:
     return entries
 
 
-def _get_worktree_mode(path: Path) -> str:
+def _get_worktree_mode(*, path: Path) -> str:
     mode = os.lstat(path).st_mode
     if stat.S_ISLNK(mode):
         return "120000"
     return "100755" if mode & 0o100 else "100644"
 
 
-def _read_worktree_content(path: Path) -> bytes:
+def _read_worktree_content(*, path: Path) -> bytes:
     # git stores a symlink's blob as its target string, so read the link rather
     # than following it: the target need not exist.
     if path.is_symlink():
@@ -140,14 +140,16 @@ def _read_worktree_content(path: Path) -> bytes:
 
 def snapshot_repository(cli: GitHunkCLI) -> RepositoryState:
     head_id = run_git_bytes(cli, "rev-parse", "HEAD").decode().strip()
-    head = _parse_git_entries(cli, run_git_bytes(cli, "ls-tree", "-r", "-z", "HEAD"))
+    head = _parse_git_entries(
+        cli=cli, output=run_git_bytes(cli, "ls-tree", "-r", "-z", "HEAD")
+    )
     raw_index = run_git_bytes(cli, "ls-files", "--stage", "-z")
-    index = _parse_git_entries(cli, raw_index)
+    index = _parse_git_entries(cli=cli, output=raw_index)
     root = Path(cli.repo.path)
     worktree = {
         path: WorktreeEntry(
-            mode=_get_worktree_mode(root / path),
-            content=_read_worktree_content(root / path),
+            mode=_get_worktree_mode(path=root / path),
+            content=_read_worktree_content(path=root / path),
         )
         for path in index
     }

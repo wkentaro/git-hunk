@@ -7,7 +7,7 @@ from git_hunk._hunk import parse_hunk_range
 from ..conftest import GitHunkCLI
 
 
-def _commit_prefixed_duplicate_blocks(cli: GitHunkCLI) -> list[str]:
+def _commit_prefixed_duplicate_blocks(*, cli: GitHunkCLI) -> list[str]:
     # Room ahead of the first block, which the shared duplicate-group fixture
     # does not leave: its file starts at the block, so a change at the top falls
     # inside the first member's context and merges into it, dissolving the
@@ -168,7 +168,7 @@ def test_staged_duplicate_member_ignores_staged_hunks_ahead_of_it(
     # unstaged Hunks ahead of a staged member. A staged Hunk's delta is already
     # in the staged member's own coordinates, so counting it again would drag
     # the member past its twin and renumber the group.
-    original = _commit_prefixed_duplicate_blocks(cli)
+    original = _commit_prefixed_duplicate_blocks(cli=cli)
     # 100 lines exceed the two members' separation, so a double-counted delta
     # actually reorders them instead of leaving the ordinals intact.
     insertion = [f"inserted {number}" for number in range(100)]
@@ -202,7 +202,7 @@ def test_staged_duplicate_member_ignores_staged_hunks_ahead_of_it(
 def test_duplicate_member_keeps_id_across_different_diff_coordinates(
     cli: GitHunkCLI, ordinal: int
 ) -> None:
-    original = _commit_prefixed_duplicate_blocks(cli)
+    original = _commit_prefixed_duplicate_blocks(cli=cli)
     insertion = [f"inserted {number}" for number in range(100)]
     changed = insertion + [line.replace("target", "TARGET") for line in original]
     cli.repo.write_file("f.txt", "\n".join(changed) + "\n")

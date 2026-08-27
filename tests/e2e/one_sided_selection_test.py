@@ -40,7 +40,7 @@ def one_for_one(cli: GitHunkCLI) -> GitHunkCLI:
     return cli
 
 
-def _capture_repo_state(cli: GitHunkCLI) -> tuple[str, str, str, str]:
+def _capture_repo_state(*, cli: GitHunkCLI) -> tuple[str, str, str, str]:
     return (
         cli.repo.git("rev-parse", "HEAD"),
         cli.repo.git("show", ":client.py"),
@@ -49,7 +49,7 @@ def _capture_repo_state(cli: GitHunkCLI) -> tuple[str, str, str, str]:
     )
 
 
-def _assert_one_sided_error(returncode: int, stderr: str) -> None:
+def _assert_one_sided_error(*, returncode: int, stderr: str) -> None:
     assert returncode == 1
     assert "cannot select one side of lines 2-3" in stderr
     assert "one-for-one replacement" in stderr
@@ -61,12 +61,12 @@ def test_stage_rejects_one_sided_selection(
     one_for_one: GitHunkCLI, selector: tuple[str, ...]
 ) -> None:
     cli = one_for_one
-    before = _capture_repo_state(cli)
+    before = _capture_repo_state(cli=cli)
 
     result = cli.run("stage", cli.get_only_hunk_id("--unstaged"), *selector)
 
-    _assert_one_sided_error(result.returncode, result.stderr)
-    assert _capture_repo_state(cli) == before
+    _assert_one_sided_error(returncode=result.returncode, stderr=result.stderr)
+    assert _capture_repo_state(cli=cli) == before
 
 
 @_ONE_SIDED_SELECTORS
@@ -74,14 +74,14 @@ def test_commit_rejects_one_sided_selection(
     one_for_one: GitHunkCLI, selector: tuple[str, ...]
 ) -> None:
     cli = one_for_one
-    before = _capture_repo_state(cli)
+    before = _capture_repo_state(cli=cli)
 
     result = cli.run(
         "commit", cli.get_only_hunk_id("--unstaged"), *selector, "-m", "half"
     )
 
-    _assert_one_sided_error(result.returncode, result.stderr)
-    assert _capture_repo_state(cli) == before
+    _assert_one_sided_error(returncode=result.returncode, stderr=result.stderr)
+    assert _capture_repo_state(cli=cli) == before
 
 
 @_ONE_SIDED_SELECTORS
@@ -90,12 +90,12 @@ def test_unstage_rejects_one_sided_selection(
 ) -> None:
     cli = one_for_one
     cli.run_ok("stage", cli.get_only_hunk_id("--unstaged"))
-    before = _capture_repo_state(cli)
+    before = _capture_repo_state(cli=cli)
 
     result = cli.run("unstage", cli.get_only_hunk_id("--staged"), *selector)
 
-    _assert_one_sided_error(result.returncode, result.stderr)
-    assert _capture_repo_state(cli) == before
+    _assert_one_sided_error(returncode=result.returncode, stderr=result.stderr)
+    assert _capture_repo_state(cli=cli) == before
 
 
 @_ONE_SIDED_SELECTORS
@@ -103,12 +103,12 @@ def test_discard_rejects_one_sided_selection(
     one_for_one: GitHunkCLI, selector: tuple[str, ...]
 ) -> None:
     cli = one_for_one
-    before = _capture_repo_state(cli)
+    before = _capture_repo_state(cli=cli)
 
     result = cli.run("discard", cli.get_only_hunk_id("--unstaged"), *selector)
 
-    _assert_one_sided_error(result.returncode, result.stderr)
-    assert _capture_repo_state(cli) == before
+    _assert_one_sided_error(returncode=result.returncode, stderr=result.stderr)
+    assert _capture_repo_state(cli=cli) == before
 
 
 @pytest.mark.parametrize(
@@ -213,22 +213,22 @@ def test_dry_run_reports_the_rejection_instead_of_a_preview(
     one_for_one: GitHunkCLI,
 ) -> None:
     cli = one_for_one
-    before = _capture_repo_state(cli)
+    before = _capture_repo_state(cli=cli)
 
     result = cli.run(
         "stage", cli.get_only_hunk_id("--unstaged"), "-l", "3", "--dry-run"
     )
 
-    _assert_one_sided_error(result.returncode, result.stderr)
+    _assert_one_sided_error(returncode=result.returncode, stderr=result.stderr)
     assert "would stage" not in result.stdout + result.stderr
-    assert _capture_repo_state(cli) == before
+    assert _capture_repo_state(cli=cli) == before
 
 
 def test_dry_run_with_allow_one_sided_previews_without_mutating(
     one_for_one: GitHunkCLI,
 ) -> None:
     cli = one_for_one
-    before = _capture_repo_state(cli)
+    before = _capture_repo_state(cli=cli)
 
     result = cli.run(
         "stage",
@@ -241,7 +241,7 @@ def test_dry_run_with_allow_one_sided_previews_without_mutating(
 
     assert result.returncode == 0
     assert "would stage" in result.stdout + result.stderr
-    assert _capture_repo_state(cli) == before
+    assert _capture_repo_state(cli=cli) == before
 
 
 def test_pattern_matching_both_lines_needs_no_flag(one_for_one: GitHunkCLI) -> None:
@@ -295,7 +295,7 @@ def test_allow_one_sided_without_a_selection_mechanism_is_a_usage_error(
     one_for_one: GitHunkCLI, command: str
 ) -> None:
     cli = one_for_one
-    before = _capture_repo_state(cli)
+    before = _capture_repo_state(cli=cli)
     extra = ["-m", "half"] if command == "commit" else []
 
     result = cli.run(
@@ -304,4 +304,4 @@ def test_allow_one_sided_without_a_selection_mechanism_is_a_usage_error(
 
     assert result.returncode == 2
     assert "--allow-one-sided requires" in result.stderr
-    assert _capture_repo_state(cli) == before
+    assert _capture_repo_state(cli=cli) == before

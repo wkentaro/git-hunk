@@ -6,7 +6,7 @@ import pytest
 from .conftest import GitHunkCLI
 
 
-def _make_unmerged_file(cli: GitHunkCLI, stages: tuple[int, ...]) -> None:
+def _make_unmerged_file(*, cli: GitHunkCLI, stages: tuple[int, ...]) -> None:
     hashes = []
     for stage in (1, 2, 3):
         path = f"stage-{stage}.txt"
@@ -27,21 +27,21 @@ def _make_unmerged_file(cli: GitHunkCLI, stages: tuple[int, ...]) -> None:
     assert "\tconflict.txt\0" in cli.repo.git("ls-files", "--unmerged", "-z")
 
 
-def _commit_source(cli: GitHunkCLI, path: str = "old.txt") -> None:
+def _commit_source(*, cli: GitHunkCLI, path: str = "old.txt") -> None:
     cli.repo.write_file(path, "one\ntwo\nthree\nfour\nfive\n")
     cli.repo.git("add", path)
     cli.repo.git("commit", "-m", "init")
 
 
 def _make_staged_rename(
-    cli: GitHunkCLI, old: str = "old.txt", new: str = "new.txt"
+    *, cli: GitHunkCLI, old: str = "old.txt", new: str = "new.txt"
 ) -> None:
-    _commit_source(cli, path=old)
+    _commit_source(cli=cli, path=old)
     cli.repo.git("mv", old, new)
 
 
-def _make_unstaged_rename(cli: GitHunkCLI) -> None:
-    _commit_source(cli)
+def _make_unstaged_rename(*, cli: GitHunkCLI) -> None:
+    _commit_source(cli=cli)
     os.rename(
         os.path.join(cli.repo.path, "old.txt"),
         os.path.join(cli.repo.path, "new.txt"),
@@ -49,14 +49,14 @@ def _make_unstaged_rename(cli: GitHunkCLI) -> None:
     cli.repo.git("add", "--intent-to-add", "new.txt")
 
 
-def _make_unstaged_copy(cli: GitHunkCLI) -> None:
-    _commit_source(cli, path="source.txt")
+def _make_unstaged_copy(*, cli: GitHunkCLI) -> None:
+    _commit_source(cli=cli, path="source.txt")
     cli.repo.write_file("copy.txt", "one\ntwo\nthree\nfour\nfive\n")
     cli.repo.git("add", "--intent-to-add", "copy.txt")
 
 
 def _run_git_bytes(
-    cli: GitHunkCLI, *args: bytes, input: bytes | None = None
+    *args: bytes, cli: GitHunkCLI, input: bytes | None = None
 ) -> subprocess.CompletedProcess[bytes]:
     return subprocess.run(
         [b"git", *args],
@@ -66,7 +66,7 @@ def _run_git_bytes(
     )
 
 
-def _snapshot_repository(cli: GitHunkCLI) -> tuple[str, str, str, str, str]:
+def _snapshot_repository(*, cli: GitHunkCLI) -> tuple[str, str, str, str, str]:
     return (
         cli.repo.git("rev-parse", "HEAD"),
         cli.repo.git("ls-files", "--stage"),
@@ -77,7 +77,7 @@ def _snapshot_repository(cli: GitHunkCLI) -> tuple[str, str, str, str, str]:
 
 
 def test_list_rejects_staged_rename_before_json_output(cli: GitHunkCLI) -> None:
-    _make_staged_rename(cli)
+    _make_staged_rename(cli=cli)
 
     result = cli.run("list", "--staged", "--json")
 
@@ -104,7 +104,7 @@ def test_list_rejects_staged_rename_before_json_output(cli: GitHunkCLI) -> None:
 def test_commands_reject_unstaged_rename_before_output_or_mutation(
     cli: GitHunkCLI, args: tuple[str, ...]
 ) -> None:
-    _make_unstaged_rename(cli)
+    _make_unstaged_rename(cli=cli)
     before = cli.repo.git("status", "--porcelain=v1", "-z")
 
     result = cli.run(*args)
@@ -116,7 +116,7 @@ def test_commands_reject_unstaged_rename_before_output_or_mutation(
 
 
 def test_unstage_rejects_staged_rename_before_mutation(cli: GitHunkCLI) -> None:
-    _make_staged_rename(cli)
+    _make_staged_rename(cli=cli)
     before = cli.repo.git("diff", "--cached", "--raw")
 
     result = cli.run("unstage", "new.txt")
@@ -129,7 +129,7 @@ def test_unstage_rejects_staged_rename_before_mutation(cli: GitHunkCLI) -> None:
 
 @pytest.mark.parametrize("edit", [False, True], ids=["unchanged", "edited"])
 def test_list_rejects_staged_copy(cli: GitHunkCLI, edit: bool) -> None:
-    _commit_source(cli, path="source.txt")
+    _commit_source(cli=cli, path="source.txt")
     content = (
         "one\ntwo changed\nthree\nfour\nfive\n"
         if edit
@@ -163,7 +163,7 @@ def test_list_rejects_staged_copy(cli: GitHunkCLI, edit: bool) -> None:
 def test_commands_reject_unstaged_copy_before_output_or_mutation(
     cli: GitHunkCLI, args: tuple[str, ...]
 ) -> None:
-    _make_unstaged_copy(cli)
+    _make_unstaged_copy(cli=cli)
     before = cli.repo.git("status", "--porcelain=v1", "-z")
 
     result = cli.run(*args)
@@ -175,7 +175,7 @@ def test_commands_reject_unstaged_copy_before_output_or_mutation(
 
 
 def test_unstage_rejects_staged_copy_before_mutation(cli: GitHunkCLI) -> None:
-    _commit_source(cli, path="source.txt")
+    _commit_source(cli=cli, path="source.txt")
     cli.repo.write_file("copy.txt", "one\ntwo\nthree\nfour\nfive\n")
     cli.repo.git("add", "copy.txt")
     before = cli.repo.git("diff", "--cached", "--raw")
@@ -218,7 +218,7 @@ def test_unstage_rejects_staged_copy_before_mutation(cli: GitHunkCLI) -> None:
 def test_list_rejects_quoted_and_ambiguous_renames(
     cli: GitHunkCLI, old: str, new: str
 ) -> None:
-    _make_staged_rename(cli, old=old, new=new)
+    _make_staged_rename(cli=cli, old=old, new=new)
     cli.repo.write_file(new, "one\ntwo changed\nthree\nfour\nfive\n")
     cli.repo.git("add", new)
 
@@ -233,7 +233,7 @@ def test_list_rejects_quoted_and_ambiguous_renames(
 def test_rename_detection_ignores_weak_repository_configuration(
     cli: GitHunkCLI,
 ) -> None:
-    _make_staged_rename(cli)
+    _make_staged_rename(cli=cli)
     cli.repo.git("config", "diff.renames", "false")
     cli.repo.git("config", "diff.renameLimit", "1")
 
@@ -265,19 +265,33 @@ def test_rename_error_handles_non_utf8_path_bytes(cli: GitHunkCLI) -> None:
     old = b"old_\xff.txt"
     new = b"new_\xff.txt"
     hash_result = _run_git_bytes(
-        cli, b"hash-object", b"-w", b"--stdin", input=b"content\n"
+        b"hash-object", b"-w", b"--stdin", cli=cli, input=b"content\n"
     )
     assert hash_result.returncode == 0, hash_result.stderr
     oid = hash_result.stdout.strip()
     add_old = _run_git_bytes(
-        cli, b"update-index", b"--add", b"--cacheinfo", b"100644," + oid + b"," + old
+        b"update-index",
+        b"--add",
+        b"--cacheinfo",
+        b"100644," + oid + b"," + old,
+        cli=cli,
     )
     assert add_old.returncode == 0, add_old.stderr
     cli.repo.git("commit", "-m", "init")
-    remove_old = _run_git_bytes(cli, b"update-index", b"--force-remove", b"--", old)
+    remove_old = _run_git_bytes(
+        b"update-index",
+        b"--force-remove",
+        b"--",
+        old,
+        cli=cli,
+    )
     assert remove_old.returncode == 0, remove_old.stderr
     add_new = _run_git_bytes(
-        cli, b"update-index", b"--add", b"--cacheinfo", b"100644," + oid + b"," + new
+        b"update-index",
+        b"--add",
+        b"--cacheinfo",
+        b"100644," + oid + b"," + new,
+        cli=cli,
     )
     assert add_new.returncode == 0, add_new.stderr
 
@@ -293,7 +307,7 @@ def test_list_rejects_unmerged_index_before_json_output(cli: GitHunkCLI) -> None
     cli.repo.write_file("conflict.txt", "base\n")
     cli.repo.git("add", "conflict.txt")
     cli.repo.git("commit", "-m", "init")
-    _make_unmerged_file(cli, stages=(1, 2, 3))
+    _make_unmerged_file(cli=cli, stages=(1, 2, 3))
 
     result = cli.run("list", "--json")
 
@@ -314,7 +328,7 @@ def test_list_rejects_every_unmerged_stage_set(
     cli.repo.write_file("conflict.txt", "base\n")
     cli.repo.git("add", "conflict.txt")
     cli.repo.git("commit", "-m", "init")
-    _make_unmerged_file(cli, stages=stages)
+    _make_unmerged_file(cli=cli, stages=stages)
 
     result = cli.run("list", "--json")
 
@@ -347,8 +361,8 @@ def test_commands_reject_unmerged_index_before_output_or_mutation(
     cli.repo.write_file("ordinary.txt", "staged\n")
     cli.repo.git("add", "ordinary.txt")
     cli.repo.write_file("ordinary.txt", "unstaged\n")
-    _make_unmerged_file(cli, stages=(1, 2, 3))
-    before = _snapshot_repository(cli)
+    _make_unmerged_file(cli=cli, stages=(1, 2, 3))
+    before = _snapshot_repository(cli=cli)
 
     result = cli.run(*args)
 
@@ -356,20 +370,20 @@ def test_commands_reject_unmerged_index_before_output_or_mutation(
     assert result.stdout == ""
     assert "unmerged" in result.stderr
     assert "conflict.txt" in result.stderr
-    assert _snapshot_repository(cli) == before
+    assert _snapshot_repository(cli=cli) == before
 
 
 @pytest.mark.skipif(os.name == "nt", reason="Windows paths do not accept these bytes")
 def test_unmerged_error_handles_non_utf8_path_bytes(cli: GitHunkCLI) -> None:
     hash_result = _run_git_bytes(
-        cli, b"hash-object", b"-w", b"--stdin", input=b"content\n"
+        b"hash-object", b"-w", b"--stdin", cli=cli, input=b"content\n"
     )
     assert hash_result.returncode == 0, hash_result.stderr
     oid = hash_result.stdout.strip()
     update_result = _run_git_bytes(
-        cli,
         b"update-index",
         b"--index-info",
+        cli=cli,
         input=b"100644 " + oid + b" 1\tbad_\xff.txt\n",
     )
     assert update_result.returncode == 0, update_result.stderr

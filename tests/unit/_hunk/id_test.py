@@ -32,7 +32,7 @@ def _make_hunk(
 
 
 def test_body_id_is_full_sha256() -> None:
-    hunk_id = _compute_text_hunk_id("f.py", "@@ -1 +1 @@\n+added")
+    hunk_id = _compute_text_hunk_id(filepath="f.py", diff_content="@@ -1 +1 @@\n+added")
 
     assert re.fullmatch(r"[0-9a-f]{64}", hunk_id)
 
@@ -41,26 +41,32 @@ def test_body_id_excludes_range_and_section_heading() -> None:
     first = "@@ -1,3 +1,4 @@ def first():\n ctx\n+added\n ctx2"
     shifted = "@@ -10,3 +10,4 @@ def second():\n ctx\n+added\n ctx2"
 
-    assert _compute_text_hunk_id("f.py", first) == _compute_text_hunk_id(
-        "f.py", shifted
-    )
+    assert _compute_text_hunk_id(
+        filepath="f.py", diff_content=first
+    ) == _compute_text_hunk_id(filepath="f.py", diff_content=shifted)
 
 
 def test_body_id_includes_repository_path_context_and_newline_state() -> None:
     base = "@@ -1 +1,2 @@\n context\n+added"
 
-    assert _compute_text_hunk_id("a.py", base) != _compute_text_hunk_id("b.py", base)
-    assert _compute_text_hunk_id("a.py", base) != _compute_text_hunk_id(
-        "a.py", "@@ -1 +1,2 @@\n other context\n+added"
+    assert _compute_text_hunk_id(
+        filepath="a.py", diff_content=base
+    ) != _compute_text_hunk_id(filepath="b.py", diff_content=base)
+    assert _compute_text_hunk_id(
+        filepath="a.py", diff_content=base
+    ) != _compute_text_hunk_id(
+        filepath="a.py", diff_content="@@ -1 +1,2 @@\n other context\n+added"
     )
-    assert _compute_text_hunk_id("a.py", base) != _compute_text_hunk_id(
-        "a.py", base + "\n\\ No newline at end of file"
+    assert _compute_text_hunk_id(
+        filepath="a.py", diff_content=base
+    ) != _compute_text_hunk_id(
+        filepath="a.py", diff_content=base + "\n\\ No newline at end of file"
     )
 
 
 def test_whole_file_id_includes_modes_and_object_ids() -> None:
     base = _compute_whole_file_hunk_id(
-        "f.bin",
+        filepath="f.bin",
         change_kind="M",
         a_mode="100644",
         b_mode="100644",
@@ -69,7 +75,7 @@ def test_whole_file_id_includes_modes_and_object_ids() -> None:
     )
 
     assert base != _compute_whole_file_hunk_id(
-        "f.bin",
+        filepath="f.bin",
         change_kind="M",
         a_mode="100644",
         b_mode="100755",
@@ -77,7 +83,7 @@ def test_whole_file_id_includes_modes_and_object_ids() -> None:
         b_object_id="b" * 40,
     )
     assert base != _compute_whole_file_hunk_id(
-        "f.bin",
+        filepath="f.bin",
         change_kind="M",
         a_mode="100644",
         b_mode="100644",

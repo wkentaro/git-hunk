@@ -7,7 +7,7 @@ import pytest
 from .conftest import GitHunkCLI
 
 
-def _id_for(cli: GitHunkCLI, path: str, *flags: str) -> str:
+def _id_for(*flags: str, cli: GitHunkCLI, path: str) -> str:
     hunks = cli.run_list_json("list", *flags, "--json")
     return next(h["id"] for h in hunks if h["file"]["text"] == path)
 
@@ -43,7 +43,12 @@ def test_list_distinguishes_modified_and_deleted_binary(cli: GitHunkCLI) -> None
 
 def test_show_binary_has_no_blank_numbered_line(modified_binary: GitHunkCLI) -> None:
     out = modified_binary.run_ok(
-        "show", _id_for(modified_binary, "a.bin", "--unstaged")
+        "show",
+        _id_for(
+            "--unstaged",
+            cli=modified_binary,
+            path="a.bin",
+        ),
     )
     assert "Binary file (modified)" in out
     assert "  1 " not in out  # no numbered line from an empty diff body
@@ -51,19 +56,49 @@ def test_show_binary_has_no_blank_numbered_line(modified_binary: GitHunkCLI) -> 
 
 def test_stage_unstage_discard_modified_binary(modified_binary: GitHunkCLI) -> None:
     cli = modified_binary
-    cli.run_ok("stage", _id_for(cli, "a.bin", "--unstaged"))
+    cli.run_ok(
+        "stage",
+        _id_for(
+            "--unstaged",
+            cli=cli,
+            path="a.bin",
+        ),
+    )
     assert "a.bin" in cli.repo.git("diff", "--cached", "--name-only")
 
-    cli.run_ok("unstage", _id_for(cli, "a.bin", "--staged"))
+    cli.run_ok(
+        "unstage",
+        _id_for(
+            "--staged",
+            cli=cli,
+            path="a.bin",
+        ),
+    )
     assert cli.repo.git("diff", "--cached").strip() == ""
 
-    cli.run_ok("discard", _id_for(cli, "a.bin", "--unstaged"))
+    cli.run_ok(
+        "discard",
+        _id_for(
+            "--unstaged",
+            cli=cli,
+            path="a.bin",
+        ),
+    )
     assert cli.repo.git("diff").strip() == ""
 
 
 def test_line_selection_rejected_on_binary(modified_binary: GitHunkCLI) -> None:
     cli = modified_binary
-    r = cli.run("stage", _id_for(cli, "a.bin", "--unstaged"), "-l", "1")
+    r = cli.run(
+        "stage",
+        _id_for(
+            "--unstaged",
+            cli=cli,
+            path="a.bin",
+        ),
+        "-l",
+        "1",
+    )
     assert r.returncode != 0
     assert "not supported for binary, mode, or type changes" in r.stderr
 
@@ -75,10 +110,24 @@ def test_stage_deleted_binary(cli: GitHunkCLI) -> None:
     cli.repo.git("commit", "-m", "init")
     path.unlink()
 
-    cli.run_ok("stage", _id_for(cli, "d.bin", "--unstaged"))
+    cli.run_ok(
+        "stage",
+        _id_for(
+            "--unstaged",
+            cli=cli,
+            path="d.bin",
+        ),
+    )
     assert "D\td.bin" in cli.repo.git("diff", "--cached", "--name-status")
 
-    cli.run_ok("unstage", _id_for(cli, "d.bin", "--staged"))
+    cli.run_ok(
+        "unstage",
+        _id_for(
+            "--staged",
+            cli=cli,
+            path="d.bin",
+        ),
+    )
     assert cli.repo.git("diff", "--cached").strip() == ""
 
 
@@ -96,7 +145,14 @@ def test_stage_added_binary(cli: GitHunkCLI) -> None:
     assert staged["n.bin"]["binary"] is True
     assert staged["n.bin"]["change_kind"] == "A"
 
-    cli.run_ok("unstage", _id_for(cli, "n.bin", "--staged"))
+    cli.run_ok(
+        "unstage",
+        _id_for(
+            "--staged",
+            cli=cli,
+            path="n.bin",
+        ),
+    )
     assert cli.repo.git("diff", "--cached").strip() == ""
 
 
@@ -151,13 +207,34 @@ def test_typechange_stage_unstage_discard(cli: GitHunkCLI) -> None:
     # The human label is derived from the typed fields at display time.
     assert "Type change (100644 -> 120000)" in cli.run_ok("list", "--unstaged")
 
-    cli.run_ok("stage", _id_for(cli, "tc.txt", "--unstaged"))
+    cli.run_ok(
+        "stage",
+        _id_for(
+            "--unstaged",
+            cli=cli,
+            path="tc.txt",
+        ),
+    )
     assert "T\ttc.txt" in cli.repo.git("diff", "--cached", "--name-status")
 
-    cli.run_ok("unstage", _id_for(cli, "tc.txt", "--staged"))
+    cli.run_ok(
+        "unstage",
+        _id_for(
+            "--staged",
+            cli=cli,
+            path="tc.txt",
+        ),
+    )
     assert cli.repo.git("diff", "--cached").strip() == ""
 
-    cli.run_ok("discard", _id_for(cli, "tc.txt", "--unstaged"))
+    cli.run_ok(
+        "discard",
+        _id_for(
+            "--unstaged",
+            cli=cli,
+            path="tc.txt",
+        ),
+    )
     assert cli.repo.git("diff").strip() == ""
 
 
@@ -182,9 +259,30 @@ def test_stage_and_discard_mode_only_change(cli: GitHunkCLI) -> None:
     # The human label is derived from the typed fields at display time.
     assert "Mode 100644 -> 100755" in cli.run_ok("list", "--unstaged")
 
-    cli.run_ok("stage", _id_for(cli, "m.sh", "--unstaged"))
+    cli.run_ok(
+        "stage",
+        _id_for(
+            "--unstaged",
+            cli=cli,
+            path="m.sh",
+        ),
+    )
     assert "m.sh" in cli.repo.git("diff", "--cached", "--name-only")
 
-    cli.run_ok("unstage", _id_for(cli, "m.sh", "--staged"))
-    cli.run_ok("discard", _id_for(cli, "m.sh", "--unstaged"))
+    cli.run_ok(
+        "unstage",
+        _id_for(
+            "--staged",
+            cli=cli,
+            path="m.sh",
+        ),
+    )
+    cli.run_ok(
+        "discard",
+        _id_for(
+            "--unstaged",
+            cli=cli,
+            path="m.sh",
+        ),
+    )
     assert cli.repo.git("diff").strip() == ""

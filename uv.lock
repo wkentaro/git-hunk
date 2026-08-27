@@ -173,7 +173,7 @@ name = "exceptiongroup"
 version = "1.3.1"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
-    { name = "typing-extensions", marker = "python_full_version < '3.13'" },
+    { name = "typing-extensions" },
 ]
 sdist = { url = "https://files.pythonhosted.org/packages/50/79/66800aadf48771f6b62f7eb014e352e5d06856655206165d775e675a02c9/exceptiongroup-1.3.1.tar.gz", hash = "sha256:8b412432c6055b0b7d14c310000ae93352ed6754f70fa8f7c34141f91c4e3219", size = 30371, upload-time = "2025-11-21T23:01:54.787Z" }
 wheels = [
@@ -199,6 +199,7 @@ dependencies = [
 
 [package.dev-dependencies]
 dev = [
+    { name = "gruff" },
     { name = "mdformat" },
     { name = "mdformat-frontmatter" },
     { name = "mdformat-gfm" },
@@ -220,6 +221,7 @@ requires-dist = [
 
 [package.metadata.requires-dev]
 dev = [
+    { name = "gruff", specifier = ">=0.0.1" },
     { name = "mdformat", specifier = ">=0.7" },
     { name = "mdformat-frontmatter", specifier = ">=2.0.10" },
     { name = "mdformat-gfm", specifier = ">=1.0.0" },
@@ -231,6 +233,18 @@ dev = [
     { name = "ty", specifier = ">=0.0.28" },
     { name = "typos", specifier = ">=1.44" },
     { name = "yamlfix", specifier = ">=1.17" },
+]
+
+[[package]]
+name = "gruff"
+version = "0.0.1"
+source = { registry = "https://pypi.org/simple" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/e4/ff/511d1514b841a5cc0a016ec3af7cada243225c684f567dcf9d41c91fc029/gruff-0.0.1-py3-none-macosx_10_12_x86_64.whl", hash = "sha256:7131801ed8e9ba55419c8ea3177d70fe53831316ca4d1fc074b633f10d20b682", size = 1935174, upload-time = "2026-08-27T12:49:55.884Z" },
+    { url = "https://files.pythonhosted.org/packages/17/2d/4763fde8f9ea906c8e2865132a94c88186d85420bffa0b65d4a7f44f385d/gruff-0.0.1-py3-none-macosx_11_0_arm64.whl", hash = "sha256:1b6297a9064955c0a7c89ed3f33d9f80cdd76402c496c696246e04c67238436c", size = 1867946, upload-time = "2026-08-27T12:49:57.713Z" },
+    { url = "https://files.pythonhosted.org/packages/bb/61/51e26afcb4b0bfe08f27a38acf50b85856b688b7780c3166cc1098fcfc7d/gruff-0.0.1-py3-none-manylinux_2_17_aarch64.manylinux2014_aarch64.whl", hash = "sha256:08d371a6742e29e0960beda2183b4eaf25dd991cebd1c1b736b52fc3b846ee7d", size = 1890354, upload-time = "2026-08-27T12:49:59.405Z" },
+    { url = "https://files.pythonhosted.org/packages/5c/4f/c2b5201da53d9001e5770a91829ba8ec3d4de13e1e6c3698eb9c4e216900/gruff-0.0.1-py3-none-manylinux_2_17_x86_64.manylinux2014_x86_64.whl", hash = "sha256:fae0bda2f2545f4ba70ccd8d639e1ed785f5b0c07ddfd00b6647c789d54b51ea", size = 2006397, upload-time = "2026-08-27T12:50:01.116Z" },
+    { url = "https://files.pythonhosted.org/packages/5a/61/87a70f844ecc108672d40925619b934e980422cc54dd97d279cbf3024a54/gruff-0.0.1-py3-none-win_amd64.whl", hash = "sha256:c311b6e769cfc0140ba16fa4f81b1f8de5df7e95810310963d660da8d9aaf80f", size = 1903196, upload-time = "2026-08-27T12:50:03.183Z" },
 ]
 
 [[package]]

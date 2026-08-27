@@ -11,7 +11,7 @@ from .conftest import TRACKED_LITERAL_PATH
 from .conftest import UNTRACKED_LITERAL_PATH
 
 
-def _get_paths(hunks: list[dict[str, Any]]) -> list[str]:
+def _get_paths(*, hunks: list[dict[str, Any]]) -> list[str]:
     return [hunk["file"]["text"] for hunk in hunks]
 
 
@@ -23,7 +23,7 @@ def test_inventory_is_stable_from_root_and_subdirectory(
     sub_hunks = cli.run_list_json("list", "--json", subdir="sub")
 
     assert sub_hunks == root_hunks
-    paths = _get_paths(sub_hunks)
+    paths = _get_paths(hunks=sub_hunks)
     assert paths == [
         TRACKED_LITERAL_PATH,
         "same.txt",
@@ -44,7 +44,7 @@ def test_inventory_is_stable_from_root_and_subdirectory(
     assert sub_plain_list == root_plain_list
     assert sub_plain_show == root_plain_show
     assert sub_json_show == root_json_show
-    assert _get_paths(sub_json_show) == paths[:5]
+    assert _get_paths(hunks=sub_json_show) == paths[:5]
     for path in paths[:5]:
         assert path in sub_plain_list
         assert path in sub_plain_show
@@ -73,10 +73,10 @@ def test_list_selects_one_exact_repository_path(
     inventory_cli: GitHunkCLI, operand: str, expected: str
 ) -> None:
     hunks = inventory_cli.run_list_json("list", "--json", operand, subdir="sub")
-    assert _get_paths(hunks) == [expected]
+    assert _get_paths(hunks=hunks) == [expected]
 
 
-def _assert_rejected(cli: GitHunkCLI, operand: str) -> None:
+def _assert_rejected(*, cli: GitHunkCLI, operand: str) -> None:
     result = cli.run("list", "--json", operand, subdir="sub")
     assert result.returncode != 0
     assert "schema_version" not in result.stdout
@@ -84,13 +84,15 @@ def _assert_rejected(cli: GitHunkCLI, operand: str) -> None:
 
 
 def test_list_rejects_an_escaping_path(inventory_cli: GitHunkCLI) -> None:
-    _assert_rejected(inventory_cli, "../same.txt")
+    _assert_rejected(cli=inventory_cli, operand="../same.txt")
 
 
 def test_list_rejects_an_absolute_path_even_inside_the_worktree(
     inventory_cli: GitHunkCLI,
 ) -> None:
-    _assert_rejected(inventory_cli, str(Path(inventory_cli.repo.path) / "same.txt"))
+    _assert_rejected(
+        cli=inventory_cli, operand=str(Path(inventory_cli.repo.path) / "same.txt")
+    )
 
 
 @pytest.mark.parametrize("operand", ["sub", "*.txt", ":(glob)*.txt"])
@@ -114,7 +116,7 @@ def test_show_id_has_same_meaning_from_root_and_subdirectory(
     sub = cli.run_list_json("show", hunk["id"], "--json", subdir="sub")
 
     assert sub == root
-    assert _get_paths(sub) == ["sibling/change.txt"]
+    assert _get_paths(hunks=sub) == ["sibling/change.txt"]
     assert "sibling/change.txt" in cli.run_ok("show", hunk["id"], subdir="sub")
 
 
@@ -134,4 +136,4 @@ def test_repository_root_preserves_trailing_space(tmp_path: Path) -> None:
     cli = GitHunkCLI(repo)
     hunks = cli.run_list_json("list", "--json")
 
-    assert _get_paths(hunks) == ["changed.txt"]
+    assert _get_paths(hunks=hunks) == ["changed.txt"]

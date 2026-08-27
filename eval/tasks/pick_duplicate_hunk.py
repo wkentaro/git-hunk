@@ -38,7 +38,7 @@ def _handlers(*, orders_validated: bool, refunds_validated: bool) -> str:
 _ALL_VALIDATED: Final = _handlers(orders_validated=True, refunds_validated=True)
 
 
-def _build(repo: GitRepo) -> None:
+def _build(repo: GitRepo) -> None:  # noqa: GR001 -- eval callback
     repo.write_file(
         name="handlers.py",
         content=_handlers(orders_validated=False, refunds_validated=False),
@@ -48,7 +48,7 @@ def _build(repo: GitRepo) -> None:
     repo.write_file(name="handlers.py", content=_ALL_VALIDATED)
 
 
-def _find_hunk_under(repo: GitRepo, function_line: str) -> str:
+def _find_hunk_under(*, repo: GitRepo, function_line: str) -> str:
     # Disambiguating the twins relies on git's default funcname heading
     # heuristic filling context_before with the unindented def line above
     # each hunk; the fixture's layout is load-bearing for that.
@@ -61,33 +61,33 @@ def _find_hunk_under(repo: GitRepo, function_line: str) -> str:
     raise RuntimeError(f"no hunk in handlers.py sits under {function_line!r}")
 
 
-def _golden(repo: GitRepo) -> None:
+def _golden(repo: GitRepo) -> None:  # noqa: GR001 -- eval callback
     run_git_hunk(
         repo,
         "commit",
-        _find_hunk_under(repo, "def handle_orders(batch):"),
+        _find_hunk_under(repo=repo, function_line="def handle_orders(batch):"),
         "-m",
         "Validate order messages",
     )
 
 
-def _commit_wrong_duplicate(repo: GitRepo) -> None:
+def _commit_wrong_duplicate(repo: GitRepo) -> None:  # noqa: GR001 -- eval callback
     run_git_hunk(
         repo,
         "commit",
-        _find_hunk_under(repo, "def handle_refunds(batch):"),
+        _find_hunk_under(repo=repo, function_line="def handle_refunds(batch):"),
         "-m",
         "Validate order messages",
     )
 
 
-def _commit_both_duplicates(repo: GitRepo) -> None:
+def _commit_both_duplicates(repo: GitRepo) -> None:  # noqa: GR001 -- eval callback
     run_git_hunk(repo, "stage", "handlers.py")
     repo.git("commit", "-m", "Validate order messages")
 
 
-def _discard_refunds_duplicate(repo: GitRepo) -> None:
-    _golden(repo)
+def _discard_refunds_duplicate(repo: GitRepo) -> None:  # noqa: GR001 -- eval callback
+    _golden(repo=repo)
     run_git_hunk(repo, "discard", "handlers.py")
 
 

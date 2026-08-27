@@ -54,14 +54,14 @@ def _make_hunk(*, file: str, diff: str, change_kind: str = "M") -> Hunk:
 
 
 def test_extract_file_headers_stops_before_hunk() -> None:
-    header = _extract_file_headers(DIFF_SINGLE)["f.py"]
+    header = _extract_file_headers(diff_output=DIFF_SINGLE)["f.py"]
     assert header.startswith("diff --git a/f.py b/f.py\n")
     assert "+++ b/f.py\n" in header
     assert "@@" not in header
 
 
 def test_extract_file_headers_keys_every_file() -> None:
-    headers = _extract_file_headers(DIFF_TWO_FILES)
+    headers = _extract_file_headers(diff_output=DIFF_TWO_FILES)
     assert set(headers) == {"a.py", "b.py"}
 
 

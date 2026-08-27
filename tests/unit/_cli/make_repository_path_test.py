@@ -21,7 +21,7 @@ _WORKTREE_ROOT: Final = "/repo"
     ],
 )
 def test_make_repository_path_collapses_to_git_form(arg: str, expected: str) -> None:
-    assert _make_repository_path(arg, worktree_root=_WORKTREE_ROOT) == expected
+    assert _make_repository_path(arg=arg, worktree_root=_WORKTREE_ROOT) == expected
 
 
 def test_make_repository_path_translates_windows_separator(
@@ -29,20 +29,20 @@ def test_make_repository_path_translates_windows_separator(
 ) -> None:
     monkeypatch.setattr(_cli.os, "sep", "\\")
     assert os.sep == "\\"
-    path = _make_repository_path("sub\\nested.py", worktree_root=_WORKTREE_ROOT)
+    path = _make_repository_path(arg="sub\\nested.py", worktree_root=_WORKTREE_ROOT)
     assert path == "sub/nested.py"
 
 
 @pytest.mark.parametrize("arg", ["/repo/file.py", "/"])
 def test_make_repository_path_rejects_absolute_path(arg: str) -> None:
     with pytest.raises(CliError, match="repository path must be relative"):
-        _make_repository_path(arg, worktree_root=_WORKTREE_ROOT)
+        _make_repository_path(arg=arg, worktree_root=_WORKTREE_ROOT)
 
 
 @pytest.mark.parametrize("arg", ["..", "../file.py", "sub/../../file.py"])
 def test_make_repository_path_rejects_path_that_escapes_worktree(arg: str) -> None:
     with pytest.raises(CliError, match="repository path escapes the worktree"):
-        _make_repository_path(arg, worktree_root=_WORKTREE_ROOT)
+        _make_repository_path(arg=arg, worktree_root=_WORKTREE_ROOT)
 
 
 def test_make_repository_path_rejects_windows_drive_relative_path(
@@ -50,11 +50,11 @@ def test_make_repository_path_rejects_windows_drive_relative_path(
 ) -> None:
     monkeypatch.setattr(_cli.os.path, "splitdrive", ntpath.splitdrive)
     with pytest.raises(CliError, match="repository path must be relative"):
-        _make_repository_path("C:foo.py", worktree_root=_WORKTREE_ROOT)
+        _make_repository_path(arg="C:foo.py", worktree_root=_WORKTREE_ROOT)
 
 
 def test_make_repository_path_rejection_tip_names_the_worktree_root() -> None:
     with pytest.raises(CliError) as excinfo:
-        _make_repository_path("/elsewhere/file.py", worktree_root=_WORKTREE_ROOT)
+        _make_repository_path(arg="/elsewhere/file.py", worktree_root=_WORKTREE_ROOT)
     assert excinfo.value.tip is not None
     assert _WORKTREE_ROOT in excinfo.value.tip

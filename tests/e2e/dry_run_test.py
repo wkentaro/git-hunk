@@ -3,7 +3,7 @@ from pathlib import Path
 from .conftest import GitHunkCLI
 
 
-def _setup_modified(cli: GitHunkCLI) -> str:
+def _setup_modified(*, cli: GitHunkCLI) -> str:
     cli.repo.write_file("f.txt", "a\nb\nc\n")
     cli.repo.git("add", "f.txt")
     cli.repo.git("commit", "-m", "init")
@@ -14,7 +14,7 @@ def _setup_modified(cli: GitHunkCLI) -> str:
 
 
 def test_stage_dry_run_changes_nothing(cli: GitHunkCLI) -> None:
-    hunk_id = _setup_modified(cli)
+    hunk_id = _setup_modified(cli=cli)
 
     r = cli.run("stage", hunk_id, "--dry-run")
     assert r.returncode == 0
@@ -25,7 +25,7 @@ def test_stage_dry_run_changes_nothing(cli: GitHunkCLI) -> None:
 
 
 def test_discard_dry_run_keeps_working_tree(cli: GitHunkCLI) -> None:
-    hunk_id = _setup_modified(cli)
+    hunk_id = _setup_modified(cli=cli)
 
     r = cli.run("discard", hunk_id, "--dry-run")
     assert r.returncode == 0
@@ -36,7 +36,7 @@ def test_discard_dry_run_keeps_working_tree(cli: GitHunkCLI) -> None:
 
 
 def test_unstage_dry_run_keeps_index(cli: GitHunkCLI) -> None:
-    hunk_id = _setup_modified(cli)
+    hunk_id = _setup_modified(cli=cli)
     cli.run_ok("stage", hunk_id)
     staged_id = cli.run_list_json("list", "--staged", "--json")[0]["id"]
 
@@ -48,7 +48,7 @@ def test_unstage_dry_run_keeps_index(cli: GitHunkCLI) -> None:
 
 
 def test_dry_run_line_selection_changes_nothing(cli: GitHunkCLI) -> None:
-    hunk_id = _setup_modified(cli)
+    hunk_id = _setup_modified(cli=cli)
 
     # Body: 1=-a 2=+aX 3= b 4=-c 5=+cX. Preview staging just the first change.
     r = cli.run("stage", hunk_id, "-l", "1,2", "--dry-run")
@@ -73,7 +73,7 @@ def test_stage_dry_run_leaves_binary_unstaged(cli: GitHunkCLI) -> None:
 
 
 def test_dry_run_unknown_id_exits_nonzero(cli: GitHunkCLI) -> None:
-    _setup_modified(cli)
+    _setup_modified(cli=cli)
 
     r = cli.run("stage", "deadbee", "--dry-run")
     assert r.returncode != 0

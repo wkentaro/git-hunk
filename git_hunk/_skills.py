@@ -40,7 +40,7 @@ def load_skills() -> list[Skill]:
         except (OSError, UnicodeDecodeError) as exc:
             print(f"warning: could not read skill {skill_md}: {exc}", file=sys.stderr)
             continue
-        meta = _parse_frontmatter(content)
+        meta = _parse_frontmatter(text=content)
         skills.append(
             Skill(
                 name=meta.get("name") or child.name,
@@ -52,7 +52,7 @@ def load_skills() -> list[Skill]:
     return skills
 
 
-def _parse_frontmatter(text: str) -> dict[str, str]:
+def _parse_frontmatter(*, text: str) -> dict[str, str]:
     lines = text.splitlines()
     if not lines or lines[0].strip() != "---":
         return {}
