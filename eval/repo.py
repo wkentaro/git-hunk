@@ -7,6 +7,7 @@ import subprocess
 import threading
 import time
 from collections.abc import Callable
+from ctypes import wintypes
 from pathlib import Path
 from typing import cast
 
@@ -177,8 +178,6 @@ class _WindowsJob:
     def create_for_suspended_process(
         cls, *, process: subprocess.Popen[str]
     ) -> "_WindowsJob | None":
-        from ctypes import wintypes
-
         class IoCounters(ctypes.Structure):
             _fields_ = [
                 ("read_operation_count", ctypes.c_ulonglong),

@@ -73,7 +73,7 @@ dev = [
 ]
 
 [tool.ruff.lint]
-extend-select = ["ARG"]
+extend-select = ["ARG", "PLC0415"]
 select = [
   "ANN", # flake8-annotations
   "E",   # pycodestyle
