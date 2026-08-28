@@ -11,7 +11,7 @@ from eval.task import Task
 from eval.task import make_file
 
 
-def _build(repo: GitRepo) -> None:  # noqa: GR001 -- eval callback
+def _build(repo: GitRepo, /) -> None:
     BASE: Final = (
         "def process(items):\n"
         "    total = 0\n"
@@ -47,17 +47,17 @@ def _commit_without_debug(*, repo: GitRepo) -> None:
     )
 
 
-def _golden(repo: GitRepo) -> None:  # noqa: GR001 -- eval callback
+def _golden(repo: GitRepo, /) -> None:
     _commit_without_debug(repo=repo)
     run_git_hunk(repo, "discard", "a.py")
 
 
-def _commit_including_debug(repo: GitRepo) -> None:  # noqa: GR001 -- eval callback
+def _commit_including_debug(repo: GitRepo, /) -> None:
     run_git_hunk(repo, "stage", "a.py")
     repo.git("commit", "-m", "Double item totals")
 
 
-def _forget_to_drop_debug(repo: GitRepo) -> None:  # noqa: GR001 -- eval callback
+def _forget_to_drop_debug(repo: GitRepo, /) -> None:
     _commit_without_debug(repo=repo)
 
 

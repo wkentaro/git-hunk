@@ -5,7 +5,7 @@ import pytest
 from .conftest import GitHunkCLI
 
 
-def _unstaged_hunk_id(cli: GitHunkCLI) -> str:  # noqa: GR001 -- pytest parameter callback
+def _unstaged_hunk_id(cli: GitHunkCLI, /) -> str:
     cli.repo.write_file("f.txt", "a\nb\nc\n")
     cli.repo.git("add", "f.txt")
     cli.repo.git("commit", "-m", "init")
@@ -13,8 +13,8 @@ def _unstaged_hunk_id(cli: GitHunkCLI) -> str:  # noqa: GR001 -- pytest paramete
     return cli.run_list_json("list", "--unstaged", "--json")[0]["id"]
 
 
-def _staged_hunk_id(cli: GitHunkCLI) -> str:  # noqa: GR001 -- pytest parameter callback
-    cli.run_ok("stage", _unstaged_hunk_id(cli=cli))
+def _staged_hunk_id(cli: GitHunkCLI, /) -> str:
+    cli.run_ok("stage", _unstaged_hunk_id(cli))
     return cli.run_list_json("list", "--staged", "--json")[0]["id"]
 
 
@@ -65,14 +65,14 @@ def test_banner_reports_one_line_per_selected_hunk(cli: GitHunkCLI) -> None:
 
 
 def test_commit_banner_reports_singular_count_and_subject(cli: GitHunkCLI) -> None:
-    hunk_id = _unstaged_hunk_id(cli=cli)
+    hunk_id = _unstaged_hunk_id(cli)
     r = cli.run("commit", hunk_id, "-m", "fix: change a")
     assert r.returncode == 0
     assert r.stderr.splitlines() == ["  committed 1 hunk  fix: change a"]
 
 
 def test_commit_banner_reports_only_the_message_subject(cli: GitHunkCLI) -> None:
-    hunk_id = _unstaged_hunk_id(cli=cli)
+    hunk_id = _unstaged_hunk_id(cli)
     r = cli.run("commit", hunk_id, "-m", "fix: change a\n\nwhy a had to change\n")
     assert r.returncode == 0
     assert r.stderr.splitlines() == ["  committed 1 hunk  fix: change a"]

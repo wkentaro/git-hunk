@@ -43,7 +43,7 @@ _FINAL: Final = _TEMPLATE.format(
 )
 
 
-def _build(repo: GitRepo) -> None:  # noqa: GR001 -- eval callback
+def _build(repo: GitRepo, /) -> None:
     BASE: Final = _TEMPLATE.format(
         greeting="'hello'",
         farewell="'goodbye'",
@@ -57,7 +57,7 @@ def _build(repo: GitRepo) -> None:  # noqa: GR001 -- eval callback
     repo.write_file(name="client.py", content=_FINAL)
 
 
-def _golden(repo: GitRepo) -> None:  # noqa: GR001 -- eval callback
+def _golden(repo: GitRepo, /) -> None:
     fix_hunk = find_hunk(repo, "client.py", "session.get")
     if 'GREETING + ", "' not in run_git_hunk(repo, "show", fix_hunk):
         raise RuntimeError("the fix no longer shares its hunk with the churn")
@@ -73,17 +73,17 @@ def _golden(repo: GitRepo) -> None:  # noqa: GR001 -- eval callback
     run_git_hunk(repo, "commit", "client.py", "-m", "Normalize string quotes")
 
 
-def _squash_into_one_commit(repo: GitRepo) -> None:  # noqa: GR001 -- eval callback
+def _squash_into_one_commit(repo: GitRepo, /) -> None:
     run_git_hunk(repo, "stage", "client.py")
     repo.git("commit", "-m", "Add timeout and reformat")
 
 
-def _commit_by_hunk_not_intent(repo: GitRepo) -> None:  # noqa: GR001 -- eval callback
+def _commit_by_hunk_not_intent(repo: GitRepo, /) -> None:
     for index, hunk in enumerate(list_hunks(repo, "client.py")):
         run_git_hunk(repo, "commit", str(hunk["id"]), "-m", f"Update part {index}")
 
 
-def _commit_one_sided_match(repo: GitRepo) -> None:  # noqa: GR001 -- eval callback
+def _commit_one_sided_match(repo: GitRepo, /) -> None:
     # The guard rejects a lone half by default, so the adversarial solver has to
     # ask for it explicitly to still reproduce the broken partition.
     run_git_hunk(

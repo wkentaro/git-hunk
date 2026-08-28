@@ -59,7 +59,7 @@ _FINAL: Final = (
 )
 
 
-def _build(repo: GitRepo) -> None:  # noqa: GR001 -- eval callback
+def _build(repo: GitRepo, /) -> None:
     repo.write_file(name=_PATH, content=_BASE)
     repo.git("add", _PATH)
     repo.git("commit", "-m", "Initial state")
@@ -77,7 +77,7 @@ def _commit_selection(*selection: str, repo: GitRepo) -> None:
     run_git_hunk(repo, "commit", hunk_id, *selection, "-m", _MESSAGE)
 
 
-def _golden(repo: GitRepo) -> None:  # noqa: GR001 -- eval callback
+def _golden(repo: GitRepo, /) -> None:
     # Stage, read back what the index now holds, and only commit once it parses
     # — the check an agent has to perform by hand today, and the one #58 wants
     # to fold into `stage --verify`. Committing from the verified index means
@@ -93,7 +93,7 @@ def _golden(repo: GitRepo) -> None:  # noqa: GR001 -- eval callback
     run_git_hunk(repo, "discard", _PATH)
 
 
-def _commit_without_matching_debug_lines(repo: GitRepo) -> None:  # noqa: GR001 -- eval callback
+def _commit_without_matching_debug_lines(repo: GitRepo, /) -> None:
     _commit_selection(
         "--exclude-matching",
         _DEBUG_PATTERN,
@@ -101,7 +101,7 @@ def _commit_without_matching_debug_lines(repo: GitRepo) -> None:  # noqa: GR001 
     )
 
 
-def _commit_without_the_debug_range(repo: GitRepo) -> None:  # noqa: GR001 -- eval callback
+def _commit_without_the_debug_range(repo: GitRepo, /) -> None:
     _commit_selection(
         "-l",
         _STRANDING_RANGE,
@@ -109,12 +109,12 @@ def _commit_without_the_debug_range(repo: GitRepo) -> None:  # noqa: GR001 -- ev
     )
 
 
-def _commit_everything(repo: GitRepo) -> None:  # noqa: GR001 -- eval callback
+def _commit_everything(repo: GitRepo, /) -> None:
     run_git_hunk(repo, "stage", _PATH)
     repo.git("commit", "-m", _MESSAGE)
 
 
-def _forget_to_drop_the_scaffolding(repo: GitRepo) -> None:  # noqa: GR001 -- eval callback
+def _forget_to_drop_the_scaffolding(repo: GitRepo, /) -> None:
     _commit_selection(
         "-l",
         _KEEP_LINES,

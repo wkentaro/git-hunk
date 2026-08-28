@@ -25,7 +25,7 @@ _FINAL: Final = _TEMPLATE.format(
 )
 
 
-def _build(repo: GitRepo) -> None:  # noqa: GR001 -- eval callback
+def _build(repo: GitRepo, /) -> None:
     BASE: Final = _TEMPLATE.format(
         read_config='    return os.environ.get("CONFIG")',
         write_log="    print(msg)",
@@ -36,7 +36,7 @@ def _build(repo: GitRepo) -> None:  # noqa: GR001 -- eval callback
     repo.write_file(name="a.py", content=_FINAL)
 
 
-def _golden(repo: GitRepo) -> None:  # noqa: GR001 -- eval callback
+def _golden(repo: GitRepo, /) -> None:
     run_git_hunk(
         repo,
         "commit",
@@ -53,7 +53,7 @@ def _golden(repo: GitRepo) -> None:  # noqa: GR001 -- eval callback
     )
 
 
-def _squash_into_one_commit(repo: GitRepo) -> None:  # noqa: GR001 -- eval callback
+def _squash_into_one_commit(repo: GitRepo, /) -> None:
     run_git_hunk(repo, "stage", "a.py")
     repo.git("commit", "-m", "Update configuration and logging")
 

@@ -14,7 +14,7 @@ _BASE_NOTES: Final = "todo: nothing yet\n"
 _FINAL_NOTES: Final = "todo: write the parser\n"
 
 
-def _build(repo: GitRepo) -> None:  # noqa: GR001 -- eval callback
+def _build(repo: GitRepo, /) -> None:
     BASE_FEATURE: Final = "def add(a, b):\n    return a + b\n"
     repo.write_file(name="feature.py", content=BASE_FEATURE)
     repo.write_file(name="notes.txt", content=_BASE_NOTES)
@@ -24,33 +24,33 @@ def _build(repo: GitRepo) -> None:  # noqa: GR001 -- eval callback
     repo.write_file(name="notes.txt", content=_FINAL_NOTES)
 
 
-def _golden(repo: GitRepo) -> None:  # noqa: GR001 -- eval callback
+def _golden(repo: GitRepo, /) -> None:
     run_git_hunk(repo, "commit", "feature.py", "-m", "Coerce add operands to int")
 
 
-def _commit_unrelated_work(repo: GitRepo) -> None:  # noqa: GR001 -- eval callback
+def _commit_unrelated_work(repo: GitRepo, /) -> None:
     run_git_hunk(repo, "stage", "feature.py", "notes.txt")
     repo.git("commit", "-m", "Coerce add operands to int")
 
 
-def _stage_unrelated_work(repo: GitRepo) -> None:  # noqa: GR001 -- eval callback
-    _golden(repo=repo)
+def _stage_unrelated_work(repo: GitRepo, /) -> None:
+    _golden(repo)
     run_git_hunk(repo, "stage", "notes.txt")
 
 
-def _leave_intent_to_add(repo: GitRepo) -> None:  # noqa: GR001 -- eval callback
-    _golden(repo=repo)
+def _leave_intent_to_add(repo: GitRepo, /) -> None:
+    _golden(repo)
     repo.write_file(name="scratch.bin", content=b"\x00\xff")
     repo.git("add", "--intent-to-add", "scratch.bin")
 
 
-def _discard_unrelated_work(repo: GitRepo) -> None:  # noqa: GR001 -- eval callback
-    _golden(repo=repo)
+def _discard_unrelated_work(repo: GitRepo, /) -> None:
+    _golden(repo)
     run_git_hunk(repo, "discard", "notes.txt")
 
 
-def _leave_ignored_untracked_file(repo: GitRepo) -> None:  # noqa: GR001 -- eval callback
-    _golden(repo=repo)
+def _leave_ignored_untracked_file(repo: GitRepo, /) -> None:
+    _golden(repo)
     repo.write_file(name="scratch.bin", content=b"\x00\xff")
     repo.write_file(name=".git/info/exclude", content="scratch.bin\n")
 

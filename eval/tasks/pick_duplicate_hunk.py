@@ -38,7 +38,7 @@ def _handlers(*, orders_validated: bool, refunds_validated: bool) -> str:
 _ALL_VALIDATED: Final = _handlers(orders_validated=True, refunds_validated=True)
 
 
-def _build(repo: GitRepo) -> None:  # noqa: GR001 -- eval callback
+def _build(repo: GitRepo, /) -> None:
     repo.write_file(
         name="handlers.py",
         content=_handlers(orders_validated=False, refunds_validated=False),
@@ -61,7 +61,7 @@ def _find_hunk_under(*, repo: GitRepo, function_line: str) -> str:
     raise RuntimeError(f"no hunk in handlers.py sits under {function_line!r}")
 
 
-def _golden(repo: GitRepo) -> None:  # noqa: GR001 -- eval callback
+def _golden(repo: GitRepo, /) -> None:
     run_git_hunk(
         repo,
         "commit",
@@ -71,7 +71,7 @@ def _golden(repo: GitRepo) -> None:  # noqa: GR001 -- eval callback
     )
 
 
-def _commit_wrong_duplicate(repo: GitRepo) -> None:  # noqa: GR001 -- eval callback
+def _commit_wrong_duplicate(repo: GitRepo, /) -> None:
     run_git_hunk(
         repo,
         "commit",
@@ -81,13 +81,13 @@ def _commit_wrong_duplicate(repo: GitRepo) -> None:  # noqa: GR001 -- eval callb
     )
 
 
-def _commit_both_duplicates(repo: GitRepo) -> None:  # noqa: GR001 -- eval callback
+def _commit_both_duplicates(repo: GitRepo, /) -> None:
     run_git_hunk(repo, "stage", "handlers.py")
     repo.git("commit", "-m", "Validate order messages")
 
 
-def _discard_refunds_duplicate(repo: GitRepo) -> None:  # noqa: GR001 -- eval callback
-    _golden(repo=repo)
+def _discard_refunds_duplicate(repo: GitRepo, /) -> None:
+    _golden(repo)
     run_git_hunk(repo, "discard", "handlers.py")
 
 

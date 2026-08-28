@@ -701,7 +701,9 @@ def cmd_skills(*, args: tuple[str, ...], force_json: bool, show_help: bool) -> N
     raise CliError(f"unrecognized skills subcommand '{subcommand}'", usage=USAGE_SKILLS)
 
 
-def _add_patch_selection_options(command: Callable[..., None]) -> Callable[..., None]:  # noqa: GR001 -- Click decorator callback
+def _add_patch_selection_options(
+    command: Callable[..., None], /
+) -> Callable[..., None]:
     options = [
         click.option("-l", "line_spec", default=None),
         click.option("--include-matching", "include_matching", multiple=True),

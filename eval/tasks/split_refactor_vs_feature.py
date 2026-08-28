@@ -16,7 +16,7 @@ _FINAL_APP: Final = (
 )
 
 
-def _build(repo: GitRepo) -> None:  # noqa: GR001 -- eval callback
+def _build(repo: GitRepo, /) -> None:
     BASE_HELPER: Final = 'def greet(name):\n    return "hi " + name\n'
     BASE_APP: Final = (
         'from helper import greet\n\n\ndef main():\n    print(greet("world"))\n'
@@ -29,22 +29,22 @@ def _build(repo: GitRepo) -> None:  # noqa: GR001 -- eval callback
     repo.write_file(name="app.py", content=_FINAL_APP)
 
 
-def _golden(repo: GitRepo) -> None:  # noqa: GR001 -- eval callback
+def _golden(repo: GitRepo, /) -> None:
     run_git_hunk(repo, "commit", "helper.py", "-m", "Rename the greet parameter")
     run_git_hunk(repo, "commit", "app.py", "-m", "Add a second greeting")
 
 
-def _commit_feature_before_refactor(repo: GitRepo) -> None:  # noqa: GR001 -- eval callback
+def _commit_feature_before_refactor(repo: GitRepo, /) -> None:
     run_git_hunk(repo, "commit", "app.py", "-m", "Add a second greeting")
     run_git_hunk(repo, "commit", "helper.py", "-m", "Rename the greet parameter")
 
 
-def _squash_into_one_commit(repo: GitRepo) -> None:  # noqa: GR001 -- eval callback
+def _squash_into_one_commit(repo: GitRepo, /) -> None:
     run_git_hunk(repo, "stage", "helper.py", "app.py")
     repo.git("commit", "-m", "Update greeting behavior")
 
 
-def _duplicate_feature_line(repo: GitRepo) -> None:  # noqa: GR001 -- eval callback
+def _duplicate_feature_line(repo: GitRepo, /) -> None:
     run_git_hunk(repo, "commit", "helper.py", "-m", "Rename the greet parameter")
     repo.write_file(
         name="app.py",
