@@ -31,6 +31,7 @@ _FAILURE_PARAMS: Final = [
     ids=["failed-without-reason", "passed-with-reason"],
 )
 def test_result_requires_a_failure_reason_exactly_when_it_failed(
+    *,
     passed: bool,
     reason: FailureReason | None,
 ) -> None:

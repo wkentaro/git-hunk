@@ -498,10 +498,12 @@ def format_usage(*, usage: TraceUsage) -> str:
 
 
 def _format_token_count(*, count: int) -> str:
-    if count >= 1_000_000:
-        return f"{count / 1_000_000:.1f}m"
-    if count >= 1_000:
-        return f"{count / 1_000:.1f}k"
+    MILLION: Final = 1_000_000
+    THOUSAND: Final = 1_000
+    if count >= MILLION:
+        return f"{count / MILLION:.1f}m"
+    if count >= THOUSAND:
+        return f"{count / THOUSAND:.1f}k"
     return str(count)
 
 

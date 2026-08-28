@@ -496,7 +496,7 @@ def _run_patch_command(
 @click.option("-h", "--help", "show_help", is_flag=True)
 @click.option("-V", "--version", "show_version", is_flag=True)
 @click.pass_context
-def cli(ctx: click.Context, show_help: bool, show_version: bool) -> None:
+def cli(ctx: click.Context, *, show_help: bool, show_version: bool) -> None:
     if show_version:
         print_version(__version__)
         ctx.exit()
@@ -559,6 +559,7 @@ def _filter_inventory_hunks(
 @click.option("-h", "--help", "show_help", is_flag=True)
 @click.argument("files", nargs=-1)
 def cmd_list(
+    *,
     staged: bool,
     unstaged: bool,
     force_json: bool,
@@ -599,6 +600,7 @@ def cmd_list(
 @click.option("-h", "--help", "show_help", is_flag=True)
 @click.argument("ids", nargs=-1)
 def cmd_show(
+    *,
     staged: bool,
     unstaged: bool,
     force_json: bool,
@@ -649,7 +651,7 @@ def _find_skill(*, skills: list[Skill], name: str) -> Skill:
 @click.option("--json", "force_json", is_flag=True)
 @click.option("-h", "--help", "show_help", is_flag=True)
 @click.argument("args", nargs=-1)
-def cmd_skills(args: tuple[str, ...], force_json: bool, show_help: bool) -> None:
+def cmd_skills(*, args: tuple[str, ...], force_json: bool, show_help: bool) -> None:
     if show_help:
         print_help(HELP_SKILLS)
         return
@@ -718,6 +720,7 @@ def _add_patch_selection_options(command: Callable[..., None]) -> Callable[..., 
 @cli.command("stage", add_help_option=False)
 @_add_patch_selection_options
 def cmd_stage(
+    *,
     targets: tuple[str, ...],
     line_spec: str | None,
     include_matching: tuple[str, ...],
@@ -754,6 +757,7 @@ def cmd_stage(
 @cli.command("unstage", add_help_option=False)
 @_add_patch_selection_options
 def cmd_unstage(
+    *,
     targets: tuple[str, ...],
     line_spec: str | None,
     include_matching: tuple[str, ...],
@@ -790,6 +794,7 @@ def cmd_unstage(
 @cli.command("discard", add_help_option=False)
 @_add_patch_selection_options
 def cmd_discard(
+    *,
     targets: tuple[str, ...],
     line_spec: str | None,
     include_matching: tuple[str, ...],
@@ -833,6 +838,7 @@ def cmd_discard(
 @click.option("-h", "--help", "show_help", is_flag=True)
 @click.argument("targets", nargs=-1)
 def cmd_commit(
+    *,
     targets: tuple[str, ...],
     message: str | None,
     line_spec: str | None,

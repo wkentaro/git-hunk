@@ -92,7 +92,7 @@ def test_prepared_task_replaces_windows_readonly_checkout(
 
     def windows_rmtree(
         path: str | Path,
-        ignore_errors: bool = False,
+        ignore_errors: bool = False,  # noqa: FBT001, FBT002 -- Callback protocol.
         onerror: Callable[..., object] | None = None,
     ) -> None:
         checkout_path = Path(path)

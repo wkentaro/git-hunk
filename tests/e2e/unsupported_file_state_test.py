@@ -126,7 +126,7 @@ def test_unstage_rejects_staged_rename_before_mutation(cli: GitHunkCLI) -> None:
 
 
 @pytest.mark.parametrize("edit", [False, True], ids=["unchanged", "edited"])
-def test_list_rejects_staged_copy(cli: GitHunkCLI, edit: bool) -> None:
+def test_list_rejects_staged_copy(cli: GitHunkCLI, *, edit: bool) -> None:
     _commit_source(cli=cli, path="source.txt")
     content = (
         "one\ntwo changed\nthree\nfour\nfive\n"

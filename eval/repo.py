@@ -9,6 +9,7 @@ import time
 from collections.abc import Callable
 from ctypes import wintypes
 from pathlib import Path
+from typing import Final
 from typing import cast
 
 
@@ -281,7 +282,7 @@ class _WindowsJob:
             )
             process_handle = kernel32.OpenProcess(
                 0x00000101,
-                False,
+                False,  # noqa: FBT003 -- Windows API requires positional arguments.
                 process.pid,
             )
             assigned = bool(
@@ -309,6 +310,7 @@ class _WindowsJob:
     def _resume_process(
         *, kernel32: ctypes.CDLL, process_id: int, thread_entry_type: type
     ) -> bool:
+        RESUME_THREAD_FAILED: Final = 0xFFFFFFFF
         snapshot = kernel32.CreateToolhelp32Snapshot(0x00000004, 0)
         if snapshot == ctypes.c_void_p(-1).value:
             return False
@@ -318,11 +320,17 @@ class _WindowsJob:
             has_entry = bool(kernel32.Thread32First(snapshot, ctypes.byref(entry)))
             while has_entry:
                 if entry.owner_process_id == process_id:
-                    thread_handle = kernel32.OpenThread(0x0002, False, entry.thread_id)
+                    thread_handle = kernel32.OpenThread(
+                        0x0002,
+                        False,  # noqa: FBT003 -- Windows API requires positional arguments.
+                        entry.thread_id,
+                    )
                     if not thread_handle:
                         return False
                     try:
-                        return kernel32.ResumeThread(thread_handle) != 0xFFFFFFFF
+                        return (
+                            kernel32.ResumeThread(thread_handle) != RESUME_THREAD_FAILED
+                        )
                     finally:
                         kernel32.CloseHandle(thread_handle)
                 has_entry = bool(kernel32.Thread32Next(snapshot, ctypes.byref(entry)))
