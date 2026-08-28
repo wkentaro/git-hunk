@@ -6,22 +6,22 @@ import pytest
 from .conftest import GitHunkCLI
 
 
-def test_help_mentions_skills(cli: GitHunkCLI) -> None:
+def test_help_mentions_skills(*, cli: GitHunkCLI) -> None:
     out = cli.run_ok("--help")
     assert "Start here (for AI agents)" in out
     assert "git-hunk skills get core" in out
     assert "skills" in out
 
 
-def test_list_is_default(cli: GitHunkCLI) -> None:
+def test_list_is_default(*, cli: GitHunkCLI) -> None:
     assert cli.run_ok("skills") == cli.run_ok("skills", "list")
 
 
-def test_list_shows_skill_name(cli: GitHunkCLI) -> None:
+def test_list_shows_skill_name(*, cli: GitHunkCLI) -> None:
     assert "core" in cli.run_ok("skills", "list")
 
 
-def test_list_json(cli: GitHunkCLI) -> None:
+def test_list_json(*, cli: GitHunkCLI) -> None:
     skills = cli.run_json("skills", "list", "--json")
     names = [skill["name"] for skill in skills]
     assert {"core", "logical-commits"} <= set(names)
@@ -29,33 +29,33 @@ def test_list_json(cli: GitHunkCLI) -> None:
     assert "git-hunk" in core["description"].lower()
 
 
-def test_list_json_has_parsed_skill_descriptions(cli: GitHunkCLI) -> None:
+def test_list_json_has_parsed_skill_descriptions(*, cli: GitHunkCLI) -> None:
     for skill in cli.run_json("skills", "list", "--json"):
         description = skill["description"]
         assert description.endswith("."), skill["name"]
         assert "Use when" in description, skill["name"]
 
 
-def test_get_outputs_full_content(cli: GitHunkCLI) -> None:
+def test_get_outputs_full_content(*, cli: GitHunkCLI) -> None:
     out = cli.run_ok("skills", "get", "core")
     assert "name: core" in out
     assert "## The core loop" in out
 
 
-def test_get_json(cli: GitHunkCLI) -> None:
+def test_get_json(*, cli: GitHunkCLI) -> None:
     skills = cli.run_json("skills", "get", "core", "--json")
     assert skills[0]["name"] == "core"
     assert "## The core loop" in skills[0]["content"]
 
 
-def test_get_concatenates_multiple_skills(cli: GitHunkCLI) -> None:
+def test_get_concatenates_multiple_skills(*, cli: GitHunkCLI) -> None:
     out = cli.run_ok("skills", "get", "core", "logical-commits")
     assert "name: core" in out
     assert "name: logical-commits" in out
 
 
 @pytest.fixture
-def two_skills(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+def two_skills(*, tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
     for name in ("alpha", "beta"):
         skill_dir = tmp_path / name
         skill_dir.mkdir()
@@ -68,65 +68,65 @@ def two_skills(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
 
 
 @pytest.mark.usefixtures("two_skills")
-def test_get_multiple_joins_bodies(cli: GitHunkCLI) -> None:
+def test_get_multiple_joins_bodies(*, cli: GitHunkCLI) -> None:
     out = cli.run_ok("skills", "get", "alpha", "beta")
     assert "Alpha body line\n---\nname: beta" in out
 
 
 @pytest.mark.usefixtures("two_skills")
-def test_get_multiple_json(cli: GitHunkCLI) -> None:
+def test_get_multiple_json(*, cli: GitHunkCLI) -> None:
     skills = cli.run_json("skills", "get", "alpha", "beta", "--json")
     assert [s["name"] for s in skills] == ["alpha", "beta"]
     assert "Beta body line" in skills[1]["content"]
 
 
-def test_get_unknown_skill_errors(cli: GitHunkCLI) -> None:
+def test_get_unknown_skill_errors(*, cli: GitHunkCLI) -> None:
     result = cli.run("skills", "get", "nope")
     assert result.returncode == 1
     assert "not found" in result.stderr
     assert "core" in result.stderr
 
 
-def test_get_requires_name(cli: GitHunkCLI) -> None:
+def test_get_requires_name(*, cli: GitHunkCLI) -> None:
     result = cli.run("skills", "get")
     assert result.returncode == 2
     assert "requires a skill name" in result.stderr
 
 
-def test_path_prints_root(cli: GitHunkCLI) -> None:
+def test_path_prints_root(*, cli: GitHunkCLI) -> None:
     out = cli.run_ok("skills", "path").strip()
     assert out.endswith("skills")
 
 
-def test_path_of_named_skill(cli: GitHunkCLI) -> None:
+def test_path_of_named_skill(*, cli: GitHunkCLI) -> None:
     out = cli.run_ok("skills", "path", "core").strip()
     assert Path(out).parts[-2:] == ("skills", "core")
 
 
-def test_path_rejects_multiple_names(cli: GitHunkCLI) -> None:
+def test_path_rejects_multiple_names(*, cli: GitHunkCLI) -> None:
     result = cli.run("skills", "path", "core", "extra")
     assert result.returncode == 2
     assert "at most one" in result.stderr
 
 
-def test_path_json(cli: GitHunkCLI) -> None:
+def test_path_json(*, cli: GitHunkCLI) -> None:
     data = json.loads(cli.run_ok("skills", "path", "--json"))
     assert data["path"].endswith("skills")
 
 
-def test_path_json_of_named_skill(cli: GitHunkCLI) -> None:
+def test_path_json_of_named_skill(*, cli: GitHunkCLI) -> None:
     data = json.loads(cli.run_ok("skills", "path", "core", "--json"))
     assert Path(data["path"]).parts[-2:] == ("skills", "core")
 
 
-def test_list_rejects_arguments(cli: GitHunkCLI) -> None:
+def test_list_rejects_arguments(*, cli: GitHunkCLI) -> None:
     result = cli.run("skills", "list", "extra")
     assert result.returncode == 2
     assert "takes no arguments" in result.stderr
 
 
 def test_list_empty_skills_dir_exits_zero_and_says_no_skills(
-    cli: GitHunkCLI, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    *, cli: GitHunkCLI, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     monkeypatch.setenv("GIT_HUNK_SKILLS_DIR", str(tmp_path))
     r = cli.run("skills", "list")
@@ -135,7 +135,7 @@ def test_list_empty_skills_dir_exits_zero_and_says_no_skills(
     assert cli.run_json("skills", "list", "--json") == []
 
 
-def test_unknown_subcommand_errors(cli: GitHunkCLI) -> None:
+def test_unknown_subcommand_errors(*, cli: GitHunkCLI) -> None:
     result = cli.run("skills", "frob")
     assert result.returncode == 2
     assert "unrecognized skills subcommand 'frob'" in result.stderr

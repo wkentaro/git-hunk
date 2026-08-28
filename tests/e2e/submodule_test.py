@@ -10,7 +10,7 @@ def _bump_submodule(*, cli: GitHunkCLI, content: str) -> None:
 
 
 @pytest.fixture
-def bumped_submodule(cli: GitHunkCLI) -> GitHunkCLI:
+def bumped_submodule(*, cli: GitHunkCLI) -> GitHunkCLI:
     # An embedded repository, not a .gitmodules-registered submodule: git records
     # both as a mode 160000 gitlink and emits the same "Subproject commit" diff,
     # and git-hunk never reads .gitmodules, so this skips `git submodule add` and
@@ -26,6 +26,7 @@ def bumped_submodule(cli: GitHunkCLI) -> GitHunkCLI:
 
 
 def test_list_reports_a_gitlink_bump_as_a_text_hunk(
+    *,
     bumped_submodule: GitHunkCLI,
 ) -> None:
     hunks = bumped_submodule.run_list_json("list", "--unstaged", "--json")
@@ -44,6 +45,7 @@ def test_list_reports_a_gitlink_bump_as_a_text_hunk(
 
 
 def test_list_plaintext_gives_a_gitlink_no_whole_file_label(
+    *,
     bumped_submodule: GitHunkCLI,
 ) -> None:
     out = bumped_submodule.run_ok("list", "--unstaged")
@@ -56,6 +58,7 @@ def test_list_plaintext_gives_a_gitlink_no_whole_file_label(
 
 
 def test_show_renders_the_subproject_commit_body(
+    *,
     bumped_submodule: GitHunkCLI,
 ) -> None:
     hunks = bumped_submodule.run_list_json("list", "--unstaged", "--json")
@@ -66,6 +69,7 @@ def test_show_renders_the_subproject_commit_body(
 
 
 def test_stage_then_unstage_round_trips_a_gitlink_bump(
+    *,
     bumped_submodule: GitHunkCLI,
 ) -> None:
     cli = bumped_submodule
@@ -105,7 +109,7 @@ def _assert_submodule_line_error(*, returncode: int, stderr: str) -> None:
     ],
 )
 def test_stage_rejects_gitlink_line_selection(
-    bumped_submodule: GitHunkCLI, selector: tuple[str, ...]
+    *, bumped_submodule: GitHunkCLI, selector: tuple[str, ...]
 ) -> None:
     cli = bumped_submodule
     before = _capture_gitlink_state(cli=cli)
@@ -117,6 +121,7 @@ def test_stage_rejects_gitlink_line_selection(
 
 
 def test_unstage_rejects_gitlink_line_selection(
+    *,
     bumped_submodule: GitHunkCLI,
 ) -> None:
     cli = bumped_submodule
@@ -130,6 +135,7 @@ def test_unstage_rejects_gitlink_line_selection(
 
 
 def test_discard_rejects_gitlink_line_selection(
+    *,
     bumped_submodule: GitHunkCLI,
 ) -> None:
     cli = bumped_submodule
@@ -142,6 +148,7 @@ def test_discard_rejects_gitlink_line_selection(
 
 
 def test_commit_rejects_gitlink_line_selection(
+    *,
     bumped_submodule: GitHunkCLI,
 ) -> None:
     cli = bumped_submodule

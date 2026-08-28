@@ -20,7 +20,7 @@ def _unstaged_ids(*, cli: GitHunkCLI) -> list[str]:
     return [h["id"] for h in cli.run_list_json("list", "--unstaged", "--json")]
 
 
-def test_commit_single_hunk(cli: GitHunkCLI) -> None:
+def test_commit_single_hunk(*, cli: GitHunkCLI) -> None:
     _init(cli=cli, files={"f.txt": "a\nb\nc\n"})
     cli.repo.write_file("f.txt", "aX\nb\nc\n")
 
@@ -33,7 +33,7 @@ def test_commit_single_hunk(cli: GitHunkCLI) -> None:
     assert cli.repo.git("status", "--porcelain").strip() == ""
 
 
-def test_commit_multiple_hunks(cli: GitHunkCLI) -> None:
+def test_commit_multiple_hunks(*, cli: GitHunkCLI) -> None:
     _init(cli=cli, files={"a.txt": "a\n", "b.txt": "b\n"})
     cli.repo.write_file("a.txt", "AAA\n")
     cli.repo.write_file("b.txt", "BBB\n")
@@ -48,7 +48,7 @@ def test_commit_multiple_hunks(cli: GitHunkCLI) -> None:
     assert cli.repo.git("status", "--porcelain").strip() == ""
 
 
-def test_commit_partial_lines_leaves_remainder_unstaged(cli: GitHunkCLI) -> None:
+def test_commit_partial_lines_leaves_remainder_unstaged(*, cli: GitHunkCLI) -> None:
     _init(cli=cli, files={"f.txt": "a\nb\nc\n"})
     cli.repo.write_file("f.txt", "aX\nb\ncX\n")
 
@@ -61,7 +61,7 @@ def test_commit_partial_lines_leaves_remainder_unstaged(cli: GitHunkCLI) -> None
     assert "cX" in cli.repo.git("diff")
 
 
-def test_commit_exclude_matching_leaves_remainder_unstaged(cli: GitHunkCLI) -> None:
+def test_commit_exclude_matching_leaves_remainder_unstaged(*, cli: GitHunkCLI) -> None:
     _init(
         cli=cli,
         files={
@@ -106,7 +106,7 @@ def test_commit_exclude_matching_leaves_remainder_unstaged(cli: GitHunkCLI) -> N
     assert 'print("DEBUG", item)' in cli.repo.git("diff")
 
 
-def test_commit_by_file_path(cli: GitHunkCLI) -> None:
+def test_commit_by_file_path(*, cli: GitHunkCLI) -> None:
     _init(cli=cli, files={"a.txt": "a\n", "b.txt": "b\n"})
     cli.repo.write_file("a.txt", "A1\nA2\nA3\n")
     cli.repo.write_file("b.txt", "BBB\n")
@@ -119,7 +119,7 @@ def test_commit_by_file_path(cli: GitHunkCLI) -> None:
     assert "BBB" in cli.repo.git("diff")
 
 
-def test_commit_requires_message(cli: GitHunkCLI) -> None:
+def test_commit_requires_message(*, cli: GitHunkCLI) -> None:
     _init(cli=cli, files={"f.txt": "a\n"})
     cli.repo.write_file("f.txt", "AAA\n")
 
@@ -132,7 +132,7 @@ def test_commit_requires_message(cli: GitHunkCLI) -> None:
 
 
 @pytest.mark.parametrize("message", ["", "   "], ids=["empty", "whitespace"])
-def test_commit_rejects_blank_message(cli: GitHunkCLI, message: str) -> None:
+def test_commit_rejects_blank_message(*, cli: GitHunkCLI, message: str) -> None:
     _init(cli=cli, files={"f.txt": "a\n"})
     cli.repo.write_file("f.txt", "AAA\n")
 
@@ -144,7 +144,7 @@ def test_commit_rejects_blank_message(cli: GitHunkCLI, message: str) -> None:
     assert cli.repo.git("diff", "--cached").strip() == ""
 
 
-def test_commit_unknown_id_makes_no_commit(cli: GitHunkCLI) -> None:
+def test_commit_unknown_id_makes_no_commit(*, cli: GitHunkCLI) -> None:
     _init(cli=cli, files={"f.txt": "a\n"})
     cli.repo.write_file("f.txt", "AAA\n")
 
@@ -155,7 +155,7 @@ def test_commit_unknown_id_makes_no_commit(cli: GitHunkCLI) -> None:
     assert cli.repo.git("diff", "--cached").strip() == ""
 
 
-def test_commit_failure_leaves_hunk_staged(cli: GitHunkCLI) -> None:
+def test_commit_failure_leaves_hunk_staged(*, cli: GitHunkCLI) -> None:
     _init(cli=cli, files={"f.txt": "a\n"})
     cli.repo.write_file("f.txt", "AAA\n")
 
@@ -171,7 +171,9 @@ def test_commit_failure_leaves_hunk_staged(cli: GitHunkCLI) -> None:
     assert "AAA" in cli.repo.git("diff", "--cached")
 
 
-def test_commit_aborts_when_index_already_has_staged_changes(cli: GitHunkCLI) -> None:
+def test_commit_aborts_when_index_already_has_staged_changes(
+    *, cli: GitHunkCLI
+) -> None:
     _init(cli=cli, files={"a.txt": "a\n", "b.txt": "b\n"})
     cli.repo.write_file("a.txt", "AAA\n")
     cli.repo.write_file("b.txt", "BBB\n")
@@ -187,7 +189,7 @@ def test_commit_aborts_when_index_already_has_staged_changes(cli: GitHunkCLI) ->
     assert cli.repo.git("diff", "--cached", "--name-only").strip() == "a.txt"
 
 
-def test_commit_reports_clean_error_when_staged_diff_fails(cli: GitHunkCLI) -> None:
+def test_commit_reports_clean_error_when_staged_diff_fails(*, cli: GitHunkCLI) -> None:
     # A git failure while checking for already-staged changes must surface as a
     # clean CLI error, not a raw Python traceback. A corrupt index makes
     # `git diff --cached` fail while the repo still looks like a work tree.

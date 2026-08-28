@@ -12,7 +12,7 @@ from .conftest import GitHunkCLI
 
 
 @pytest.fixture
-def two_changed_files(cli: GitHunkCLI) -> GitHunkCLI:
+def two_changed_files(*, cli: GitHunkCLI) -> GitHunkCLI:
     cli.repo.write_file("f1.py", "a\n")
     cli.repo.write_file("f2.py", "b\n")
     cli.repo.git("add", ".")
@@ -23,6 +23,7 @@ def two_changed_files(cli: GitHunkCLI) -> GitHunkCLI:
 
 
 def test_stage_with_one_unknown_id_stages_nothing(
+    *,
     two_changed_files: GitHunkCLI,
 ) -> None:
     cli = two_changed_files
@@ -36,7 +37,9 @@ def test_stage_with_one_unknown_id_stages_nothing(
     assert cli.repo.git("diff", "--cached").strip() == ""
 
 
-def test_unstage_with_one_unknown_id_keeps_index(two_changed_files: GitHunkCLI) -> None:
+def test_unstage_with_one_unknown_id_keeps_index(
+    *, two_changed_files: GitHunkCLI
+) -> None:
     cli = two_changed_files
     cli.repo.git("add", ".")
     staged_before = cli.repo.git("diff", "--cached")
@@ -51,6 +54,7 @@ def test_unstage_with_one_unknown_id_keeps_index(two_changed_files: GitHunkCLI) 
 
 
 def test_discard_with_one_unknown_id_keeps_working_tree(
+    *,
     two_changed_files: GitHunkCLI,
 ) -> None:
     cli = two_changed_files
@@ -66,6 +70,7 @@ def test_discard_with_one_unknown_id_keeps_working_tree(
 
 
 def test_stage_with_one_unknown_path_stages_nothing(
+    *,
     two_changed_files: GitHunkCLI,
 ) -> None:
     cli = two_changed_files
@@ -78,6 +83,7 @@ def test_stage_with_one_unknown_path_stages_nothing(
 
 
 def test_unstage_text_and_empty_additions_in_unborn_repository(
+    *,
     cli: GitHunkCLI,
 ) -> None:
     cli.repo.write_file("content.txt", "content\n")

@@ -40,6 +40,7 @@ def _two_unstaged_hunk_ids(*, cli: GitHunkCLI) -> list[str]:
     ids=["stage", "unstage", "discard"],
 )
 def test_banner_reports_verb_id_file_header_and_stats(
+    *,
     cli: GitHunkCLI,
     command: str,
     verb: str,
@@ -53,7 +54,7 @@ def test_banner_reports_verb_id_file_header_and_stats(
     ]
 
 
-def test_banner_reports_one_line_per_selected_hunk(cli: GitHunkCLI) -> None:
+def test_banner_reports_one_line_per_selected_hunk(*, cli: GitHunkCLI) -> None:
     ids = _two_unstaged_hunk_ids(cli=cli)
 
     r = cli.run("stage", *ids)
@@ -64,21 +65,21 @@ def test_banner_reports_one_line_per_selected_hunk(cli: GitHunkCLI) -> None:
     ]
 
 
-def test_commit_banner_reports_singular_count_and_subject(cli: GitHunkCLI) -> None:
+def test_commit_banner_reports_singular_count_and_subject(*, cli: GitHunkCLI) -> None:
     hunk_id = _unstaged_hunk_id(cli)
     r = cli.run("commit", hunk_id, "-m", "fix: change a")
     assert r.returncode == 0
     assert r.stderr.splitlines() == ["  committed 1 hunk  fix: change a"]
 
 
-def test_commit_banner_reports_only_the_message_subject(cli: GitHunkCLI) -> None:
+def test_commit_banner_reports_only_the_message_subject(*, cli: GitHunkCLI) -> None:
     hunk_id = _unstaged_hunk_id(cli)
     r = cli.run("commit", hunk_id, "-m", "fix: change a\n\nwhy a had to change\n")
     assert r.returncode == 0
     assert r.stderr.splitlines() == ["  committed 1 hunk  fix: change a"]
 
 
-def test_commit_banner_pluralizes_multiple_hunks(cli: GitHunkCLI) -> None:
+def test_commit_banner_pluralizes_multiple_hunks(*, cli: GitHunkCLI) -> None:
     ids = _two_unstaged_hunk_ids(cli=cli)
 
     r = cli.run("commit", *ids, "-m", "fix: change both")

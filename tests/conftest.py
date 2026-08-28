@@ -8,7 +8,7 @@ import pytest
 
 
 class GitRepo:
-    def __init__(self, path: str) -> None:
+    def __init__(self, path: str, /) -> None:
         self.path = path
 
     def run(
@@ -27,7 +27,7 @@ class GitRepo:
         assert r.returncode == 0, f"git {' '.join(args)} failed: {r.stderr}"
         return r.stdout
 
-    def write_file(self, name: str, content: str) -> str:
+    def write_file(self, name: str, content: str, /) -> str:
         filepath = os.path.join(self.path, name)
         os.makedirs(os.path.dirname(filepath), exist_ok=True)
         with open(filepath, "w") as f:

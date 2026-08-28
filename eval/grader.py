@@ -42,7 +42,7 @@ class Result:
             raise ValueError("a Result has a failure reason if and only if it failed")
 
 
-def grade(repo: GitRepo, task: Task, base: str) -> Result:
+def grade(*, repo: GitRepo, task: Task, base: str) -> Result:
     shas = repo.git("rev-list", "--reverse", f"{base}..HEAD").split()
     # A commit nobody can run is worse than a wrongly grouped one, so this reads
     # every commit's own tree before the partition is even considered.

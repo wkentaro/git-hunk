@@ -15,6 +15,7 @@ from .conftest import snapshot_repository
     ],
 )
 def test_dry_run_keeps_complete_repository_state(
+    *,
     make_mutation_repo: MutationRepoFactory,
     command: str,
     selection: str,

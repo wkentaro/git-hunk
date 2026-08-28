@@ -8,7 +8,7 @@ from git_hunk._hunk import count_changes
 
 @pytest.fixture
 def make_hunk() -> Callable[[str], Hunk]:
-    def _make(diff: str) -> Hunk:
+    def _make(diff: str, /) -> Hunk:
         body = diff.split("\n")[1:]
         additions, deletions = count_changes(body)
         return Hunk(

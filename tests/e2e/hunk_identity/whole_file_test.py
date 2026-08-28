@@ -8,6 +8,7 @@ from ..conftest import GitHunkCLI
 
 
 def test_binary_id_includes_content_and_survives_complete_move(
+    *,
     cli: GitHunkCLI,
 ) -> None:
     path = Path(cli.repo.path) / "f.bin"
@@ -30,7 +31,7 @@ def test_binary_id_includes_content_and_survives_complete_move(
 @pytest.mark.skipif(
     os.name == "nt", reason="git does not track the executable bit on Windows"
 )
-def test_mode_id_includes_transition_direction(cli: GitHunkCLI) -> None:
+def test_mode_id_includes_transition_direction(*, cli: GitHunkCLI) -> None:
     cli.repo.git("config", "core.fileMode", "true")
     path = Path(cli.repo.path) / "f.sh"
     path.write_text("echo hi\n")
@@ -51,7 +52,7 @@ def test_mode_id_includes_transition_direction(cli: GitHunkCLI) -> None:
 @pytest.mark.skipif(
     sys.platform == "win32", reason="git does not track symlinks on Windows"
 )
-def test_type_id_includes_changed_object_content(cli: GitHunkCLI) -> None:
+def test_type_id_includes_changed_object_content(*, cli: GitHunkCLI) -> None:
     path = Path(cli.repo.path) / "f.txt"
     path.write_text("file\n")
     cli.repo.git("add", "f.txt")

@@ -45,7 +45,7 @@ UNTRACKED_LITERAL_PATH: Final = (
 _Entry = TypeVar("_Entry")
 
 
-def run_git_bytes(cli: GitHunkCLI, *args: str, input: bytes | None = None) -> bytes:
+def run_git_bytes(cli: GitHunkCLI, /, *args: str, input: bytes | None = None) -> bytes:
     result = subprocess.run(
         ["git", *args],
         capture_output=True,
@@ -56,7 +56,7 @@ def run_git_bytes(cli: GitHunkCLI, *args: str, input: bytes | None = None) -> by
     return result.stdout
 
 
-def get_object_id(cli: GitHunkCLI, content: bytes) -> str:
+def get_object_id(cli: GitHunkCLI, content: bytes, /) -> str:
     return run_git_bytes(cli, "hash-object", "--stdin", input=content).decode().strip()
 
 
@@ -138,7 +138,7 @@ def _read_worktree_content(*, path: Path) -> bytes:
     return path.read_bytes()
 
 
-def snapshot_repository(cli: GitHunkCLI) -> RepositoryState:
+def snapshot_repository(cli: GitHunkCLI, /) -> RepositoryState:
     head_id = run_git_bytes(cli, "rev-parse", "HEAD").decode().strip()
     head = _parse_git_entries(
         cli=cli, output=run_git_bytes(cli, "ls-tree", "-r", "-z", "HEAD")
@@ -164,21 +164,21 @@ def snapshot_repository(cli: GitHunkCLI) -> RepositoryState:
     )
 
 
-def get_hunk_id(cli: GitHunkCLI, *, path: str, staged: bool = False) -> str:
+def get_hunk_id(cli: GitHunkCLI, /, *, path: str, staged: bool = False) -> str:
     flags = ["--staged"] if staged else ["--unstaged"]
     hunks = cli.run_list_json("list", *flags, "--json", subdir="sub")
     return next(hunk["id"] for hunk in hunks if hunk["file"]["text"] == path)
 
 
 def get_target(
-    cli: GitHunkCLI, *, path: str, selection: str, staged: bool = False
+    cli: GitHunkCLI, /, *, path: str, selection: str, staged: bool = False
 ) -> str:
     if selection == "file":
         return path
     return get_hunk_id(cli, path=path, staged=staged)
 
 
-def set_hostile_diff_config(cli: GitHunkCLI) -> None:
+def set_hostile_diff_config(cli: GitHunkCLI, /) -> None:
     # The diff.* keys shift git's own diff path basis; the color.* ones make it
     # colorize even into a pipe. git-hunk must ignore every one of them and
     # still report stable Repository paths and Hunk IDs.
@@ -190,7 +190,7 @@ def set_hostile_diff_config(cli: GitHunkCLI) -> None:
 
 
 @pytest.fixture
-def inventory_cli(cli: GitHunkCLI) -> GitHunkCLI:
+def inventory_cli(*, cli: GitHunkCLI) -> GitHunkCLI:
     cli.repo.write_file("same.txt", "root old\n")
     cli.repo.write_file("sub/same.txt", "sub old\n")
     cli.repo.write_file("sibling/change.txt", "sibling old\n")
@@ -212,8 +212,8 @@ def inventory_cli(cli: GitHunkCLI) -> GitHunkCLI:
 
 
 @pytest.fixture
-def make_mutation_repo(cli: GitHunkCLI) -> MutationRepoFactory:
-    def make(path: str, before: bytes, after: bytes) -> GitHunkCLI:
+def make_mutation_repo(*, cli: GitHunkCLI) -> MutationRepoFactory:
+    def make(path: str, before: bytes, after: bytes, /) -> GitHunkCLI:
         root = Path(cli.repo.path)
         cli.repo.git("config", "core.autocrlf", "false")
         (root / "sub").mkdir(parents=True, exist_ok=True)

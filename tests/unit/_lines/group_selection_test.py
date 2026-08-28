@@ -18,10 +18,10 @@ from git_hunk._lines import filter_hunk_lines
     ],
 )
 def test_allows_unambiguous_group_selection(
+    *,
     make_hunk: Callable[[str], Hunk],
     diff: str,
     selected: set[int],
-    *,
     reverse: bool,
 ) -> None:
     result = filter_hunk_lines(
@@ -37,9 +37,9 @@ _ONE_FOR_ONE: Final = "@@ -1,2 +1,2 @@\n a\n-b\n+B"
 @pytest.mark.parametrize("reverse", [False, True])
 @pytest.mark.parametrize("selected", [{2}, {3}])
 def test_rejects_one_sided_one_for_one_replacement_by_default(
+    *,
     make_hunk: Callable[[str], Hunk],
     selected: set[int],
-    *,
     reverse: bool,
 ) -> None:
     with pytest.raises(ValueError, match="cannot select one side of lines 2-3"):
@@ -51,9 +51,9 @@ def test_rejects_one_sided_one_for_one_replacement_by_default(
 @pytest.mark.parametrize("reverse", [False, True])
 @pytest.mark.parametrize("selected", [{2}, {3}])
 def test_allows_one_sided_one_for_one_replacement_when_opted_in(
+    *,
     make_hunk: Callable[[str], Hunk],
     selected: set[int],
-    *,
     reverse: bool,
 ) -> None:
     result = filter_hunk_lines(
@@ -70,9 +70,9 @@ def test_allows_one_sided_one_for_one_replacement_when_opted_in(
 @pytest.mark.parametrize("reverse", [False, True])
 @pytest.mark.parametrize("selected", [{2}, {3}])
 def test_exclude_selection_rejects_the_other_side_of_a_pair(
+    *,
     make_hunk: Callable[[str], Hunk],
     selected: set[int],
-    *,
     reverse: bool,
 ) -> None:
     # Excluding one side of the pair still leaves the other side alone.
@@ -83,6 +83,7 @@ def test_exclude_selection_rejects_the_other_side_of_a_pair(
 
 
 def test_one_for_one_error_names_both_lines_and_the_override(
+    *,
     make_hunk: Callable[[str], Hunk],
 ) -> None:
     with pytest.raises(ValueError) as excinfo:
@@ -108,11 +109,11 @@ def test_one_for_one_error_names_both_lines_and_the_override(
     ],
 )
 def test_rejects_partial_composite_replacement(
+    *,
     make_hunk: Callable[[str], Hunk],
     diff: str,
     selected: set[int],
     message: str,
-    *,
     reverse: bool,
 ) -> None:
     with pytest.raises(ValueError, match=message):
@@ -129,10 +130,10 @@ def test_rejects_partial_composite_replacement(
     ],
 )
 def test_allow_one_sided_does_not_relax_the_wider_group_rule(
+    *,
     make_hunk: Callable[[str], Hunk],
     diff: str,
     selected: set[int],
-    *,
     reverse: bool,
 ) -> None:
     with pytest.raises(ValueError, match="cannot partially select"):
@@ -147,7 +148,7 @@ def test_allow_one_sided_does_not_relax_the_wider_group_rule(
 
 @pytest.mark.parametrize("reverse", [False, True])
 def test_allows_unselected_composite_group_when_another_group_changes(
-    make_hunk: Callable[[str], Hunk], *, reverse: bool
+    *, make_hunk: Callable[[str], Hunk], reverse: bool
 ) -> None:
     diff = "@@ -1,4 +1,5 @@\n a\n-b\n-c\n+B\n+C\n x\n+tail"
 
@@ -158,7 +159,7 @@ def test_allows_unselected_composite_group_when_another_group_changes(
 
 @pytest.mark.parametrize("reverse", [False, True])
 def test_exclude_selection_uses_the_same_group_rule(
-    make_hunk: Callable[[str], Hunk], *, reverse: bool
+    *, make_hunk: Callable[[str], Hunk], reverse: bool
 ) -> None:
     diff = "@@ -1,3 +1,3 @@\n a\n-b\n-c\n+B\n+C"
 
@@ -167,6 +168,7 @@ def test_exclude_selection_uses_the_same_group_rule(
 
 
 def test_context_line_does_not_change_group_classification(
+    *,
     make_hunk: Callable[[str], Hunk],
 ) -> None:
     diff = "@@ -1,3 +1,3 @@\n a\n-b\n-c\n+B\n+C"

@@ -4,7 +4,7 @@ from typing import Final
 
 
 class GitCommandError(RuntimeError):
-    def __init__(self, command: tuple[str, ...], stderr: str) -> None:
+    def __init__(self, command: tuple[str, ...], stderr: str, /) -> None:
         self.stderr = stderr
         super().__init__(f"git {' '.join(command)} failed: {stderr}")
 
@@ -133,6 +133,7 @@ def get_unmerged_files(*, worktree_root: str) -> list[str]:
 
 def apply_patch(
     patch: str,
+    /,
     *,
     worktree_root: str,
     cached: bool,
@@ -155,7 +156,7 @@ def apply_patch(
 _LITERAL_PATHSPECS: Final = "--literal-pathspecs"
 
 
-def stage_files(files: list[str], *, worktree_root: str, dry_run: bool) -> None:
+def stage_files(files: list[str], /, *, worktree_root: str, dry_run: bool) -> None:
     args = [_LITERAL_PATHSPECS, "add"]
     if dry_run:
         args.append("--dry-run")
@@ -167,7 +168,9 @@ def stage_files(files: list[str], *, worktree_root: str, dry_run: bool) -> None:
     )
 
 
-def unstage_added_files(files: list[str], *, worktree_root: str, dry_run: bool) -> None:
+def unstage_added_files(
+    files: list[str], /, *, worktree_root: str, dry_run: bool
+) -> None:
     args = [_LITERAL_PATHSPECS, "rm", "--cached", "--force"]
     if dry_run:
         args.append("--dry-run")
@@ -179,7 +182,7 @@ def unstage_added_files(files: list[str], *, worktree_root: str, dry_run: bool) 
     )
 
 
-def unstage_files(files: list[str], *, worktree_root: str) -> None:
+def unstage_files(files: list[str], /, *, worktree_root: str) -> None:
     run_git(
         _LITERAL_PATHSPECS,
         "restore",
@@ -190,7 +193,7 @@ def unstage_files(files: list[str], *, worktree_root: str) -> None:
     )
 
 
-def discard_files(files: list[str], *, worktree_root: str) -> None:
+def discard_files(files: list[str], /, *, worktree_root: str) -> None:
     run_git(
         _LITERAL_PATHSPECS,
         "restore",
@@ -200,5 +203,5 @@ def discard_files(files: list[str], *, worktree_root: str) -> None:
     )
 
 
-def commit(message: str, *, worktree_root: str) -> None:
+def commit(message: str, /, *, worktree_root: str) -> None:
     run_git("commit", "-m", message, worktree_root=worktree_root)

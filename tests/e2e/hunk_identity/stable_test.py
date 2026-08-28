@@ -2,6 +2,7 @@ from ..conftest import GitHunkCLI
 
 
 def test_complete_hunk_keeps_id_across_stage_and_unstage(
+    *,
     modified_text_hunk: GitHunkCLI,
 ) -> None:
     cli = modified_text_hunk
@@ -15,7 +16,7 @@ def test_complete_hunk_keeps_id_across_stage_and_unstage(
     assert staged["id_stability"] == "stable"
 
 
-def test_unchanged_hunk_keeps_id_when_its_range_shifts(cli: GitHunkCLI) -> None:
+def test_unchanged_hunk_keeps_id_when_its_range_shifts(*, cli: GitHunkCLI) -> None:
     original = [f"line {number}" for number in range(1, 41)]
     cli.repo.write_file("f.txt", "\n".join(original) + "\n")
     cli.repo.git("add", "f.txt")

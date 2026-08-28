@@ -34,7 +34,7 @@ _ADVERSARIAL: Final = [
 
 
 @pytest.mark.parametrize("scenario", _GOLDEN)
-def test_golden_solver_passes(scenario: Scenario) -> None:
+def test_golden_solver_passes(*, scenario: Scenario) -> None:
     result = run_and_grade(task=scenario.task, solver=scenario.golden)
 
     assert result.passed, result.detail
@@ -42,7 +42,7 @@ def test_golden_solver_passes(scenario: Scenario) -> None:
 
 @pytest.mark.parametrize("task,solver,expected_reason", _ADVERSARIAL)
 def test_adversarial_solver_fails_at_expected_boundary(
-    task: Task, solver: Solver, expected_reason: str
+    *, task: Task, solver: Solver, expected_reason: str
 ) -> None:
     result = run_and_grade(task=task, solver=solver)
 
@@ -52,7 +52,7 @@ def test_adversarial_solver_fails_at_expected_boundary(
 
 
 def test_solver_error_is_a_failed_result() -> None:
-    def fail(_repo: GitRepo) -> None:
+    def fail(_repo: GitRepo, /) -> None:
         raise RuntimeError("solver stopped")
 
     result = run_and_grade(task=SCENARIOS[0].task, solver=fail)
@@ -66,7 +66,7 @@ def test_prepared_task_reuses_exact_initial_repository() -> None:
     scenario = SCENARIOS[0]
     initial_repositories: list[tuple[Path, str, str]] = []
 
-    def record_and_solve(repo: GitRepo) -> None:
+    def record_and_solve(repo: GitRepo, /) -> None:
         initial_repositories.append(
             (
                 repo.path,
@@ -86,6 +86,7 @@ def test_prepared_task_reuses_exact_initial_repository() -> None:
 
 
 def test_prepared_task_replaces_windows_readonly_checkout(
+    *,
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     real_shutil = eval_harness.shutil
@@ -94,7 +95,7 @@ def test_prepared_task_replaces_windows_readonly_checkout(
         path: str | Path,
         ignore_errors: bool = False,  # noqa: FBT001, FBT002 -- Callback protocol.
         onerror: Callable[..., object] | None = None,
-    ) -> None:
+    ) -> None:  # noqa: GR001 -- standard-library replacement
         checkout_path = Path(path)
         if checkout_path.name != "checkout":
             real_shutil.rmtree(path, ignore_errors=ignore_errors, onerror=onerror)
@@ -108,7 +109,7 @@ def test_prepared_task_replaces_windows_readonly_checkout(
         if onerror is None:
             raise PermissionError(object_path)
 
-        def unlink_readonly(path: str) -> None:
+        def unlink_readonly(path: str, /) -> None:
             if not os.stat(path).st_mode & stat.S_IWRITE:
                 raise PermissionError(path)
             os.unlink(path)
@@ -135,7 +136,7 @@ def test_prepared_task_replaces_windows_readonly_checkout(
 
 
 def test_drop_debug_golden_ignores_global_autocrlf(
-    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    *, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     global_config = tmp_path / "gitconfig"
     subprocess.run(

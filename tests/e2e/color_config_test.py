@@ -12,7 +12,9 @@ REPORTS: Final = (["list"], ["show"], ["list", "--json"])
 # hostile diff config of the repository_path suite, which also covers the
 # mutation commands.
 @pytest.mark.parametrize("key", ["color.ui", "color.diff"])
-def test_forced_color_leaves_the_reports_unchanged(cli: GitHunkCLI, key: str) -> None:
+def test_forced_color_leaves_the_reports_unchanged(
+    *, cli: GitHunkCLI, key: str
+) -> None:
     # `always` makes git colorize into a pipe too, so the ANSI escapes land in
     # the diff git-hunk parses rather than on a terminal.
     cli.repo.write_file("changed.txt", "a\nb\nc\n")

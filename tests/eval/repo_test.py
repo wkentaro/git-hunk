@@ -14,7 +14,9 @@ def _assert_descendant_stopped(*, marker_path: Path, sentinel_path: Path) -> Non
     assert not sentinel_path.exists()
 
 
-def test_run_stream_drains_stdout_and_stderr_without_deadlock(tmp_path: Path) -> None:
+def test_run_stream_drains_stdout_and_stderr_without_deadlock(
+    *, tmp_path: Path
+) -> None:
     stdout_lines: list[str] = []
     script = "\n".join(
         [
@@ -40,7 +42,7 @@ def test_run_stream_drains_stdout_and_stderr_without_deadlock(tmp_path: Path) ->
     assert stdout_lines == ["first\n", "second\n"]
 
 
-def test_run_stream_timeout_kills_descendants_holding_pipes(tmp_path: Path) -> None:
+def test_run_stream_timeout_kills_descendants_holding_pipes(*, tmp_path: Path) -> None:
     stdout_lines: list[str] = []
     script = "\n".join(
         [
@@ -69,6 +71,7 @@ def test_run_stream_timeout_kills_descendants_holding_pipes(tmp_path: Path) -> N
 
 
 def test_run_stream_timeout_kills_descendant_holding_only_stderr(
+    *,
     tmp_path: Path,
 ) -> None:
     marker_path = tmp_path / "check-descendant"
@@ -111,7 +114,7 @@ def test_run_stream_timeout_kills_descendant_holding_only_stderr(
     )
 
 
-def test_run_stream_interrupt_kills_descendants(tmp_path: Path) -> None:
+def test_run_stream_interrupt_kills_descendants(*, tmp_path: Path) -> None:
     marker_path = tmp_path / "check-descendant"
     sentinel_path = tmp_path / "descendant-survived"
     descendant_script = "\n".join(
@@ -135,7 +138,7 @@ def test_run_stream_interrupt_kills_descendants(tmp_path: Path) -> None:
         ]
     )
 
-    def interrupt(_line: str) -> None:
+    def interrupt(_line: str, /) -> None:
         raise KeyboardInterrupt
 
     with pytest.raises(KeyboardInterrupt):

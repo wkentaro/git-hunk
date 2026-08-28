@@ -11,7 +11,7 @@ pytestmark = pytest.mark.skipif(
 
 
 @pytest.fixture
-def mode_and_text_change(cli: GitHunkCLI) -> GitHunkCLI:
+def mode_and_text_change(*, cli: GitHunkCLI) -> GitHunkCLI:
     path = Path(cli.repo.path) / "script.sh"
     path.write_text("old\n")
     cli.repo.git("add", "script.sh")
@@ -22,7 +22,7 @@ def mode_and_text_change(cli: GitHunkCLI) -> GitHunkCLI:
 
 
 @pytest.fixture
-def mode_and_two_text_changes(cli: GitHunkCLI) -> GitHunkCLI:
+def mode_and_two_text_changes(*, cli: GitHunkCLI) -> GitHunkCLI:
     path = Path(cli.repo.path) / "script.sh"
     original = [f"line {number}" for number in range(1, 31)]
     path.write_text("\n".join(original) + "\n")
@@ -57,6 +57,7 @@ def _get_repository_snapshot(*, cli: GitHunkCLI) -> tuple[str, str, int, str, st
 
 
 def test_list_separates_mode_and_two_text_hunks(
+    *,
     mode_and_two_text_changes: GitHunkCLI,
 ) -> None:
     mode_hunk, text_hunks = _get_hunks(
@@ -71,6 +72,7 @@ def test_list_separates_mode_and_two_text_hunks(
 
 
 def test_stage_mode_hunk_leaves_text_unstaged(
+    *,
     mode_and_text_change: GitHunkCLI,
 ) -> None:
     cli = mode_and_text_change
@@ -87,6 +89,7 @@ def test_stage_mode_hunk_leaves_text_unstaged(
 
 
 def test_stage_text_hunk_leaves_mode_and_other_text_unstaged(
+    *,
     mode_and_two_text_changes: GitHunkCLI,
 ) -> None:
     cli = mode_and_two_text_changes
@@ -105,6 +108,7 @@ def test_stage_text_hunk_leaves_mode_and_other_text_unstaged(
 
 
 def test_stage_text_hunk_keeps_unchanged_mode_hunk_id(
+    *,
     mode_and_two_text_changes: GitHunkCLI,
 ) -> None:
     cli = mode_and_two_text_changes
@@ -123,6 +127,7 @@ def test_stage_text_hunk_keeps_unchanged_mode_hunk_id(
 
 
 def test_stage_mode_and_one_text_hunk_leaves_other_text_unstaged(
+    *,
     mode_and_two_text_changes: GitHunkCLI,
 ) -> None:
     cli = mode_and_two_text_changes
@@ -141,6 +146,7 @@ def test_stage_mode_and_one_text_hunk_leaves_other_text_unstaged(
 
 
 def test_stage_file_path_applies_mode_and_all_text_hunks(
+    *,
     mode_and_two_text_changes: GitHunkCLI,
 ) -> None:
     cli = mode_and_two_text_changes
@@ -153,7 +159,9 @@ def test_stage_file_path_applies_mode_and_all_text_hunks(
     assert "changed 28" in cli.repo.git("show", ":script.sh")
 
 
-def test_unstage_mode_hunk_leaves_text_staged(mode_and_text_change: GitHunkCLI) -> None:
+def test_unstage_mode_hunk_leaves_text_staged(
+    *, mode_and_text_change: GitHunkCLI
+) -> None:
     cli = mode_and_text_change
     cli.repo.git("add", "script.sh")
     mode_hunk, _ = _get_hunks(
@@ -169,6 +177,7 @@ def test_unstage_mode_hunk_leaves_text_staged(mode_and_text_change: GitHunkCLI) 
 
 
 def test_discard_mode_hunk_leaves_text_unstaged(
+    *,
     mode_and_text_change: GitHunkCLI,
 ) -> None:
     cli = mode_and_text_change
@@ -186,6 +195,7 @@ def test_discard_mode_hunk_leaves_text_unstaged(
 
 
 def test_commit_text_hunk_leaves_mode_uncommitted(
+    *,
     mode_and_text_change: GitHunkCLI,
 ) -> None:
     cli = mode_and_text_change
@@ -202,6 +212,7 @@ def test_commit_text_hunk_leaves_mode_uncommitted(
 
 
 def test_commit_mode_hunk_leaves_text_uncommitted(
+    *,
     mode_and_text_change: GitHunkCLI,
 ) -> None:
     cli = mode_and_text_change
@@ -219,7 +230,7 @@ def test_commit_mode_hunk_leaves_text_uncommitted(
 
 @pytest.mark.parametrize("command", ["stage", "unstage", "discard"])
 def test_mode_hunk_dry_run_changes_nothing(
-    mode_and_text_change: GitHunkCLI, command: str
+    *, mode_and_text_change: GitHunkCLI, command: str
 ) -> None:
     cli = mode_and_text_change
     if command == "unstage":
@@ -240,7 +251,7 @@ def test_mode_hunk_dry_run_changes_nothing(
 
 @pytest.mark.parametrize("command", ["stage", "unstage", "discard"])
 def test_mode_and_text_hunks_dry_run_change_nothing(
-    mode_and_text_change: GitHunkCLI, command: str
+    *, mode_and_text_change: GitHunkCLI, command: str
 ) -> None:
     cli = mode_and_text_change
     if command == "unstage":

@@ -6,7 +6,7 @@ from .conftest import GitHunkCLI
 
 
 @pytest.fixture
-def committed_keep_file(cli: GitHunkCLI) -> GitHunkCLI:
+def committed_keep_file(*, cli: GitHunkCLI) -> GitHunkCLI:
     cli.repo.write_file("keep.txt", "keep\n")
     cli.repo.git("add", ".")
     cli.repo.git("commit", "-m", "init")
@@ -14,7 +14,7 @@ def committed_keep_file(cli: GitHunkCLI) -> GitHunkCLI:
 
 
 @pytest.fixture
-def committed_empty_file(committed_keep_file: GitHunkCLI) -> GitHunkCLI:
+def committed_empty_file(*, committed_keep_file: GitHunkCLI) -> GitHunkCLI:
     cli = committed_keep_file
     cli.repo.write_file("empty.txt", "")
     cli.repo.git("add", "empty.txt")
@@ -23,7 +23,7 @@ def committed_empty_file(committed_keep_file: GitHunkCLI) -> GitHunkCLI:
 
 
 @pytest.fixture
-def staged_empty_addition(committed_keep_file: GitHunkCLI) -> GitHunkCLI:
+def staged_empty_addition(*, committed_keep_file: GitHunkCLI) -> GitHunkCLI:
     cli = committed_keep_file
     cli.repo.write_file("empty.txt", "")
     cli.repo.git("add", "empty.txt")
@@ -31,20 +31,21 @@ def staged_empty_addition(committed_keep_file: GitHunkCLI) -> GitHunkCLI:
 
 
 @pytest.fixture
-def staged_empty_deletion(committed_empty_file: GitHunkCLI) -> GitHunkCLI:
+def staged_empty_deletion(*, committed_empty_file: GitHunkCLI) -> GitHunkCLI:
     cli = committed_empty_file
     cli.repo.git("rm", "empty.txt")
     return cli
 
 
 @pytest.fixture
-def unstaged_empty_deletion(committed_empty_file: GitHunkCLI) -> GitHunkCLI:
+def unstaged_empty_deletion(*, committed_empty_file: GitHunkCLI) -> GitHunkCLI:
     cli = committed_empty_file
     os.unlink(os.path.join(cli.repo.path, "empty.txt"))
     return cli
 
 
 def test_empty_addition_inventory_has_whole_file_shape(
+    *,
     staged_empty_addition: GitHunkCLI,
 ) -> None:
     cli = staged_empty_addition
@@ -69,6 +70,7 @@ def test_empty_addition_inventory_has_whole_file_shape(
 
 
 def test_empty_deletion_inventory_has_whole_file_shape(
+    *,
     staged_empty_deletion: GitHunkCLI,
 ) -> None:
     cli = staged_empty_deletion
@@ -97,7 +99,7 @@ def test_empty_deletion_inventory_has_whole_file_shape(
     "fixture_name", ["staged_empty_addition", "staged_empty_deletion"]
 )
 def test_unstage_empty_file(
-    request: pytest.FixtureRequest, fixture_name: str, selection: str
+    *, request: pytest.FixtureRequest, fixture_name: str, selection: str
 ) -> None:
     cli: GitHunkCLI = request.getfixturevalue(fixture_name)
     target = cli.get_only_hunk_id("--staged") if selection == "id" else "empty.txt"
@@ -109,7 +111,7 @@ def test_unstage_empty_file(
 
 @pytest.mark.parametrize("selection", ["id", "path"])
 def test_stage_empty_deletion(
-    unstaged_empty_deletion: GitHunkCLI, selection: str
+    *, unstaged_empty_deletion: GitHunkCLI, selection: str
 ) -> None:
     cli = unstaged_empty_deletion
     hunk_id = cli.get_only_hunk_id("--unstaged")
@@ -120,6 +122,7 @@ def test_stage_empty_deletion(
 
 
 def test_discard_empty_deletion_restores_file(
+    *,
     unstaged_empty_deletion: GitHunkCLI,
 ) -> None:
     cli = unstaged_empty_deletion
@@ -130,7 +133,7 @@ def test_discard_empty_deletion_restores_file(
     assert cli.repo.git("status", "--short") == ""
 
 
-def test_commit_empty_deletion(unstaged_empty_deletion: GitHunkCLI) -> None:
+def test_commit_empty_deletion(*, unstaged_empty_deletion: GitHunkCLI) -> None:
     cli = unstaged_empty_deletion
 
     cli.run_ok("commit", "empty.txt", "-m", "delete empty file")
@@ -141,6 +144,7 @@ def test_commit_empty_deletion(unstaged_empty_deletion: GitHunkCLI) -> None:
 
 
 def test_unstaged_empty_addition_is_untracked_after_unstage(
+    *,
     staged_empty_addition: GitHunkCLI,
 ) -> None:
     cli = staged_empty_addition
@@ -155,7 +159,7 @@ def test_unstaged_empty_addition_is_untracked_after_unstage(
     assert "no changed file matches" in result.stderr
 
 
-def test_unstage_empty_addition_in_unborn_repository(cli: GitHunkCLI) -> None:
+def test_unstage_empty_addition_in_unborn_repository(*, cli: GitHunkCLI) -> None:
     cli.repo.write_file("empty.txt", "")
     cli.repo.git("add", "empty.txt")
 
@@ -174,7 +178,7 @@ def test_unstage_empty_addition_in_unborn_repository(cli: GitHunkCLI) -> None:
     ],
 )
 def test_line_selection_rejects_empty_file_before_mutation(
-    staged_empty_addition: GitHunkCLI, option: tuple[str, str]
+    *, staged_empty_addition: GitHunkCLI, option: tuple[str, str]
 ) -> None:
     cli = staged_empty_addition
     before = cli.repo.git("diff", "--cached", "--raw")
@@ -188,7 +192,7 @@ def test_line_selection_rejects_empty_file_before_mutation(
 
 @pytest.mark.parametrize("command", ["stage", "discard"])
 def test_empty_deletion_dry_run_changes_nothing(
-    unstaged_empty_deletion: GitHunkCLI, command: str
+    *, unstaged_empty_deletion: GitHunkCLI, command: str
 ) -> None:
     cli = unstaged_empty_deletion
     before = cli.repo.git("status", "--porcelain=v1", "-z")
@@ -202,7 +206,7 @@ def test_empty_deletion_dry_run_changes_nothing(
     "fixture_name", ["staged_empty_addition", "staged_empty_deletion"]
 )
 def test_empty_file_unstage_dry_run_changes_nothing(
-    request: pytest.FixtureRequest, fixture_name: str
+    *, request: pytest.FixtureRequest, fixture_name: str
 ) -> None:
     cli: GitHunkCLI = request.getfixturevalue(fixture_name)
     before = cli.repo.git("status", "--porcelain=v1", "-z")

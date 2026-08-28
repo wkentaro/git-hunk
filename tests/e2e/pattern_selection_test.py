@@ -9,7 +9,7 @@ from .conftest import GitHunkCLI
 
 
 @pytest.fixture
-def added_lines(cli: GitHunkCLI) -> GitHunkCLI:
+def added_lines(*, cli: GitHunkCLI) -> GitHunkCLI:
     cli.repo.write_file("f.txt", "keep\n")
     cli.repo.git("add", ".")
     cli.repo.git("commit", "-m", "init")
@@ -27,7 +27,7 @@ def _working(*, cli: GitHunkCLI) -> str:
     return (Path(cli.repo.path) / "f.txt").read_text()
 
 
-def test_stage_exclude_matching(added_lines: GitHunkCLI) -> None:
+def test_stage_exclude_matching(*, added_lines: GitHunkCLI) -> None:
     added_lines.run_ok(
         "stage",
         _only_id(
@@ -40,7 +40,7 @@ def test_stage_exclude_matching(added_lines: GitHunkCLI) -> None:
     assert added_lines.repo.git("show", ":f.txt") == "keep\nFEATURE line\n"
 
 
-def test_stage_include_matching(added_lines: GitHunkCLI) -> None:
+def test_stage_include_matching(*, added_lines: GitHunkCLI) -> None:
     added_lines.run_ok(
         "stage",
         _only_id(
@@ -53,7 +53,7 @@ def test_stage_include_matching(added_lines: GitHunkCLI) -> None:
     assert added_lines.repo.git("show", ":f.txt") == "keep\nDEBUG line\n"
 
 
-def test_unstage_include_matching(added_lines: GitHunkCLI) -> None:
+def test_unstage_include_matching(*, added_lines: GitHunkCLI) -> None:
     added_lines.run_ok(
         "stage",
         _only_id(
@@ -73,7 +73,7 @@ def test_unstage_include_matching(added_lines: GitHunkCLI) -> None:
     assert added_lines.repo.git("show", ":f.txt") == "keep\nFEATURE line\n"
 
 
-def test_discard_include_matching(added_lines: GitHunkCLI) -> None:
+def test_discard_include_matching(*, added_lines: GitHunkCLI) -> None:
     added_lines.run_ok(
         "discard",
         _only_id(
@@ -86,7 +86,7 @@ def test_discard_include_matching(added_lines: GitHunkCLI) -> None:
     assert _working(cli=added_lines) == "keep\nFEATURE line\n"
 
 
-def test_discard_exclude_matching(added_lines: GitHunkCLI) -> None:
+def test_discard_exclude_matching(*, added_lines: GitHunkCLI) -> None:
     added_lines.run_ok(
         "discard",
         _only_id(
@@ -99,7 +99,7 @@ def test_discard_exclude_matching(added_lines: GitHunkCLI) -> None:
     assert _working(cli=added_lines) == "keep\nDEBUG line\n"
 
 
-def test_unstage_regex(added_lines: GitHunkCLI) -> None:
+def test_unstage_regex(*, added_lines: GitHunkCLI) -> None:
     added_lines.run_ok(
         "stage",
         _only_id(
@@ -120,7 +120,7 @@ def test_unstage_regex(added_lines: GitHunkCLI) -> None:
     assert added_lines.repo.git("show", ":f.txt") == "keep\nFEATURE line\n"
 
 
-def test_repeated_flag_is_ored(added_lines: GitHunkCLI) -> None:
+def test_repeated_flag_is_ored(*, added_lines: GitHunkCLI) -> None:
     added_lines.run_ok(
         "stage",
         _only_id(
@@ -135,7 +135,7 @@ def test_repeated_flag_is_ored(added_lines: GitHunkCLI) -> None:
     assert added_lines.repo.git("show", ":f.txt") == "keep\nDEBUG line\nFEATURE line\n"
 
 
-def test_matching_is_case_sensitive(added_lines: GitHunkCLI) -> None:
+def test_matching_is_case_sensitive(*, added_lines: GitHunkCLI) -> None:
     r = added_lines.run(
         "stage",
         _only_id(
@@ -150,7 +150,7 @@ def test_matching_is_case_sensitive(added_lines: GitHunkCLI) -> None:
     assert added_lines.repo.git("show", ":f.txt") == "keep\n"
 
 
-def test_literal_metacharacters_match_literally(added_lines: GitHunkCLI) -> None:
+def test_literal_metacharacters_match_literally(*, added_lines: GitHunkCLI) -> None:
     # 'D.BUG' is not a substring of any line; as a literal it matches nothing.
     r = added_lines.run(
         "stage",
@@ -165,7 +165,7 @@ def test_literal_metacharacters_match_literally(added_lines: GitHunkCLI) -> None
     assert "no changed line matches" in r.stderr
 
 
-def test_regex_opt_in(added_lines: GitHunkCLI) -> None:
+def test_regex_opt_in(*, added_lines: GitHunkCLI) -> None:
     added_lines.run_ok(
         "stage",
         _only_id(
@@ -179,7 +179,7 @@ def test_regex_opt_in(added_lines: GitHunkCLI) -> None:
     assert added_lines.repo.git("show", ":f.txt") == "keep\nDEBUG line\n"
 
 
-def test_zero_matches_stages_nothing(added_lines: GitHunkCLI) -> None:
+def test_zero_matches_stages_nothing(*, added_lines: GitHunkCLI) -> None:
     r = added_lines.run(
         "stage",
         _only_id(
@@ -194,7 +194,9 @@ def test_zero_matches_stages_nothing(added_lines: GitHunkCLI) -> None:
     assert added_lines.repo.git("show", ":f.txt") == "keep\n"
 
 
-def test_line_spec_and_matching_are_mutually_exclusive(added_lines: GitHunkCLI) -> None:
+def test_line_spec_and_matching_are_mutually_exclusive(
+    *, added_lines: GitHunkCLI
+) -> None:
     r = added_lines.run(
         "stage",
         _only_id(
@@ -210,7 +212,7 @@ def test_line_spec_and_matching_are_mutually_exclusive(added_lines: GitHunkCLI) 
     assert "choose one of" in r.stderr
 
 
-def test_both_matching_flags_are_mutually_exclusive(added_lines: GitHunkCLI) -> None:
+def test_both_matching_flags_are_mutually_exclusive(*, added_lines: GitHunkCLI) -> None:
     r = added_lines.run(
         "stage",
         _only_id(
@@ -226,7 +228,7 @@ def test_both_matching_flags_are_mutually_exclusive(added_lines: GitHunkCLI) -> 
     assert "choose one of" in r.stderr
 
 
-def test_regex_without_matching_flag_is_rejected(added_lines: GitHunkCLI) -> None:
+def test_regex_without_matching_flag_is_rejected(*, added_lines: GitHunkCLI) -> None:
     # --regex alone has no effect; reject it rather than silently staging the hunk.
     r = added_lines.run(
         "stage",
@@ -241,7 +243,7 @@ def test_regex_without_matching_flag_is_rejected(added_lines: GitHunkCLI) -> Non
     assert added_lines.repo.git("show", ":f.txt") == "keep\n"
 
 
-def test_empty_include_matching_is_rejected(added_lines: GitHunkCLI) -> None:
+def test_empty_include_matching_is_rejected(*, added_lines: GitHunkCLI) -> None:
     # An empty pattern would match every line; reject it rather than silently
     # staging the whole hunk.
     r = added_lines.run(
@@ -276,7 +278,7 @@ _conflicting_flags = pytest.mark.parametrize(
 
 @_conflicting_flags
 def test_unstage_rejects_conflicting_selection_flags(
-    added_lines: GitHunkCLI, flags: list[str], message: str
+    *, added_lines: GitHunkCLI, flags: list[str], message: str
 ) -> None:
     added_lines.run_ok(
         "stage",
@@ -300,7 +302,7 @@ def test_unstage_rejects_conflicting_selection_flags(
 
 @_conflicting_flags
 def test_discard_rejects_conflicting_selection_flags(
-    added_lines: GitHunkCLI, flags: list[str], message: str
+    *, added_lines: GitHunkCLI, flags: list[str], message: str
 ) -> None:
     r = added_lines.run(
         "discard",

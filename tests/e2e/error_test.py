@@ -9,7 +9,7 @@ from .conftest import GitHunkCLI
 
 
 def test_missing_git_binary_reports_clean_error(
-    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    *, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     empty_bin = tmp_path / "bin"
     empty_bin.mkdir()
@@ -23,7 +23,7 @@ def test_missing_git_binary_reports_clean_error(
     assert "Traceback" not in r.stderr
 
 
-def test_not_a_git_repo(tmp_path: Path) -> None:
+def test_not_a_git_repo(*, tmp_path: Path) -> None:
     repo = GitRepo(str(tmp_path))
     cli = GitHunkCLI(repo)
     r = cli.run("list")
@@ -32,7 +32,7 @@ def test_not_a_git_repo(tmp_path: Path) -> None:
 
 
 def test_not_a_git_repo_with_non_caller_locale(
-    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    *, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     monkeypatch.setenv("LC_ALL", "fr_FR.UTF-8")
     repo = GitRepo(str(tmp_path))
@@ -53,7 +53,7 @@ def test_not_a_git_repo_with_non_caller_locale(
     ],
 )
 def test_not_a_git_repo_outranks_a_bad_repository_path(
-    tmp_path: Path, args: tuple[str, ...]
+    *, tmp_path: Path, args: tuple[str, ...]
 ) -> None:
     # A Repository path only has meaning inside a worktree, so the missing
     # repository is the error to report, not the shape of the operand.
@@ -65,7 +65,7 @@ def test_not_a_git_repo_outranks_a_bad_repository_path(
     assert "repository path" not in r.stderr
 
 
-def test_bare_repo(tmp_path: Path) -> None:
+def test_bare_repo(*, tmp_path: Path) -> None:
     repo = GitRepo(str(tmp_path))
     repo.run("git", "init", "--bare")
     cli = GitHunkCLI(repo)
@@ -77,20 +77,20 @@ def test_bare_repo(tmp_path: Path) -> None:
     assert "work tree" in r.stderr
 
 
-def test_version(cli: GitHunkCLI) -> None:
+def test_version(*, cli: GitHunkCLI) -> None:
     r = cli.run("--version")
     assert r.returncode == 0
     assert "git-hunk" in r.stderr
 
 
-def test_help(cli: GitHunkCLI) -> None:
+def test_help(*, cli: GitHunkCLI) -> None:
     r = cli.run("--help")
     assert r.returncode == 0
     assert "Examples:" in r.stderr
     assert "git-hunk stage d161935" in r.stderr
 
 
-def test_version_short_circuits_subcommand(cli: GitHunkCLI) -> None:
+def test_version_short_circuits_subcommand(*, cli: GitHunkCLI) -> None:
     cli.repo.write_file("f.py", "one\n")
     cli.repo.git("add", ".")
     cli.repo.git("commit", "-m", "init")
@@ -102,7 +102,7 @@ def test_version_short_circuits_subcommand(cli: GitHunkCLI) -> None:
     assert "f.py" not in r.stdout
 
 
-def test_help_short_circuits_subcommand(cli: GitHunkCLI) -> None:
+def test_help_short_circuits_subcommand(*, cli: GitHunkCLI) -> None:
     cli.repo.write_file("f.py", "one\n")
     cli.repo.git("add", ".")
     cli.repo.git("commit", "-m", "init")
@@ -114,7 +114,7 @@ def test_help_short_circuits_subcommand(cli: GitHunkCLI) -> None:
     assert cli.repo.git("diff", "--cached").strip() == ""
 
 
-def test_commit_help_advertises_matching_options(cli: GitHunkCLI) -> None:
+def test_commit_help_advertises_matching_options(*, cli: GitHunkCLI) -> None:
     r = cli.run("commit", "--help")
     assert r.returncode == 0
     assert "-m" in r.stderr
@@ -124,7 +124,7 @@ def test_commit_help_advertises_matching_options(cli: GitHunkCLI) -> None:
     assert "--regex" in r.stderr
 
 
-def test_stage_help_advertises_matching_options(cli: GitHunkCLI) -> None:
+def test_stage_help_advertises_matching_options(*, cli: GitHunkCLI) -> None:
     r = cli.run("stage", "--help")
     assert r.returncode == 0
     assert "-l" in r.stderr
@@ -133,17 +133,17 @@ def test_stage_help_advertises_matching_options(cli: GitHunkCLI) -> None:
     assert "--regex" in r.stderr
 
 
-def test_unknown_command(cli: GitHunkCLI) -> None:
+def test_unknown_command(*, cli: GitHunkCLI) -> None:
     r = cli.run("bogus")
     assert r.returncode != 0
 
 
-def test_stage_missing_id(cli: GitHunkCLI) -> None:
+def test_stage_missing_id(*, cli: GitHunkCLI) -> None:
     r = cli.run("stage")
     assert r.returncode != 0
 
 
-def test_stage_nonexistent_hunk(cli: GitHunkCLI) -> None:
+def test_stage_nonexistent_hunk(*, cli: GitHunkCLI) -> None:
     cli.repo.write_file("f.py", "old\n")
     cli.repo.git("add", ".")
     cli.repo.git("commit", "-m", "init")
@@ -154,7 +154,7 @@ def test_stage_nonexistent_hunk(cli: GitHunkCLI) -> None:
     assert "not found" in r.stderr
 
 
-def test_empty_operand_rejected(cli: GitHunkCLI) -> None:
+def test_empty_operand_rejected(*, cli: GitHunkCLI) -> None:
     cli.repo.write_file("f.py", "old\n")
     cli.repo.git("add", ".")
     cli.repo.git("commit", "-m", "init")
@@ -168,7 +168,7 @@ def test_empty_operand_rejected(cli: GitHunkCLI) -> None:
 
 
 @pytest.fixture
-def unstaged_change(cli: GitHunkCLI) -> GitHunkCLI:
+def unstaged_change(*, cli: GitHunkCLI) -> GitHunkCLI:
     cli.repo.write_file("f.py", "old\n")
     cli.repo.git("add", ".")
     cli.repo.git("commit", "-m", "init")
@@ -179,14 +179,14 @@ def unstaged_change(cli: GitHunkCLI) -> GitHunkCLI:
 # `stage`, `unstage`, `discard` and `commit` route an operand through
 # _make_repository_path, so each must refuse to touch its own state.
 # `show` is ID-only and keeps the separate hunk-id guard below.
-def test_empty_operand_rejected_on_stage(unstaged_change: GitHunkCLI) -> None:
+def test_empty_operand_rejected_on_stage(*, unstaged_change: GitHunkCLI) -> None:
     r = unstaged_change.run("stage", "")
     assert r.returncode != 0
     assert "repository path must not be empty" in r.stderr
     assert unstaged_change.repo.git("diff", "--cached").strip() == ""
 
 
-def test_empty_operand_rejected_on_unstage(unstaged_change: GitHunkCLI) -> None:
+def test_empty_operand_rejected_on_unstage(*, unstaged_change: GitHunkCLI) -> None:
     unstaged_change.repo.git("add", ".")
     r = unstaged_change.run("unstage", "")
     assert r.returncode != 0
@@ -194,7 +194,7 @@ def test_empty_operand_rejected_on_unstage(unstaged_change: GitHunkCLI) -> None:
     assert unstaged_change.repo.git("diff", "--cached").strip() != ""
 
 
-def test_empty_operand_rejected_on_commit(unstaged_change: GitHunkCLI) -> None:
+def test_empty_operand_rejected_on_commit(*, unstaged_change: GitHunkCLI) -> None:
     head = unstaged_change.repo.git("rev-parse", "HEAD")
     r = unstaged_change.run("commit", "-m", "msg", "")
     assert r.returncode != 0
@@ -202,7 +202,7 @@ def test_empty_operand_rejected_on_commit(unstaged_change: GitHunkCLI) -> None:
     assert unstaged_change.repo.git("rev-parse", "HEAD") == head
 
 
-def test_empty_hunk_id_rejected_on_show(cli: GitHunkCLI) -> None:
+def test_empty_hunk_id_rejected_on_show(*, cli: GitHunkCLI) -> None:
     cli.repo.write_file("f.py", "old\n")
     cli.repo.git("add", ".")
     cli.repo.git("commit", "-m", "init")
@@ -213,7 +213,7 @@ def test_empty_hunk_id_rejected_on_show(cli: GitHunkCLI) -> None:
     assert "hunk id must not be empty" in r.stderr
 
 
-def test_ambiguous_hunk_id_rejected(cli: GitHunkCLI) -> None:
+def test_ambiguous_hunk_id_rejected(*, cli: GitHunkCLI) -> None:
     # IDs are 7-char hex prefixes; with more than 16 hunks two must share a
     # leading hex char (pigeonhole), so a single-char prefix is ambiguous.
     for i in range(20):
@@ -237,7 +237,7 @@ def test_ambiguous_hunk_id_rejected(cli: GitHunkCLI) -> None:
     assert cli.repo.git("diff", "--cached").strip() == ""
 
 
-def test_malformed_line_spec_rejected(cli: GitHunkCLI) -> None:
+def test_malformed_line_spec_rejected(*, cli: GitHunkCLI) -> None:
     cli.repo.write_file("f.py", "a\nb\nc\n")
     cli.repo.git("add", ".")
     cli.repo.git("commit", "-m", "init")
@@ -250,7 +250,7 @@ def test_malformed_line_spec_rejected(cli: GitHunkCLI) -> None:
     assert "expected start-end" in r.stderr  # readable message, not raw int() error
 
 
-def test_empty_line_spec_rejected(cli: GitHunkCLI) -> None:
+def test_empty_line_spec_rejected(*, cli: GitHunkCLI) -> None:
     # An empty -l must error, not silently fall through and stage the whole hunk.
     cli.repo.write_file("f.py", "a\nb\nc\n")
     cli.repo.git("add", ".")
@@ -265,7 +265,7 @@ def test_empty_line_spec_rejected(cli: GitHunkCLI) -> None:
 
 
 def test_git_apply_failure_becomes_clean_error(
-    cli: GitHunkCLI, monkeypatch: pytest.MonkeyPatch
+    *, cli: GitHunkCLI, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     # A low-level git failure during apply must surface as a clean CLI error,
     # not a raw traceback. _apply_selection rebuilds the patch fresh from the
@@ -288,7 +288,7 @@ def test_git_apply_failure_becomes_clean_error(
     assert "git apply refused the patch" in r.stderr
 
 
-def test_line_spec_with_multiple_hunks_fails(cli: GitHunkCLI) -> None:
+def test_line_spec_with_multiple_hunks_fails(*, cli: GitHunkCLI) -> None:
     lines = [f"line{i}" for i in range(1, 21)]
     cli.repo.write_file("f.py", "\n".join(lines) + "\n")
     cli.repo.git("add", ".")
@@ -306,7 +306,7 @@ def test_line_spec_with_multiple_hunks_fails(cli: GitHunkCLI) -> None:
     assert "exactly one hunk" in r.stderr
 
 
-def test_pathspec_magic_is_not_expanded(cli: GitHunkCLI) -> None:
+def test_pathspec_magic_is_not_expanded(*, cli: GitHunkCLI) -> None:
     r = cli.run("list", ":(bogus)x")
     assert r.returncode == 0
     assert r.stderr == "No hunks.\n"

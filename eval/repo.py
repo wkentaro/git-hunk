@@ -14,7 +14,7 @@ from typing import cast
 
 
 class GitRepo:
-    def __init__(self, path: str | Path) -> None:
+    def __init__(self, path: str | Path, /) -> None:
         self.path = Path(path)
 
     def run(
@@ -160,7 +160,7 @@ class GitRepo:
         return result.stdout
 
     def write_file(
-        self, name: str, content: str | bytes, *, executable: bool = False
+        self, *, name: str, content: str | bytes, executable: bool = False
     ) -> None:
         file_path = self.path / name
         file_path.parent.mkdir(parents=True, exist_ok=True)
@@ -386,7 +386,7 @@ def _kill_process_tree(
         pass
 
 
-def init_repo(path: str | Path) -> GitRepo:
+def init_repo(*, path: str | Path) -> GitRepo:
     repo = GitRepo(path)
     repo.git("init", "--quiet")
     repo.git("config", "user.email", "test@test.com")

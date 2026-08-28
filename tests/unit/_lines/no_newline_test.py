@@ -6,6 +6,7 @@ from git_hunk._lines import filter_hunk_lines
 
 
 def test_drops_old_marker_when_selected_deletion_has_later_old_line(
+    *,
     make_hunk: Callable[[str], Hunk],
 ) -> None:
     diff = f"@@ -1,2 +1,2 @@\n a\n-b\n{NO_NEWLINE_MARKER}\n+B"
@@ -18,6 +19,7 @@ def test_drops_old_marker_when_selected_deletion_has_later_old_line(
 
 
 def test_drops_new_marker_when_selected_addition_has_later_new_line(
+    *,
     make_hunk: Callable[[str], Hunk],
 ) -> None:
     diff = f"@@ -1,2 +1,2 @@\n a\n+b\n{NO_NEWLINE_MARKER}\n-B"

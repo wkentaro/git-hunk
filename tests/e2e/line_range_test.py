@@ -7,7 +7,9 @@ from .conftest import GitHunkCLI
 
 
 @pytest.mark.parametrize("spec", ["1-999999999", "^1-999999999"])
-def test_large_range_fails_promptly_and_atomically(cli: GitHunkCLI, spec: str) -> None:
+def test_large_range_fails_promptly_and_atomically(
+    *, cli: GitHunkCLI, spec: str
+) -> None:
     cli.repo.write_file("f.txt", "old\n")
     cli.repo.git("add", "f.txt")
     cli.repo.git("commit", "-m", "init")

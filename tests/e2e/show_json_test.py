@@ -14,7 +14,7 @@ def _two_group(*, cli: GitHunkCLI) -> str:
     return cli.run_list_json("list", "--unstaged", "--json")[0]["id"]
 
 
-def test_show_json_envelope_and_structured_body(cli: GitHunkCLI) -> None:
+def test_show_json_envelope_and_structured_body(*, cli: GitHunkCLI) -> None:
     hid = _two_group(cli=cli)
 
     envelope = cli.run_list_envelope("show", hid, "--unstaged", "--json")
@@ -29,7 +29,7 @@ def test_show_json_envelope_and_structured_body(cli: GitHunkCLI) -> None:
     assert body["lines"][2]["content"] == {"text": "B"}
 
 
-def test_show_json_n_round_trips_with_line_selection(cli: GitHunkCLI) -> None:
+def test_show_json_n_round_trips_with_line_selection(*, cli: GitHunkCLI) -> None:
     hid = _two_group(cli=cli)
     lines = cli.run_list_json("show", hid, "--unstaged", "--json")[0]["lines"]
 
@@ -40,7 +40,7 @@ def test_show_json_n_round_trips_with_line_selection(cli: GitHunkCLI) -> None:
     assert cli.repo.git("show", ":f.txt") == "a\nB\nc\nd\n"
 
 
-def test_show_json_non_utf8_content_round_trips_as_bytes(cli: GitHunkCLI) -> None:
+def test_show_json_non_utf8_content_round_trips_as_bytes(*, cli: GitHunkCLI) -> None:
     path = Path(cli.repo.path) / "f.txt"
     path.write_bytes(b"line\n")
     cli.repo.git("add", ".")

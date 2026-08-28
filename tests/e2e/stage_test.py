@@ -1,7 +1,7 @@
 from .conftest import GitHunkCLI
 
 
-def test_stage_single_hunk(cli: GitHunkCLI) -> None:
+def test_stage_single_hunk(*, cli: GitHunkCLI) -> None:
     lines = [f"line{i}" for i in range(1, 21)]
     cli.repo.write_file("f.py", "\n".join(lines) + "\n")
     cli.repo.git("add", ".")
@@ -24,7 +24,7 @@ def test_stage_single_hunk(cli: GitHunkCLI) -> None:
     assert "CHANGED18" in unstaged
 
 
-def test_stage_hunk_by_uppercase_id(cli: GitHunkCLI) -> None:
+def test_stage_hunk_by_uppercase_id(*, cli: GitHunkCLI) -> None:
     cli.repo.write_file("f.py", "old\n")
     cli.repo.git("add", ".")
     cli.repo.git("commit", "-m", "init")
@@ -37,7 +37,7 @@ def test_stage_hunk_by_uppercase_id(cli: GitHunkCLI) -> None:
     assert "+new" in staged
 
 
-def test_stage_multiple_hunks(cli: GitHunkCLI) -> None:
+def test_stage_multiple_hunks(*, cli: GitHunkCLI) -> None:
     lines = [f"line{i}" for i in range(1, 21)]
     cli.repo.write_file("f.py", "\n".join(lines) + "\n")
     cli.repo.git("add", ".")
@@ -58,7 +58,7 @@ def test_stage_multiple_hunks(cli: GitHunkCLI) -> None:
     assert unstaged.strip() == ""
 
 
-def test_stage_from_different_files(cli: GitHunkCLI) -> None:
+def test_stage_from_different_files(*, cli: GitHunkCLI) -> None:
     cli.repo.write_file("a.py", "aaa\n")
     cli.repo.write_file("b.py", "bbb\n")
     cli.repo.git("add", ".")

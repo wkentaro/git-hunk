@@ -71,6 +71,7 @@ class CliError(Exception):
     def __init__(
         self,
         message: str,
+        /,
         *,
         tip: str | None = None,
         usage: str | None = None,
@@ -83,7 +84,7 @@ class CliError(Exception):
 class CliGroup(click.Group):
     def resolve_command(
         self, ctx: click.Context, args: list[str]
-    ) -> tuple[str | None, click.Command | None, list[str]]:
+    ) -> tuple[str | None, click.Command | None, list[str]]:  # noqa: GR001 -- framework override
         try:
             return super().resolve_command(ctx, args)
         except click.UsageError:
@@ -92,7 +93,7 @@ class CliGroup(click.Group):
                 f"unrecognized subcommand '{cmd_name}'", usage=USAGE
             ) from None
 
-    def invoke(self, ctx: click.Context) -> None:
+    def invoke(self, ctx: click.Context) -> None:  # noqa: GR001 -- framework override
         try:
             super().invoke(ctx)
         except CliError as exc:
@@ -177,7 +178,7 @@ def _get_inventory(*, worktree_root: str) -> _Inventory:
 
 
 def _find_hunks_by_ids(*, hunks: list[Hunk], ids: list[str]) -> list[Hunk]:
-    def format_candidate(hunk: Hunk) -> str:
+    def format_candidate(hunk: Hunk, /) -> str:
         marker = " (conditional)" if hunk.id_stability == "conditional" else ""
         return format_hunk_id(hunk) + marker
 
@@ -284,7 +285,7 @@ class _Selection:
             or bool(self.exclude_matching)
         )
 
-    def resolve(self, hunk: Hunk) -> tuple[set[int], bool]:
+    def resolve(self, hunk: Hunk, /) -> tuple[set[int], bool]:
         if self.line_spec is not None:
             return parse_line_spec(self.line_spec, total=count_hunk_body_lines(hunk))
         if self.include_matching:
@@ -496,7 +497,7 @@ def _run_patch_command(
 @click.option("-h", "--help", "show_help", is_flag=True)
 @click.option("-V", "--version", "show_version", is_flag=True)
 @click.pass_context
-def cli(ctx: click.Context, *, show_help: bool, show_version: bool) -> None:
+def cli(ctx: click.Context, /, *, show_help: bool, show_version: bool) -> None:
     if show_version:
         print_version(__version__)
         ctx.exit()

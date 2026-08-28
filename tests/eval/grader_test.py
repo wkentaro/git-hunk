@@ -39,7 +39,7 @@ def test_result_requires_a_failure_reason_exactly_when_it_failed(
         Result(passed=passed, reason=reason)
 
 
-def test_grade_accepts_exact_repository_state(eval_repo: GitRepo) -> None:
+def test_grade_accepts_exact_repository_state(*, eval_repo: GitRepo) -> None:
     eval_repo.write_file(name="a.py", content="old\n")
     eval_repo.git("add", "a.py")
     eval_repo.git("commit", "-m", "Initial state")
@@ -92,6 +92,7 @@ def _single_commit_task(*, path: str, content: str) -> Task:
 
 
 def test_grade_reports_an_intermediate_commit_that_does_not_parse(
+    *,
     eval_repo: GitRepo,
 ) -> None:
     eval_repo.write_file(name="a.py", content="value = 1\n")
@@ -112,6 +113,7 @@ def test_grade_reports_an_intermediate_commit_that_does_not_parse(
 
 
 def test_grade_reports_a_python_file_ast_refuses_to_read(
+    *,
     eval_repo: GitRepo,
 ) -> None:
     eval_repo.write_file(name="a.py", content="value = 1\n")
@@ -129,7 +131,7 @@ def test_grade_reports_a_python_file_ast_refuses_to_read(
     assert "null bytes" in (result.detail or "")
 
 
-def test_grade_parses_only_python_files(eval_repo: GitRepo) -> None:
+def test_grade_parses_only_python_files(*, eval_repo: GitRepo) -> None:
     eval_repo.write_file(name="notes.txt", content="")
     eval_repo.git("add", "notes.txt")
     eval_repo.git("commit", "-m", "Initial state")
@@ -143,6 +145,7 @@ def test_grade_parses_only_python_files(eval_repo: GitRepo) -> None:
 
 @pytest.mark.parametrize("task,solver,expected_reason", _FAILURE_PARAMS)
 def test_grade_reports_each_repository_failure_reason(
+    *,
     eval_repo: GitRepo,
     task: Task,
     solver: Solver,

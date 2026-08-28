@@ -12,7 +12,7 @@ from tests.conftest import GitRepo
 
 
 class GitHunkCLI:
-    def __init__(self, repo: GitRepo) -> None:
+    def __init__(self, repo: GitRepo, /) -> None:
         self.repo = repo
 
     def run(
@@ -69,5 +69,5 @@ class GitHunkCLI:
 
 
 @pytest.fixture
-def cli(git_repo: GitRepo) -> GitHunkCLI:
+def cli(*, git_repo: GitRepo) -> GitHunkCLI:
     return GitHunkCLI(git_repo)

@@ -1,7 +1,7 @@
 from ..conftest import GitHunkCLI
 
 
-def test_partial_operation_creates_new_hunk_ids(cli: GitHunkCLI) -> None:
+def test_partial_operation_creates_new_hunk_ids(*, cli: GitHunkCLI) -> None:
     cli.repo.write_file("f.txt", "a\nb\nc\n")
     cli.repo.git("add", "f.txt")
     cli.repo.git("commit", "-m", "init")

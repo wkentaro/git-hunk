@@ -22,7 +22,7 @@ pytestmark = pytest.mark.skipif(
 
 
 @pytest.fixture
-def mode_change_cli(make_mutation_repo: MutationRepoFactory) -> GitHunkCLI:
+def mode_change_cli(*, make_mutation_repo: MutationRepoFactory) -> GitHunkCLI:
     # A chmod with unchanged bytes yields a mode-only whole-file Hunk. Drive it
     # from sub/ so the changed file sits outside the invocation directory.
     cli = make_mutation_repo(_PATH, _CONTENT, _CONTENT)
@@ -32,7 +32,7 @@ def mode_change_cli(make_mutation_repo: MutationRepoFactory) -> GitHunkCLI:
 
 @pytest.mark.parametrize("selection", ["file", "id"])
 def test_stage_mode_change_hunk_from_subdirectory(
-    mode_change_cli: GitHunkCLI, selection: str
+    *, mode_change_cli: GitHunkCLI, selection: str
 ) -> None:
     cli = mode_change_cli
     before = snapshot_repository(cli)
@@ -51,7 +51,7 @@ def test_stage_mode_change_hunk_from_subdirectory(
 
 @pytest.mark.parametrize("selection", ["file", "id"])
 def test_unstage_mode_change_hunk_from_subdirectory(
-    mode_change_cli: GitHunkCLI, selection: str
+    *, mode_change_cli: GitHunkCLI, selection: str
 ) -> None:
     cli = mode_change_cli
     cli.repo.git("add", _PATH, "unrelated.txt")
@@ -70,7 +70,7 @@ def test_unstage_mode_change_hunk_from_subdirectory(
 
 @pytest.mark.parametrize("selection", ["file", "id"])
 def test_discard_mode_change_hunk_from_subdirectory(
-    mode_change_cli: GitHunkCLI, selection: str
+    *, mode_change_cli: GitHunkCLI, selection: str
 ) -> None:
     cli = mode_change_cli
     before = snapshot_repository(cli)
@@ -89,7 +89,7 @@ def test_discard_mode_change_hunk_from_subdirectory(
 
 @pytest.mark.parametrize("selection", ["file", "id"])
 def test_commit_mode_change_hunk_from_subdirectory(
-    mode_change_cli: GitHunkCLI, selection: str
+    *, mode_change_cli: GitHunkCLI, selection: str
 ) -> None:
     cli = mode_change_cli
     before = snapshot_repository(cli)
