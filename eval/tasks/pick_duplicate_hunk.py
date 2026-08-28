@@ -24,14 +24,14 @@ _HANDLER_TEMPLATE: Final = (
 
 
 def _handlers(*, orders_validated: bool, refunds_validated: bool) -> str:
-    def handler(name: str, validated: bool) -> str:
+    def handler(*, name: str, validated: bool) -> str:
         validate = f"{_VALIDATE_LINE}\n" if validated else ""
         return _HANDLER_TEMPLATE.format(name=name, validate=validate)
 
     return (
-        handler("handle_orders", orders_validated)
+        handler(name="handle_orders", validated=orders_validated)
         + "\n\n"
-        + handler("handle_refunds", refunds_validated)
+        + handler(name="handle_refunds", validated=refunds_validated)
     )
 
 

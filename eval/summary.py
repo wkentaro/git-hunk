@@ -134,7 +134,8 @@ def render_summary(*, runs: list[TaskRun]) -> str:
 
     lines = _format_table(rows=rows)
     caveats: list[str] = []
-    if len(variant_names) == 2:
+    COMPARISON_VARIANT_COUNT: Final = 2
+    if len(variant_names) == COMPARISON_VARIANT_COUNT:
         first, second = variant_names
         caveats.append(_CACHE_CAVEAT.format(first=first, second=second))
     if any(len(cell) > 1 for cell in cells.values()):

@@ -1,6 +1,7 @@
 import re
 from collections.abc import Sequence
 from dataclasses import replace
+from typing import Final
 from typing import NamedTuple
 
 from ._hunk import NO_NEWLINE_MARKER
@@ -45,8 +46,11 @@ def parse_line_spec(spec: str, *, total: int) -> tuple[set[int], bool]:
         if not raw:
             raise ValueError(f"invalid token in -l spec: '{part}'")
         if "-" in raw:
+            RANGE_BOUND_COUNT: Final = 2
             bounds = raw.split("-")
-            if len(bounds) != 2 or not all(b.strip() for b in bounds):
+            if len(bounds) != RANGE_BOUND_COUNT or not all(
+                bound.strip() for bound in bounds
+            ):
                 raise ValueError(f"invalid range: '{part}' (expected start-end)")
             lo = _parse_line_number(token=bounds[0])
             hi = _parse_line_number(token=bounds[1])
