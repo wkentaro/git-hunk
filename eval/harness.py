@@ -41,7 +41,7 @@ class PreparedTask:
     checkout_path: Path
     base: str
 
-    def run_and_grade(self, solver: Solver) -> Result:
+    def run_and_grade(self, solver: Solver, /) -> Result:
         if self.checkout_path.exists():
             shutil.rmtree(self.checkout_path, onerror=_remove_readonly)
         shutil.copytree(self.snapshot_path, self.checkout_path, symlinks=True)
@@ -58,7 +58,7 @@ class PreparedTask:
 
 
 @contextlib.contextmanager
-def prepare_task(task: Task) -> Iterator[PreparedTask]:
+def prepare_task(task: Task, /) -> Iterator[PreparedTask]:
     with tempfile.TemporaryDirectory() as temp_dir:
         root = Path(temp_dir)
         snapshot_path = root / "snapshot"
@@ -73,24 +73,24 @@ def prepare_task(task: Task) -> Iterator[PreparedTask]:
         )
 
 
-def run_and_grade(task: Task, solver: Solver) -> Result:
+def run_and_grade(*, task: Task, solver: Solver) -> Result:
     with prepare_task(task) as prepared:
         return prepared.run_and_grade(solver)
 
 
-def run_git_hunk(repo: GitRepo, *args: str) -> str:
+def run_git_hunk(repo: GitRepo, /, *args: str) -> str:
     result = repo.run("git-hunk", *args)
     if result.returncode != 0:
         raise RuntimeError(f"git-hunk {' '.join(args)} failed:\n{result.stderr}")
     return result.stdout
 
 
-def list_hunks(repo: GitRepo, *file_paths: str) -> list[dict[str, Any]]:
+def list_hunks(repo: GitRepo, /, *file_paths: str) -> list[dict[str, Any]]:
     envelope = json.loads(run_git_hunk(repo, "list", "--json", *file_paths))
     return cast("list[dict[str, Any]]", envelope["hunks"])
 
 
-def find_hunk(repo: GitRepo, path: str, needle: str) -> str:
+def find_hunk(repo: GitRepo, path: str, needle: str, /) -> str:
     # The needle is matched against the full `show` rendering, context lines
     # included, so pick text unique to the target hunk's changed lines.
     matches = [

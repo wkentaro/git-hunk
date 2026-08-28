@@ -10,7 +10,7 @@ _PATH: Final = "src/[id].tsx"
 
 
 @pytest.fixture
-def bracket_repo(cli: GitHunkCLI) -> GitHunkCLI:
+def bracket_repo(*, cli: GitHunkCLI) -> GitHunkCLI:
     cli.repo.write_file(_PATH, "a\n")
     cli.repo.git("add", ".")
     cli.repo.git("commit", "-m", "init")
@@ -18,15 +18,15 @@ def bracket_repo(cli: GitHunkCLI) -> GitHunkCLI:
     return cli
 
 
-def test_list_renders_bracketed_path_verbatim(bracket_repo: GitHunkCLI) -> None:
+def test_list_renders_bracketed_path_verbatim(*, bracket_repo: GitHunkCLI) -> None:
     assert _PATH in bracket_repo.run_ok("list")
 
 
-def test_show_renders_bracketed_path_verbatim(bracket_repo: GitHunkCLI) -> None:
+def test_show_renders_bracketed_path_verbatim(*, bracket_repo: GitHunkCLI) -> None:
     assert _PATH in bracket_repo.run_ok("show")
 
 
-def test_list_renders_bracketed_untracked_path_verbatim(cli: GitHunkCLI) -> None:
+def test_list_renders_bracketed_untracked_path_verbatim(*, cli: GitHunkCLI) -> None:
     cli.repo.write_file("keep.txt", "x\n")
     cli.repo.git("add", ".")
     cli.repo.git("commit", "-m", "init")
@@ -35,7 +35,7 @@ def test_list_renders_bracketed_untracked_path_verbatim(cli: GitHunkCLI) -> None
     assert _PATH in cli.run_ok("list")
 
 
-def test_error_renders_bracketed_value_verbatim(cli: GitHunkCLI) -> None:
+def test_error_renders_bracketed_value_verbatim(*, cli: GitHunkCLI) -> None:
     cli.repo.write_file("f.txt", "a\n")
     cli.repo.git("add", ".")
     cli.repo.git("commit", "-m", "init")

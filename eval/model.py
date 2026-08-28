@@ -66,7 +66,7 @@ class TokenUsage:
         }
 
     @classmethod
-    def total(cls, usages: list["TokenUsage"]) -> "TokenUsage":
+    def total(cls, usages: list["TokenUsage"], /) -> "TokenUsage":
         return cls(
             input_tokens=sum(usage.input_tokens for usage in usages),
             cache_creation_input_tokens=sum(
@@ -272,7 +272,7 @@ class TranscriptReporter:
         self._emit(line=f"  {result_line}")
         self._emit(line=f"  {usage_line}")
 
-    def consume_line(self, line: str) -> None:
+    def consume_line(self, line: str, /) -> None:
         try:
             event = json.loads(line)
         except json.JSONDecodeError:

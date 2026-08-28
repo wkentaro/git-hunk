@@ -24,7 +24,7 @@ _CASES: Final = [
 
 @pytest.mark.parametrize(("path", "selection"), _CASES)
 def test_stage_text_hunk_from_subdirectory(
-    make_mutation_repo: MutationRepoFactory, path: str, selection: str
+    *, make_mutation_repo: MutationRepoFactory, path: str, selection: str
 ) -> None:
     cli = make_mutation_repo(path, _BEFORE, _AFTER)
     before = snapshot_repository(cli)
@@ -44,7 +44,7 @@ def test_stage_text_hunk_from_subdirectory(
 
 @pytest.mark.parametrize(("path", "selection"), _CASES)
 def test_unstage_text_hunk_from_subdirectory(
-    make_mutation_repo: MutationRepoFactory, path: str, selection: str
+    *, make_mutation_repo: MutationRepoFactory, path: str, selection: str
 ) -> None:
     cli = make_mutation_repo(path, _BEFORE, _AFTER)
     cli.repo.git("add", path, "unrelated.txt")
@@ -63,7 +63,7 @@ def test_unstage_text_hunk_from_subdirectory(
 
 @pytest.mark.parametrize(("path", "selection"), _CASES)
 def test_discard_text_hunk_from_subdirectory(
-    make_mutation_repo: MutationRepoFactory, path: str, selection: str
+    *, make_mutation_repo: MutationRepoFactory, path: str, selection: str
 ) -> None:
     cli = make_mutation_repo(path, _BEFORE, _AFTER)
     before = snapshot_repository(cli)
@@ -82,7 +82,7 @@ def test_discard_text_hunk_from_subdirectory(
 
 @pytest.mark.parametrize(("path", "selection"), _CASES)
 def test_commit_text_hunk_from_subdirectory(
-    make_mutation_repo: MutationRepoFactory, path: str, selection: str
+    *, make_mutation_repo: MutationRepoFactory, path: str, selection: str
 ) -> None:
     cli = make_mutation_repo(path, _BEFORE, _AFTER)
     before = snapshot_repository(cli)
@@ -109,6 +109,7 @@ def test_commit_text_hunk_from_subdirectory(
     ],
 )
 def test_colliding_name_selects_the_repository_path_not_the_cwd_sibling(
+    *,
     make_mutation_repo: MutationRepoFactory,
     operand: str,
     selected: str,
@@ -135,6 +136,7 @@ def test_colliding_name_selects_the_repository_path_not_the_cwd_sibling(
 
 @pytest.mark.skipif(os.name == "nt", reason="Windows does not allow this file name")
 def test_stage_whitespace_only_repository_path(
+    *,
     make_mutation_repo: MutationRepoFactory,
 ) -> None:
     path = "   "

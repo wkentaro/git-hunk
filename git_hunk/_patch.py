@@ -95,7 +95,7 @@ def _normalize_hunk_ranges(*, hunks: list[Hunk], reverse: bool) -> list[str]:
     return normalized
 
 
-def build_patch(hunks: list[Hunk], diff_output: str, *, reverse: bool) -> str:
+def build_patch(hunks: list[Hunk], diff_output: str, /, *, reverse: bool) -> str:
     files: dict[str, list[Hunk]] = {}
     for hunk in hunks:
         files.setdefault(hunk.file, []).append(hunk)

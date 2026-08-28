@@ -16,6 +16,7 @@ def _get_paths(*, hunks: list[dict[str, Any]]) -> list[str]:
 
 
 def test_inventory_is_stable_from_root_and_subdirectory(
+    *,
     inventory_cli: GitHunkCLI,
 ) -> None:
     cli = inventory_cli
@@ -70,7 +71,7 @@ def test_inventory_is_stable_from_root_and_subdirectory(
     ],
 )
 def test_list_selects_one_exact_repository_path(
-    inventory_cli: GitHunkCLI, operand: str, expected: str
+    *, inventory_cli: GitHunkCLI, operand: str, expected: str
 ) -> None:
     hunks = inventory_cli.run_list_json("list", "--json", operand, subdir="sub")
     assert _get_paths(hunks=hunks) == [expected]
@@ -83,11 +84,12 @@ def _assert_rejected(*, cli: GitHunkCLI, operand: str) -> None:
     assert '"hunks"' not in result.stdout
 
 
-def test_list_rejects_an_escaping_path(inventory_cli: GitHunkCLI) -> None:
+def test_list_rejects_an_escaping_path(*, inventory_cli: GitHunkCLI) -> None:
     _assert_rejected(cli=inventory_cli, operand="../same.txt")
 
 
 def test_list_rejects_an_absolute_path_even_inside_the_worktree(
+    *,
     inventory_cli: GitHunkCLI,
 ) -> None:
     _assert_rejected(
@@ -97,13 +99,14 @@ def test_list_rejects_an_absolute_path_even_inside_the_worktree(
 
 @pytest.mark.parametrize("operand", ["sub", "*.txt", ":(glob)*.txt"])
 def test_list_does_not_expand_non_file_operands(
-    inventory_cli: GitHunkCLI, operand: str
+    *, inventory_cli: GitHunkCLI, operand: str
 ) -> None:
     hunks = inventory_cli.run_list_json("list", "--json", operand, subdir="sub")
     assert hunks == []
 
 
 def test_show_id_has_same_meaning_from_root_and_subdirectory(
+    *,
     inventory_cli: GitHunkCLI,
 ) -> None:
     cli = inventory_cli
@@ -121,7 +124,7 @@ def test_show_id_has_same_meaning_from_root_and_subdirectory(
 
 
 @pytest.mark.skipif(os.name == "nt", reason="Windows strips trailing path spaces")
-def test_repository_root_preserves_trailing_space(tmp_path: Path) -> None:
+def test_repository_root_preserves_trailing_space(*, tmp_path: Path) -> None:
     root = tmp_path / "repo "
     root.mkdir()
     repo = GitRepo(str(root))

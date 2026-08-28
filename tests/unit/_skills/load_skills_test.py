@@ -16,6 +16,7 @@ def _write_skill(*, root: Path, name: str, content: bytes) -> None:
 
 
 def test_non_utf8_skill_is_skipped_with_warning(
+    *,
     tmp_path: Path,
     monkeypatch: pytest.MonkeyPatch,
     capsys: pytest.CaptureFixture[str],
@@ -29,7 +30,7 @@ def test_non_utf8_skill_is_skipped_with_warning(
 
 
 def test_unclosed_frontmatter_loads_with_directory_name(
-    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    *, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     # No closing ---: the skill still loads, but with no metadata.
     _write_skill(
@@ -43,7 +44,7 @@ def test_unclosed_frontmatter_loads_with_directory_name(
 
 
 def test_missing_skills_root_returns_empty(
-    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    *, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     monkeypatch.setenv("GIT_HUNK_SKILLS_DIR", str(tmp_path / "does-not-exist"))
 
@@ -51,7 +52,7 @@ def test_missing_skills_root_returns_empty(
 
 
 def test_directory_without_skill_md_is_skipped(
-    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    *, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     _write_skill(root=tmp_path, name="good", content=_VALID)
     (tmp_path / "not-a-skill").mkdir()
@@ -67,7 +68,7 @@ def test_directory_without_skill_md_is_skipped(
     hasattr(os, "geteuid") and os.geteuid() == 0, reason="root bypasses permissions"
 )
 def test_unreadable_skill_is_skipped(
-    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    *, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     _write_skill(root=tmp_path, name="good", content=_VALID)
     _write_skill(root=tmp_path, name="noperm", content=b"---\nname: noperm\n---\n")

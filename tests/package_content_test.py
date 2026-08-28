@@ -7,6 +7,7 @@ from typing import Final
 
 
 def test_wheel_and_source_distribution_contain_only_package_files(
+    *,
     tmp_path: Path,
 ) -> None:
     repository_root = Path(__file__).resolve().parents[1]

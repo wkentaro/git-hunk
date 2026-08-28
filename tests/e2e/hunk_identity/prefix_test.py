@@ -5,7 +5,7 @@ from ..conftest import GitHunkCLI
 
 @pytest.mark.parametrize("command", ["show", "stage", "unstage", "discard", "commit"])
 def test_commands_accept_case_insensitive_hunk_id_prefix(
-    modified_text_hunk: GitHunkCLI, command: str
+    *, modified_text_hunk: GitHunkCLI, command: str
 ) -> None:
     cli = modified_text_hunk
     if command == "unstage":

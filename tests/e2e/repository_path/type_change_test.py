@@ -22,7 +22,7 @@ pytestmark = pytest.mark.skipif(
 
 
 @pytest.fixture
-def type_change_cli(make_mutation_repo: MutationRepoFactory) -> GitHunkCLI:
+def type_change_cli(*, make_mutation_repo: MutationRepoFactory) -> GitHunkCLI:
     # git emits a file -> symlink type change as a delete + add pair, which
     # git-hunk merges into one "T" whole-file Hunk. Drive it from sub/ so the
     # changed file sits outside the invocation directory.
@@ -35,7 +35,7 @@ def type_change_cli(make_mutation_repo: MutationRepoFactory) -> GitHunkCLI:
 
 @pytest.mark.parametrize("selection", ["file", "id"])
 def test_stage_type_change_hunk_from_subdirectory(
-    type_change_cli: GitHunkCLI, selection: str
+    *, type_change_cli: GitHunkCLI, selection: str
 ) -> None:
     cli = type_change_cli
     before = snapshot_repository(cli)
@@ -54,7 +54,7 @@ def test_stage_type_change_hunk_from_subdirectory(
 
 @pytest.mark.parametrize("selection", ["file", "id"])
 def test_unstage_type_change_hunk_from_subdirectory(
-    type_change_cli: GitHunkCLI, selection: str
+    *, type_change_cli: GitHunkCLI, selection: str
 ) -> None:
     cli = type_change_cli
     cli.repo.git("add", _PATH, "unrelated.txt")
@@ -73,7 +73,7 @@ def test_unstage_type_change_hunk_from_subdirectory(
 
 @pytest.mark.parametrize("selection", ["file", "id"])
 def test_discard_type_change_hunk_from_subdirectory(
-    type_change_cli: GitHunkCLI, selection: str
+    *, type_change_cli: GitHunkCLI, selection: str
 ) -> None:
     cli = type_change_cli
     before = snapshot_repository(cli)
@@ -92,7 +92,7 @@ def test_discard_type_change_hunk_from_subdirectory(
 
 @pytest.mark.parametrize("selection", ["file", "id"])
 def test_commit_type_change_hunk_from_subdirectory(
-    type_change_cli: GitHunkCLI, selection: str
+    *, type_change_cli: GitHunkCLI, selection: str
 ) -> None:
     cli = type_change_cli
     before = snapshot_repository(cli)

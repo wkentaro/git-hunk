@@ -24,7 +24,7 @@ SUBCOMMAND_HELP: Final = [
     ids=[command for command, _ in SUBCOMMAND_HELP],
 )
 def test_subcommand_help(
-    cli: GitHunkCLI, command: str, flag: str, expected: str
+    *, cli: GitHunkCLI, command: str, flag: str, expected: str
 ) -> None:
     r = cli.run(command, flag)
     assert r.returncode == 0
@@ -37,7 +37,7 @@ def test_subcommand_help_covers_every_command() -> None:
 
 @pytest.mark.parametrize("command", ["show", "stage", "unstage", "discard", "commit"])
 def test_hunk_command_help_describes_prefix_lookup(
-    cli: GitHunkCLI, command: str
+    *, cli: GitHunkCLI, command: str
 ) -> None:
     output = cli.run_ok(command, "--help")
 
@@ -47,7 +47,7 @@ def test_hunk_command_help_describes_prefix_lookup(
 
 @pytest.mark.parametrize("command", ["stage", "unstage", "discard", "commit"])
 def test_selection_command_help_documents_allow_one_sided(
-    cli: GitHunkCLI, command: str
+    *, cli: GitHunkCLI, command: str
 ) -> None:
     output = cli.run_ok(command, "--help")
 

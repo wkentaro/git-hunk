@@ -4,7 +4,7 @@ import sys
 from pathlib import Path
 
 
-def test_suite_ignores_an_inherited_git_environment(tmp_path: Path) -> None:
+def test_suite_ignores_an_inherited_git_environment(*, tmp_path: Path) -> None:
     """The suite must not write to whatever repository GIT_DIR names.
 
     Point GIT_DIR and friends at a decoy repository, run a slice of the suite,

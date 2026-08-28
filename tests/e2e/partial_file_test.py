@@ -4,6 +4,7 @@ from .conftest import GitHunkCLI
 
 
 def test_partial_unstage_of_added_file_keeps_a_smaller_added_file(
+    *,
     cli: GitHunkCLI,
 ) -> None:
     cli.repo.git("commit", "--allow-empty", "-m", "init")
@@ -23,6 +24,7 @@ def test_partial_unstage_of_added_file_keeps_a_smaller_added_file(
 
 
 def test_partial_stage_of_deleted_file_keeps_a_smaller_tracked_file(
+    *,
     cli: GitHunkCLI,
 ) -> None:
     cli.repo.write_file("f.txt", "a\nb\nc\n")

@@ -8,6 +8,7 @@ from .conftest import snapshot_repository
 
 
 def test_mixed_selection_applies_changes_across_repository(
+    *,
     make_mutation_repo: MutationRepoFactory,
 ) -> None:
     cli = make_mutation_repo("sibling/change.txt", b"sibling old\n", b"sibling new\n")
@@ -31,6 +32,7 @@ def test_mixed_selection_applies_changes_across_repository(
 
 
 def test_mixed_text_and_whole_file_selection_applies_both_legs(
+    *,
     make_mutation_repo: MutationRepoFactory,
 ) -> None:
     # _apply_selection runs the text hunks through git apply and the whole-file
@@ -60,7 +62,7 @@ def test_mixed_text_and_whole_file_selection_applies_both_legs(
 @pytest.mark.parametrize("command", ["stage", "unstage", "discard", "commit"])
 @pytest.mark.parametrize("operand", ["../same.txt", "absolute"])
 def test_operand_outside_repository_path_space_changes_nothing(
-    make_mutation_repo: MutationRepoFactory, command: str, operand: str
+    *, make_mutation_repo: MutationRepoFactory, command: str, operand: str
 ) -> None:
     cli = make_mutation_repo("sibling/change.txt", b"old\n", b"new\n")
     if operand == "absolute":
@@ -78,6 +80,7 @@ def test_operand_outside_repository_path_space_changes_nothing(
 
 
 def test_invalid_mixed_selection_changes_nothing(
+    *,
     make_mutation_repo: MutationRepoFactory,
 ) -> None:
     cli = make_mutation_repo("sibling/change.txt", b"old\n", b"new\n")

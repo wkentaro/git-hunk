@@ -93,7 +93,7 @@ def test_spaces_around_range_hyphen_allowed() -> None:
 
 @pytest.mark.parametrize("spec", ["1-999999999", "^1-999999999"])
 def test_range_endpoint_is_validated_before_expansion(
-    monkeypatch: pytest.MonkeyPatch, spec: str
+    *, monkeypatch: pytest.MonkeyPatch, spec: str
 ) -> None:
     def fail_range(*args: int) -> range:
         raise AssertionError(f"range expanded with {args}")

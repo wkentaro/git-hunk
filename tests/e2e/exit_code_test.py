@@ -4,7 +4,7 @@ from .conftest import GitHunkCLI
 
 
 @pytest.fixture
-def cli_with_change(cli: GitHunkCLI) -> GitHunkCLI:
+def cli_with_change(*, cli: GitHunkCLI) -> GitHunkCLI:
     cli.repo.write_file("f.py", "a\nb\nc\n")
     cli.repo.git("add", ".")
     cli.repo.git("commit", "-m", "init")
@@ -35,7 +35,7 @@ def cli_with_change(cli: GitHunkCLI) -> GitHunkCLI:
     ],
 )
 def test_usage_error_exits_2_with_usage_block(
-    cli: GitHunkCLI, args: tuple[str, ...]
+    *, cli: GitHunkCLI, args: tuple[str, ...]
 ) -> None:
     # These are rejected before any repo lookup, so a bare repo is enough.
     r = cli.run(*args)
@@ -59,7 +59,7 @@ def test_usage_error_exits_2_with_usage_block(
     ],
 )
 def test_domain_error_exits_1_without_usage_block(
-    cli_with_change: GitHunkCLI, args: tuple[str, ...]
+    *, cli_with_change: GitHunkCLI, args: tuple[str, ...]
 ) -> None:
     r = cli_with_change.run(*args)
     assert r.returncode == 1

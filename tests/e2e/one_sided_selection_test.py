@@ -33,7 +33,7 @@ _ONE_SIDED_SELECTORS: Final = pytest.mark.parametrize(
 
 
 @pytest.fixture
-def one_for_one(cli: GitHunkCLI) -> GitHunkCLI:
+def one_for_one(*, cli: GitHunkCLI) -> GitHunkCLI:
     cli.repo.write_file("client.py", _HEAD)
     cli.repo.git("add", "client.py")
     cli.repo.git("commit", "-m", "init")
@@ -59,7 +59,7 @@ def _assert_one_sided_error(*, returncode: int, stderr: str) -> None:
 
 @_ONE_SIDED_SELECTORS
 def test_stage_rejects_one_sided_selection(
-    one_for_one: GitHunkCLI, selector: tuple[str, ...]
+    *, one_for_one: GitHunkCLI, selector: tuple[str, ...]
 ) -> None:
     cli = one_for_one
     before = _capture_repo_state(cli=cli)
@@ -72,7 +72,7 @@ def test_stage_rejects_one_sided_selection(
 
 @_ONE_SIDED_SELECTORS
 def test_commit_rejects_one_sided_selection(
-    one_for_one: GitHunkCLI, selector: tuple[str, ...]
+    *, one_for_one: GitHunkCLI, selector: tuple[str, ...]
 ) -> None:
     cli = one_for_one
     before = _capture_repo_state(cli=cli)
@@ -87,7 +87,7 @@ def test_commit_rejects_one_sided_selection(
 
 @_ONE_SIDED_SELECTORS
 def test_unstage_rejects_one_sided_selection(
-    one_for_one: GitHunkCLI, selector: tuple[str, ...]
+    *, one_for_one: GitHunkCLI, selector: tuple[str, ...]
 ) -> None:
     cli = one_for_one
     cli.run_ok("stage", cli.get_only_hunk_id("--unstaged"))
@@ -101,7 +101,7 @@ def test_unstage_rejects_one_sided_selection(
 
 @_ONE_SIDED_SELECTORS
 def test_discard_rejects_one_sided_selection(
-    one_for_one: GitHunkCLI, selector: tuple[str, ...]
+    *, one_for_one: GitHunkCLI, selector: tuple[str, ...]
 ) -> None:
     cli = one_for_one
     before = _capture_repo_state(cli=cli)
@@ -122,7 +122,7 @@ def test_discard_rejects_one_sided_selection(
     ids=["line-spec", "include-matching", "exclude-matching"],
 )
 def test_stage_allow_one_sided_stages_the_deletion_half(
-    one_for_one: GitHunkCLI, selector: tuple[str, ...]
+    *, one_for_one: GitHunkCLI, selector: tuple[str, ...]
 ) -> None:
     cli = one_for_one
 
@@ -135,6 +135,7 @@ def test_stage_allow_one_sided_stages_the_deletion_half(
 
 
 def test_commit_allow_one_sided_commits_the_deletion_half(
+    *,
     one_for_one: GitHunkCLI,
 ) -> None:
     cli = one_for_one
@@ -154,6 +155,7 @@ def test_commit_allow_one_sided_commits_the_deletion_half(
 
 
 def test_stage_allow_one_sided_stages_the_addition_half(
+    *,
     one_for_one: GitHunkCLI,
 ) -> None:
     cli = one_for_one
@@ -170,7 +172,7 @@ def test_stage_allow_one_sided_stages_the_addition_half(
     assert (Path(cli.repo.path) / "client.py").read_text() == _WORKING
 
 
-def test_unstage_allow_one_sided_smoke(one_for_one: GitHunkCLI) -> None:
+def test_unstage_allow_one_sided_smoke(*, one_for_one: GitHunkCLI) -> None:
     cli = one_for_one
     cli.run_ok("stage", cli.get_only_hunk_id("--unstaged"))
 
@@ -181,7 +183,7 @@ def test_unstage_allow_one_sided_smoke(one_for_one: GitHunkCLI) -> None:
     assert cli.repo.git("show", ":client.py") == "def fetch(session, url):\n"
 
 
-def test_discard_allow_one_sided_smoke(one_for_one: GitHunkCLI) -> None:
+def test_discard_allow_one_sided_smoke(*, one_for_one: GitHunkCLI) -> None:
     cli = one_for_one
 
     cli.run_ok(
@@ -193,7 +195,7 @@ def test_discard_allow_one_sided_smoke(one_for_one: GitHunkCLI) -> None:
     )
 
 
-def test_error_names_the_group_the_selection_lands_in(cli: GitHunkCLI) -> None:
+def test_error_names_the_group_the_selection_lands_in(*, cli: GitHunkCLI) -> None:
     # Two one-for-one pairs separated by context. Body lines: 1=" alpha"
     # 2="-one" 3="+ONE" 4=" beta" 5="-two" 6="+TWO" 7=" gamma". A one-sided
     # selection in the second pair must name that pair, not the first.
@@ -211,6 +213,7 @@ def test_error_names_the_group_the_selection_lands_in(cli: GitHunkCLI) -> None:
 
 
 def test_dry_run_reports_the_rejection_instead_of_a_preview(
+    *,
     one_for_one: GitHunkCLI,
 ) -> None:
     cli = one_for_one
@@ -226,6 +229,7 @@ def test_dry_run_reports_the_rejection_instead_of_a_preview(
 
 
 def test_dry_run_with_allow_one_sided_previews_without_mutating(
+    *,
     one_for_one: GitHunkCLI,
 ) -> None:
     cli = one_for_one
@@ -245,7 +249,7 @@ def test_dry_run_with_allow_one_sided_previews_without_mutating(
     assert _capture_repo_state(cli=cli) == before
 
 
-def test_pattern_matching_both_lines_needs_no_flag(one_for_one: GitHunkCLI) -> None:
+def test_pattern_matching_both_lines_needs_no_flag(*, one_for_one: GitHunkCLI) -> None:
     cli = one_for_one
 
     cli.run_ok(
@@ -258,7 +262,7 @@ def test_pattern_matching_both_lines_needs_no_flag(one_for_one: GitHunkCLI) -> N
     assert cli.repo.git("show", ":client.py") == _WORKING
 
 
-def test_full_pair_line_selection_needs_no_flag(one_for_one: GitHunkCLI) -> None:
+def test_full_pair_line_selection_needs_no_flag(*, one_for_one: GitHunkCLI) -> None:
     cli = one_for_one
 
     cli.run_ok("stage", cli.get_only_hunk_id("--unstaged"), "-l", "2,3")
@@ -266,7 +270,7 @@ def test_full_pair_line_selection_needs_no_flag(one_for_one: GitHunkCLI) -> None
     assert cli.repo.git("show", ":client.py") == _WORKING
 
 
-def test_pure_addition_selection_needs_no_flag(cli: GitHunkCLI) -> None:
+def test_pure_addition_selection_needs_no_flag(*, cli: GitHunkCLI) -> None:
     cli.repo.write_file("f.txt", "keep\n")
     cli.repo.git("add", "f.txt")
     cli.repo.git("commit", "-m", "init")
@@ -277,7 +281,7 @@ def test_pure_addition_selection_needs_no_flag(cli: GitHunkCLI) -> None:
     assert cli.repo.git("show", ":f.txt") == "keep\nfirst\n"
 
 
-def test_pure_deletion_selection_needs_no_flag(cli: GitHunkCLI) -> None:
+def test_pure_deletion_selection_needs_no_flag(*, cli: GitHunkCLI) -> None:
     cli.repo.write_file("f.txt", "keep\nfirst\nsecond\n")
     cli.repo.git("add", "f.txt")
     cli.repo.git("commit", "-m", "init")
@@ -293,7 +297,7 @@ def test_pure_deletion_selection_needs_no_flag(cli: GitHunkCLI) -> None:
     ["stage", "unstage", "discard", "commit"],
 )
 def test_allow_one_sided_without_a_selection_mechanism_is_a_usage_error(
-    one_for_one: GitHunkCLI, command: str
+    *, one_for_one: GitHunkCLI, command: str
 ) -> None:
     cli = one_for_one
     before = _capture_repo_state(cli=cli)

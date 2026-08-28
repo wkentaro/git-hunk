@@ -10,7 +10,7 @@ def _hunk_id_for(*, cli: GitHunkCLI, path: str) -> str:
     return next(h["id"] for h in hunks if h["file"]["text"] == path)
 
 
-def test_non_ascii_modified_file_round_trips(cli: GitHunkCLI) -> None:
+def test_non_ascii_modified_file_round_trips(*, cli: GitHunkCLI) -> None:
     cli.repo.write_file("файл.txt", "a\nb\n")
     cli.repo.git("add", ".")
     cli.repo.git("commit", "-m", "init")
@@ -27,7 +27,7 @@ def test_non_ascii_modified_file_round_trips(cli: GitHunkCLI) -> None:
     assert cli.repo.git("diff").strip() == ""
 
 
-def test_non_ascii_untracked_shows_real_path(cli: GitHunkCLI) -> None:
+def test_non_ascii_untracked_shows_real_path(*, cli: GitHunkCLI) -> None:
     cli.repo.write_file("keep.txt", "x\n")
     cli.repo.git("add", ".")
     cli.repo.git("commit", "-m", "init")
@@ -38,7 +38,7 @@ def test_non_ascii_untracked_shows_real_path(cli: GitHunkCLI) -> None:
     assert [h["file"]["text"] for h in untracked] == ["untrack𝟙.txt"]
 
 
-def test_filename_with_b_slash_substring_stages(cli: GitHunkCLI) -> None:
+def test_filename_with_b_slash_substring_stages(*, cli: GitHunkCLI) -> None:
     cli.repo.write_file("a b/c.txt", "x\ny\n")
     cli.repo.git("add", ".")
     cli.repo.git("commit", "-m", "init")
@@ -70,7 +70,7 @@ def test_filename_with_b_slash_substring_stages(cli: GitHunkCLI) -> None:
     ["od\ttab.txt", "od\nnl.txt", "od\\back.txt", 'od"q.txt', "od\x1besc.txt"],
     ids=["tab", "newline", "backslash", "quote", "escape"],
 )
-def test_quoted_path_modified_file_round_trips(cli: GitHunkCLI, path: str) -> None:
+def test_quoted_path_modified_file_round_trips(*, cli: GitHunkCLI, path: str) -> None:
     cli.repo.write_file(path, "a\nb\n")
     cli.repo.git("add", ".")
     cli.repo.git("commit", "-m", "init")

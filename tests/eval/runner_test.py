@@ -127,7 +127,7 @@ def _install_fake_run(
     ) -> Solver:
         del task
 
-        def solve(repo: GitRepo) -> None:
+        def solve(repo: GitRepo, /) -> None:
             del repo
             print(f"variant: {variant.name}")
             trace_path.write_text(
@@ -145,11 +145,11 @@ def _install_fake_run(
         return solve
 
     class PreparedTask:
-        def run_and_grade(self, solver: Solver) -> Result:
+        def run_and_grade(self, solver: Solver, /) -> Result:
             solver(GitRepo(tmp_path))
             return next_result()
 
-    def prepare_task(task: Task) -> contextlib.AbstractContextManager[PreparedTask]:
+    def prepare_task(task: Task, /) -> contextlib.AbstractContextManager[PreparedTask]:
         if prepared_tasks is not None:
             prepared_tasks.append(task.name)
         return contextlib.nullcontext(PreparedTask())
@@ -199,6 +199,7 @@ _TWO_TASK_SUMMARY: Final = [
     [(1, _SINGLE_TASK_SUMMARY), (2, _TWO_TASK_SUMMARY)],
 )
 def test_run_reports_context_usage_and_artifacts(
+    *,
     tmp_path: Path,
     monkeypatch: pytest.MonkeyPatch,
     capsys: pytest.CaptureFixture[str],
@@ -279,6 +280,7 @@ def test_run_reports_context_usage_and_artifacts(
 
 
 def test_run_samples_each_variant_repeatedly_from_one_prepared_task(
+    *,
     tmp_path: Path,
     monkeypatch: pytest.MonkeyPatch,
     capsys: pytest.CaptureFixture[str],
@@ -345,6 +347,7 @@ def test_run_samples_each_variant_repeatedly_from_one_prepared_task(
 
 
 def test_run_gates_on_every_repeat_of_the_subject_variant(
+    *,
     tmp_path: Path,
     monkeypatch: pytest.MonkeyPatch,
     capsys: pytest.CaptureFixture[str],
@@ -393,6 +396,7 @@ def test_run_gates_on_every_repeat_of_the_subject_variant(
     ids=["both-pass", "bare-git-graded-failure", "git-hunk-failure", "solver-error"],
 )
 def test_run_gates_on_subject_variant_outcomes_and_solver_errors(
+    *,
     tmp_path: Path,
     monkeypatch: pytest.MonkeyPatch,
     capsys: pytest.CaptureFixture[str],

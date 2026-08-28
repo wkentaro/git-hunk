@@ -6,7 +6,7 @@ from .conftest import GitHunkCLI
 
 
 @pytest.fixture
-def grouped_replacement(cli: GitHunkCLI) -> GitHunkCLI:
+def grouped_replacement(*, cli: GitHunkCLI) -> GitHunkCLI:
     cli.repo.write_file("f.txt", "a\nb\nc\n")
     cli.repo.git("add", "f.txt")
     cli.repo.git("commit", "-m", "init")
@@ -30,7 +30,9 @@ def _assert_group_error(*, returncode: int, stderr: str) -> None:
 
 
 @pytest.mark.parametrize("spec", ["2,4", "^3,^5"])
-def test_stage_rejection_is_atomic(grouped_replacement: GitHunkCLI, spec: str) -> None:
+def test_stage_rejection_is_atomic(
+    *, grouped_replacement: GitHunkCLI, spec: str
+) -> None:
     cli = grouped_replacement
     before = _capture_repo_state(cli=cli)
 
@@ -40,7 +42,7 @@ def test_stage_rejection_is_atomic(grouped_replacement: GitHunkCLI, spec: str) -
     assert _capture_repo_state(cli=cli) == before
 
 
-def test_unstage_rejection_is_atomic(grouped_replacement: GitHunkCLI) -> None:
+def test_unstage_rejection_is_atomic(*, grouped_replacement: GitHunkCLI) -> None:
     cli = grouped_replacement
     cli.run_ok("stage", cli.get_only_hunk_id("--unstaged"))
     before = _capture_repo_state(cli=cli)
@@ -51,7 +53,7 @@ def test_unstage_rejection_is_atomic(grouped_replacement: GitHunkCLI) -> None:
     assert _capture_repo_state(cli=cli) == before
 
 
-def test_discard_rejection_is_atomic(grouped_replacement: GitHunkCLI) -> None:
+def test_discard_rejection_is_atomic(*, grouped_replacement: GitHunkCLI) -> None:
     cli = grouped_replacement
     before = _capture_repo_state(cli=cli)
 
@@ -61,7 +63,7 @@ def test_discard_rejection_is_atomic(grouped_replacement: GitHunkCLI) -> None:
     assert _capture_repo_state(cli=cli) == before
 
 
-def test_commit_rejection_is_atomic(grouped_replacement: GitHunkCLI) -> None:
+def test_commit_rejection_is_atomic(*, grouped_replacement: GitHunkCLI) -> None:
     cli = grouped_replacement
     before = _capture_repo_state(cli=cli)
 
@@ -80,7 +82,7 @@ def test_commit_rejection_is_atomic(grouped_replacement: GitHunkCLI) -> None:
 
 @pytest.mark.parametrize("spec", ["2,4", "^3,^5"])
 def test_allow_one_sided_does_not_relax_the_group_rule(
-    grouped_replacement: GitHunkCLI, spec: str
+    *, grouped_replacement: GitHunkCLI, spec: str
 ) -> None:
     # --allow-one-sided covers a one-for-one pair only; a wider grouped
     # replacement stays a hard error.
@@ -103,7 +105,7 @@ def test_allow_one_sided_does_not_relax_the_group_rule(
     ],
 )
 def test_matching_selection_uses_group_validation(
-    grouped_replacement: GitHunkCLI, selector: tuple[str, ...]
+    *, grouped_replacement: GitHunkCLI, selector: tuple[str, ...]
 ) -> None:
     cli = grouped_replacement
     before = _capture_repo_state(cli=cli)
@@ -122,7 +124,7 @@ def test_matching_selection_uses_group_validation(
     ],
 )
 def test_unstage_matching_selection_uses_group_validation(
-    grouped_replacement: GitHunkCLI, selector: tuple[str, ...]
+    *, grouped_replacement: GitHunkCLI, selector: tuple[str, ...]
 ) -> None:
     cli = grouped_replacement
     cli.run_ok("stage", cli.get_only_hunk_id("--unstaged"))

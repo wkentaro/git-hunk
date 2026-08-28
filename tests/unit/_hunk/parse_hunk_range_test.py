@@ -33,6 +33,6 @@ def test_keeps_git_heading_as_suffix() -> None:
         " @@ -1,3 +1,3 @@",
     ],
 )
-def test_raises_when_header_does_not_match(header: str) -> None:
+def test_raises_when_header_does_not_match(*, header: str) -> None:
     with pytest.raises(ValueError, match="cannot parse hunk header"):
         parse_hunk_range(header)

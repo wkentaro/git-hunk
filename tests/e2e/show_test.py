@@ -3,7 +3,7 @@ from git_hunk._hunk import NO_NEWLINE_MARKER
 from .conftest import GitHunkCLI
 
 
-def test_show_hunk_by_full_id(cli: GitHunkCLI) -> None:
+def test_show_hunk_by_full_id(*, cli: GitHunkCLI) -> None:
     cli.repo.write_file("f.py", "old\n")
     cli.repo.git("add", ".")
     cli.repo.git("commit", "-m", "init")
@@ -18,7 +18,7 @@ def test_show_hunk_by_full_id(cli: GitHunkCLI) -> None:
     assert "+new" in r.stdout
 
 
-def test_show_hunk_by_uppercase_id(cli: GitHunkCLI) -> None:
+def test_show_hunk_by_uppercase_id(*, cli: GitHunkCLI) -> None:
     cli.repo.write_file("f.py", "old\n")
     cli.repo.git("add", ".")
     cli.repo.git("commit", "-m", "init")
@@ -33,7 +33,7 @@ def test_show_hunk_by_uppercase_id(cli: GitHunkCLI) -> None:
     assert "+new" in r.stdout
 
 
-def test_show_hunk_by_prefix(cli: GitHunkCLI) -> None:
+def test_show_hunk_by_prefix(*, cli: GitHunkCLI) -> None:
     cli.repo.write_file("f.py", "old\n")
     cli.repo.git("add", ".")
     cli.repo.git("commit", "-m", "init")
@@ -47,7 +47,7 @@ def test_show_hunk_by_prefix(cli: GitHunkCLI) -> None:
     assert "@@" in r.stdout
 
 
-def test_show_staged_hunk(cli: GitHunkCLI) -> None:
+def test_show_staged_hunk(*, cli: GitHunkCLI) -> None:
     cli.repo.write_file("f.py", "old\n")
     cli.repo.git("add", ".")
     cli.repo.git("commit", "-m", "init")
@@ -62,7 +62,7 @@ def test_show_staged_hunk(cli: GitHunkCLI) -> None:
     assert "+new" in r.stdout
 
 
-def test_show_finds_staged_hunk_without_flag(cli: GitHunkCLI) -> None:
+def test_show_finds_staged_hunk_without_flag(*, cli: GitHunkCLI) -> None:
     cli.repo.write_file("f.py", "old\n")
     cli.repo.git("add", ".")
     cli.repo.git("commit", "-m", "init")
@@ -77,7 +77,7 @@ def test_show_finds_staged_hunk_without_flag(cli: GitHunkCLI) -> None:
     assert "+new" in r.stdout
 
 
-def test_show_no_args_shows_all(cli: GitHunkCLI) -> None:
+def test_show_no_args_shows_all(*, cli: GitHunkCLI) -> None:
     cli.repo.write_file("a.py", "old\n")
     cli.repo.write_file("b.py", "old\n")
     cli.repo.git("add", ".")
@@ -92,7 +92,7 @@ def test_show_no_args_shows_all(cli: GitHunkCLI) -> None:
     assert "+unstaged" in r.stdout
 
 
-def test_show_excludes_untracked_files_that_list_includes(cli: GitHunkCLI) -> None:
+def test_show_excludes_untracked_files_that_list_includes(*, cli: GitHunkCLI) -> None:
     cli.repo.write_file("tracked.py", "old\n")
     cli.repo.git("add", ".")
     cli.repo.git("commit", "-m", "init")
@@ -109,7 +109,7 @@ def test_show_excludes_untracked_files_that_list_includes(cli: GitHunkCLI) -> No
     assert "fresh.py" not in r.stdout
 
 
-def test_show_staged_and_unstaged_together_errors(cli: GitHunkCLI) -> None:
+def test_show_staged_and_unstaged_together_errors(*, cli: GitHunkCLI) -> None:
     cli.repo.write_file("f.py", "old\n")
     cli.repo.git("add", ".")
     cli.repo.git("commit", "-m", "init")
@@ -121,7 +121,7 @@ def test_show_staged_and_unstaged_together_errors(cli: GitHunkCLI) -> None:
     assert "Usage: git-hunk show" in r.stderr
 
 
-def test_show_renders_no_newline_marker_unnumbered(cli: GitHunkCLI) -> None:
+def test_show_renders_no_newline_marker_unnumbered(*, cli: GitHunkCLI) -> None:
     cli.repo.write_file("f.txt", "a\nb\nc\n")
     cli.repo.git("add", ".")
     cli.repo.git("commit", "-m", "init")
@@ -142,6 +142,7 @@ def test_show_renders_no_newline_marker_unnumbered(cli: GitHunkCLI) -> None:
 
 
 def test_show_puts_exactly_one_rule_between_consecutive_hunks(
+    *,
     cli: GitHunkCLI,
 ) -> None:
     # The rule divides hunks, so it appears between them and never leads the

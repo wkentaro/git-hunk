@@ -31,7 +31,7 @@ from eval.summary import render_summary
 from eval.tasks import SCENARIOS
 
 
-def main(argv: list[str] | None = None) -> int:
+def main(argv: list[str] | None = None, /) -> int:
     task_names = tuple(scenario.task.name for scenario in SCENARIOS)
     task_list = "\n".join(f"  {name}" for name in task_names)
     parser = argparse.ArgumentParser(

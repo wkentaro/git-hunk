@@ -123,7 +123,7 @@ def test_command_pins_model_and_isolates_claude() -> None:
 
 
 def test_validate_trace_accepts_complete_trace(
-    tmp_path: Path, trace_events: list[dict[str, Any]]
+    *, tmp_path: Path, trace_events: list[dict[str, Any]]
 ) -> None:
     trace_path = tmp_path / "trace.jsonl"
     _write_trace(trace_path=trace_path, events=trace_events)
@@ -147,7 +147,7 @@ def test_validate_trace_accepts_complete_trace(
     ],
 )
 def test_validate_trace_rejects_incomplete_or_wrong_model(
-    tmp_path: Path, events: list[dict[str, Any]], error: str
+    *, tmp_path: Path, events: list[dict[str, Any]], error: str
 ) -> None:
     trace_path = tmp_path / "trace.jsonl"
     _write_trace(trace_path=trace_path, events=events)
@@ -156,7 +156,7 @@ def test_validate_trace_rejects_incomplete_or_wrong_model(
         validate_trace(trace_path=trace_path)
 
 
-def test_validate_trace_rejects_malformed_json(tmp_path: Path) -> None:
+def test_validate_trace_rejects_malformed_json(*, tmp_path: Path) -> None:
     trace_path = tmp_path / "trace.jsonl"
     trace_path.write_text("{bad json}\n", encoding="utf-8")
 
@@ -165,7 +165,7 @@ def test_validate_trace_rejects_malformed_json(tmp_path: Path) -> None:
 
 
 def test_validate_trace_rejects_empty_bash_command(
-    tmp_path: Path, trace_events: list[dict[str, Any]]
+    *, tmp_path: Path, trace_events: list[dict[str, Any]]
 ) -> None:
     trace_path = tmp_path / "trace.jsonl"
     trace_events[0]["message"]["content"][0]["input"] = {"command": ""}
@@ -176,7 +176,7 @@ def test_validate_trace_rejects_empty_bash_command(
 
 
 def test_validate_trace_rejects_unmatched_tool_result(
-    tmp_path: Path, trace_events: list[dict[str, Any]]
+    *, tmp_path: Path, trace_events: list[dict[str, Any]]
 ) -> None:
     trace_path = tmp_path / "trace.jsonl"
     trace_events[1]["message"]["content"][0]["tool_use_id"] = "other-tool"
@@ -201,6 +201,7 @@ def test_validate_trace_rejects_unmatched_tool_result(
     ],
 )
 def test_validate_trace_rejects_invalid_result_events(
+    *,
     tmp_path: Path,
     trace_events: list[dict[str, Any]],
     result_events: list[dict[str, Any]],
@@ -226,6 +227,7 @@ def test_validate_trace_rejects_invalid_result_events(
     ],
 )
 def test_validate_trace_rejects_invalid_metadata(
+    *,
     tmp_path: Path,
     trace_events: list[dict[str, Any]],
     field: str,
@@ -241,7 +243,7 @@ def test_validate_trace_rejects_invalid_metadata(
 
 
 def test_run_claude_writes_partial_trace_on_timeout(
-    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    *, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     partial_trace = (
         '{"type":"assistant","message":{"model":"partial"}}\n{"type":"assistant"'
@@ -276,6 +278,7 @@ def test_run_claude_writes_partial_trace_on_timeout(
 
 
 def test_run_claude_streams_tool_calls_without_results(
+    *,
     tmp_path: Path,
     monkeypatch: pytest.MonkeyPatch,
     capsys: pytest.CaptureFixture[str],
@@ -354,7 +357,7 @@ def test_run_claude_streams_tool_calls_without_results(
 
 
 def test_trace_usage_has_stable_shape_and_compact_format(
-    tmp_path: Path, trace_events: list[dict[str, Any]]
+    *, tmp_path: Path, trace_events: list[dict[str, Any]]
 ) -> None:
     trace_events[2].update(
         {
@@ -441,7 +444,7 @@ def test_trace_usage_has_stable_shape_and_compact_format(
 
 
 def test_trace_usage_counts_each_tool_use_once(
-    tmp_path: Path, trace_events: list[dict[str, Any]]
+    *, tmp_path: Path, trace_events: list[dict[str, Any]]
 ) -> None:
     trace_events[2].update(
         {
@@ -475,7 +478,7 @@ def test_trace_usage_counts_each_tool_use_once(
 
 
 def test_trace_usage_accepts_missing_optional_model_metadata(
-    tmp_path: Path, trace_events: list[dict[str, Any]]
+    *, tmp_path: Path, trace_events: list[dict[str, Any]]
 ) -> None:
     trace_events[2].update(
         {

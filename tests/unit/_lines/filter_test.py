@@ -8,7 +8,7 @@ from git_hunk._hunk import Hunk
 from git_hunk._lines import filter_hunk_lines
 
 
-def test_include_additions(make_hunk: Callable[[str], Hunk]) -> None:
+def test_include_additions(*, make_hunk: Callable[[str], Hunk]) -> None:
     diff = "@@ -1,3 +1,5 @@ def foo():\n ctx1\n+add1\n+add2\n ctx2\n+add3"
     hunk = make_hunk(diff)
     result = filter_hunk_lines(hunk, {2}, exclude=False)
@@ -19,7 +19,7 @@ def test_include_additions(make_hunk: Callable[[str], Hunk]) -> None:
     assert "add3" not in result.diff
 
 
-def test_include_deletions(make_hunk: Callable[[str], Hunk]) -> None:
+def test_include_deletions(*, make_hunk: Callable[[str], Hunk]) -> None:
     diff = "@@ -1,4 +1,2 @@ def foo():\n ctx1\n-del1\n-del2\n ctx2"
     hunk = make_hunk(diff)
     result = filter_hunk_lines(hunk, {2}, exclude=False)
@@ -28,7 +28,7 @@ def test_include_deletions(make_hunk: Callable[[str], Hunk]) -> None:
     assert " del2" in result.diff
 
 
-def test_exclude_mode(make_hunk: Callable[[str], Hunk]) -> None:
+def test_exclude_mode(*, make_hunk: Callable[[str], Hunk]) -> None:
     diff = "@@ -1,3 +1,5 @@ def foo():\n ctx1\n+add1\n+add2\n ctx2\n+add3"
     hunk = make_hunk(diff)
     result = filter_hunk_lines(hunk, {3}, exclude=True)
@@ -38,14 +38,14 @@ def test_exclude_mode(make_hunk: Callable[[str], Hunk]) -> None:
     assert "+add3" in result.diff
 
 
-def test_no_changes_remain_errors(make_hunk: Callable[[str], Hunk]) -> None:
+def test_no_changes_remain_errors(*, make_hunk: Callable[[str], Hunk]) -> None:
     diff = "@@ -1,2 +1,3 @@ def foo():\n ctx1\n+add1\n ctx2"
     hunk = make_hunk(diff)
     with pytest.raises(ValueError, match="no changes remain"):
         filter_hunk_lines(hunk, {2}, exclude=True)
 
 
-def test_out_of_range_errors(make_hunk: Callable[[str], Hunk]) -> None:
+def test_out_of_range_errors(*, make_hunk: Callable[[str], Hunk]) -> None:
     diff = "@@ -1,2 +1,3 @@ def foo():\n ctx1\n+add1\n ctx2"
     hunk = make_hunk(diff)
     with pytest.raises(
@@ -54,14 +54,14 @@ def test_out_of_range_errors(make_hunk: Callable[[str], Hunk]) -> None:
         filter_hunk_lines(hunk, {99, 100}, exclude=False)
 
 
-def test_unparsable_header_errors(make_hunk: Callable[[str], Hunk]) -> None:
+def test_unparsable_header_errors(*, make_hunk: Callable[[str], Hunk]) -> None:
     diff = "@@ -bad +bad @@ def foo():\n ctx1\n+add1\n ctx2"
     hunk = make_hunk(diff)
     with pytest.raises(ValueError, match="cannot parse hunk header"):
         filter_hunk_lines(hunk, {2}, exclude=False)
 
 
-def test_header_recalculated(make_hunk: Callable[[str], Hunk]) -> None:
+def test_header_recalculated(*, make_hunk: Callable[[str], Hunk]) -> None:
     diff = "@@ -1,2 +1,4 @@ def foo():\n ctx1\n+add1\n+add2\n ctx2"
     hunk = make_hunk(diff)
     result = filter_hunk_lines(hunk, {3}, exclude=False)
@@ -70,7 +70,7 @@ def test_header_recalculated(make_hunk: Callable[[str], Hunk]) -> None:
     assert result.header == "@@ -1,2 +1,3 @@"
 
 
-def test_one_for_one_addition(make_hunk: Callable[[str], Hunk]) -> None:
+def test_one_for_one_addition(*, make_hunk: Callable[[str], Hunk]) -> None:
     diff = "@@ -1,2 +1,2 @@ def foo():\n ctx\n-old\n+new"
     hunk = make_hunk(diff)
     result = filter_hunk_lines(hunk, {3}, exclude=False, allow_one_sided=True)
@@ -84,6 +84,7 @@ _TWO_GROUP: Final = "@@ -1,4 +1,4 @@\n a\n-b\n+B\n c\n-d\n+D"
 
 
 def test_reverse_include_drops_unselected_deletion_keeps_addition(
+    *,
     make_hunk: Callable[[str], Hunk],
 ) -> None:
     # Reverse (unstage/discard): unselected '+' becomes context, '-' drops.
@@ -97,7 +98,7 @@ def test_reverse_include_drops_unselected_deletion_keeps_addition(
     assert "-d" not in result.diff  # unselected -d dropped
 
 
-def test_reverse_exclude_first_group(make_hunk: Callable[[str], Hunk]) -> None:
+def test_reverse_exclude_first_group(*, make_hunk: Callable[[str], Hunk]) -> None:
     hunk = make_hunk(_TWO_GROUP)
     result = filter_hunk_lines(hunk, {2, 3}, exclude=True, reverse=True)
     assert result.additions == 1
@@ -112,6 +113,7 @@ _NO_NEWLINE_TO_NEWLINE: Final = f"@@ -1,2 +1,2 @@\n a\n-b\n{NO_NEWLINE_MARKER}\n
 
 
 def test_keep_addition_splits_stale_no_newline_context(
+    *,
     make_hunk: Callable[[str], Hunk],
 ) -> None:
     # The unselected '-b' (no trailing newline) survives as context, but the
@@ -125,6 +127,7 @@ def test_keep_addition_splits_stale_no_newline_context(
 
 
 def test_keep_deletion_drops_no_newline_marker_from_dropped_addition(
+    *,
     make_hunk: Callable[[str], Hunk],
 ) -> None:
     # Keeping only '-b' drops '+B' and its marker; 'b' keeps no trailing newline
@@ -142,6 +145,7 @@ _REVERSE_NEW_SIDE_NO_NEWLINE: Final = (
 
 
 def test_reverse_keeps_no_newline_new_context_without_split(
+    *,
     make_hunk: Callable[[str], Hunk],
 ) -> None:
     # Reverse keeps the unselected '+D' (new-side EOF, no trailing newline) as

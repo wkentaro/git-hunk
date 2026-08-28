@@ -9,7 +9,7 @@ from eval.repo import init_repo
 
 
 def test_git_commands_ignore_inherited_repository(
-    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    *, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     checkout_path = tmp_path / "checkout"
     decoy_path = tmp_path / "decoy"
@@ -29,7 +29,7 @@ def test_git_commands_ignore_inherited_repository(
 
 
 def test_git_commands_ignore_global_status_configuration(
-    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    *, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     checkout_path = tmp_path / "checkout"
     checkout_path.mkdir()
@@ -59,6 +59,7 @@ def test_git_commands_ignore_global_status_configuration(
 
 
 def test_rejects_skill_that_does_not_match_imported_package(
+    *,
     tmp_path: Path,
 ) -> None:
     imported_package = tmp_path / "git_hunk" / "__init__.py"

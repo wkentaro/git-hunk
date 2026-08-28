@@ -1,7 +1,7 @@
 from .conftest import GitHunkCLI
 
 
-def test_unstage_hunk(cli: GitHunkCLI) -> None:
+def test_unstage_hunk(*, cli: GitHunkCLI) -> None:
     cli.repo.write_file("f.py", "old\n")
     cli.repo.git("add", ".")
     cli.repo.git("commit", "-m", "init")
@@ -20,7 +20,7 @@ def test_unstage_hunk(cli: GitHunkCLI) -> None:
     assert len(unstaged) == 1
 
 
-def test_unstage_one_of_multiple(cli: GitHunkCLI) -> None:
+def test_unstage_one_of_multiple(*, cli: GitHunkCLI) -> None:
     lines = [f"line{i}" for i in range(1, 21)]
     cli.repo.write_file("f.py", "\n".join(lines) + "\n")
     cli.repo.git("add", ".")
@@ -41,6 +41,7 @@ def test_unstage_one_of_multiple(cli: GitHunkCLI) -> None:
 
 
 def test_unstage_two_hunks_keeps_unselected_insertion_staged(
+    *,
     cli: GitHunkCLI,
 ) -> None:
     original = [f"line {number}" for number in range(1, 61)]

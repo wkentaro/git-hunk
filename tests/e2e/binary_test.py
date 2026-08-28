@@ -13,7 +13,7 @@ def _id_for(*flags: str, cli: GitHunkCLI, path: str) -> str:
 
 
 @pytest.fixture
-def modified_binary(cli: GitHunkCLI) -> GitHunkCLI:
+def modified_binary(*, cli: GitHunkCLI) -> GitHunkCLI:
     path = Path(cli.repo.path) / "a.bin"
     path.write_bytes(b"\x00\x01bin\xff")
     cli.repo.git("add", ".")
@@ -22,7 +22,7 @@ def modified_binary(cli: GitHunkCLI) -> GitHunkCLI:
     return cli
 
 
-def test_list_distinguishes_modified_and_deleted_binary(cli: GitHunkCLI) -> None:
+def test_list_distinguishes_modified_and_deleted_binary(*, cli: GitHunkCLI) -> None:
     root = Path(cli.repo.path)
     (root / "a.bin").write_bytes(b"\x00\x01a\xff")
     (root / "d.bin").write_bytes(b"\x00\x01d\xff")
@@ -41,7 +41,7 @@ def test_list_distinguishes_modified_and_deleted_binary(cli: GitHunkCLI) -> None
     assert by_file["d.bin"]["change_kind"] == "D"
 
 
-def test_show_binary_has_no_blank_numbered_line(modified_binary: GitHunkCLI) -> None:
+def test_show_binary_has_no_blank_numbered_line(*, modified_binary: GitHunkCLI) -> None:
     out = modified_binary.run_ok(
         "show",
         _id_for(
@@ -54,7 +54,7 @@ def test_show_binary_has_no_blank_numbered_line(modified_binary: GitHunkCLI) -> 
     assert "  1 " not in out  # no numbered line from an empty diff body
 
 
-def test_stage_unstage_discard_modified_binary(modified_binary: GitHunkCLI) -> None:
+def test_stage_unstage_discard_modified_binary(*, modified_binary: GitHunkCLI) -> None:
     cli = modified_binary
     cli.run_ok(
         "stage",
@@ -87,7 +87,7 @@ def test_stage_unstage_discard_modified_binary(modified_binary: GitHunkCLI) -> N
     assert cli.repo.git("diff").strip() == ""
 
 
-def test_line_selection_rejected_on_binary(modified_binary: GitHunkCLI) -> None:
+def test_line_selection_rejected_on_binary(*, modified_binary: GitHunkCLI) -> None:
     cli = modified_binary
     r = cli.run(
         "stage",
@@ -103,7 +103,7 @@ def test_line_selection_rejected_on_binary(modified_binary: GitHunkCLI) -> None:
     assert "not supported for binary, mode, or type changes" in r.stderr
 
 
-def test_stage_deleted_binary(cli: GitHunkCLI) -> None:
+def test_stage_deleted_binary(*, cli: GitHunkCLI) -> None:
     path = Path(cli.repo.path) / "d.bin"
     path.write_bytes(b"\x00\x01del\xff")
     cli.repo.git("add", ".")
@@ -131,7 +131,7 @@ def test_stage_deleted_binary(cli: GitHunkCLI) -> None:
     assert cli.repo.git("diff", "--cached").strip() == ""
 
 
-def test_stage_added_binary(cli: GitHunkCLI) -> None:
+def test_stage_added_binary(*, cli: GitHunkCLI) -> None:
     # A new binary is untracked; stage it, then it shows as an added binary.
     (Path(cli.repo.path) / "keep.txt").write_text("x\n")
     cli.repo.git("add", ".")
@@ -156,7 +156,7 @@ def test_stage_added_binary(cli: GitHunkCLI) -> None:
     assert cli.repo.git("diff", "--cached").strip() == ""
 
 
-def test_stage_and_unstage_text_and_binary_hunk_together(cli: GitHunkCLI) -> None:
+def test_stage_and_unstage_text_and_binary_hunk_together(*, cli: GitHunkCLI) -> None:
     # git-hunk's pitch is grouping hunks by intent, so a single command may mix a
     # text hunk (applied via a patch) with a whole-file binary hunk (staged whole).
     root = Path(cli.repo.path)
@@ -187,7 +187,7 @@ def test_stage_and_unstage_text_and_binary_hunk_together(cli: GitHunkCLI) -> Non
 @pytest.mark.skipif(
     sys.platform == "win32", reason="git does not track symlinks on Windows"
 )
-def test_typechange_stage_unstage_discard(cli: GitHunkCLI) -> None:
+def test_typechange_stage_unstage_discard(*, cli: GitHunkCLI) -> None:
     # git emits a file -> symlink type change as a delete + add pair; git-hunk
     # surfaces it as a single "T" whole-file hunk staged whole.
     path = Path(cli.repo.path) / "tc.txt"
@@ -241,7 +241,7 @@ def test_typechange_stage_unstage_discard(cli: GitHunkCLI) -> None:
 @pytest.mark.skipif(
     sys.platform == "win32", reason="git does not track unix file modes on Windows"
 )
-def test_stage_and_discard_mode_only_change(cli: GitHunkCLI) -> None:
+def test_stage_and_discard_mode_only_change(*, cli: GitHunkCLI) -> None:
     cli.repo.git("config", "core.fileMode", "true")
     path = Path(cli.repo.path) / "m.sh"
     path.write_text("plain\n")

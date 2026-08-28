@@ -19,7 +19,7 @@ _AFTER: Final = b"\x00binary new\xfe"
 
 @pytest.mark.parametrize("selection", ["file", "id"])
 def test_stage_binary_hunk_from_subdirectory(
-    make_mutation_repo: MutationRepoFactory, selection: str
+    *, make_mutation_repo: MutationRepoFactory, selection: str
 ) -> None:
     cli = make_mutation_repo(_PATH, _BEFORE, _AFTER)
     before = snapshot_repository(cli)
@@ -39,7 +39,7 @@ def test_stage_binary_hunk_from_subdirectory(
 
 @pytest.mark.parametrize("selection", ["file", "id"])
 def test_unstage_binary_hunk_from_subdirectory(
-    make_mutation_repo: MutationRepoFactory, selection: str
+    *, make_mutation_repo: MutationRepoFactory, selection: str
 ) -> None:
     cli = make_mutation_repo(_PATH, _BEFORE, _AFTER)
     cli.repo.git("add", _PATH, "unrelated.txt")
@@ -58,7 +58,7 @@ def test_unstage_binary_hunk_from_subdirectory(
 
 @pytest.mark.parametrize("selection", ["file", "id"])
 def test_discard_binary_hunk_from_subdirectory(
-    make_mutation_repo: MutationRepoFactory, selection: str
+    *, make_mutation_repo: MutationRepoFactory, selection: str
 ) -> None:
     cli = make_mutation_repo(_PATH, _BEFORE, _AFTER)
     before = snapshot_repository(cli)
@@ -77,7 +77,7 @@ def test_discard_binary_hunk_from_subdirectory(
 
 @pytest.mark.parametrize("selection", ["file", "id"])
 def test_commit_binary_hunk_from_subdirectory(
-    make_mutation_repo: MutationRepoFactory, selection: str
+    *, make_mutation_repo: MutationRepoFactory, selection: str
 ) -> None:
     cli = make_mutation_repo(_PATH, _BEFORE, _AFTER)
     before = snapshot_repository(cli)
@@ -100,6 +100,7 @@ def test_commit_binary_hunk_from_subdirectory(
 
 @pytest.mark.skipif(os.name == "nt", reason="Windows does not allow this file name")
 def test_stage_binary_repository_path_with_pathspec_punctuation(
+    *,
     make_mutation_repo: MutationRepoFactory,
 ) -> None:
     path = ":literal[*]?!.bin"
@@ -122,7 +123,7 @@ def test_stage_binary_repository_path_with_pathspec_punctuation(
 @pytest.mark.skipif(os.name == "nt", reason="Windows does not allow this file name")
 @pytest.mark.parametrize("command", ["unstage", "discard"])
 def test_reverse_binary_repository_path_with_pathspec_punctuation(
-    make_mutation_repo: MutationRepoFactory, command: str
+    *, make_mutation_repo: MutationRepoFactory, command: str
 ) -> None:
     # A whole-file mutation hands Hunk.file to git add/restore, the only calls
     # that pass a path as a pathspec. Without --literal-pathspecs git reads the

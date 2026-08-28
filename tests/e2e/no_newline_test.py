@@ -19,7 +19,11 @@ class _NewlineChange(NamedTuple):
 
 
 @pytest.fixture(params=[("b", "B\n"), ("b\n", "B"), ("b", "B")])
-def newline_change(cli: GitHunkCLI, request: pytest.FixtureRequest) -> _NewlineChange:
+def newline_change(
+    *,
+    cli: GitHunkCLI,
+    request: pytest.FixtureRequest,
+) -> _NewlineChange:
     old, new = request.param
     _commit(cli=cli, content="a\n" + old)
     cli.repo.write_file("f.txt", "a\n" + new)
@@ -27,13 +31,13 @@ def newline_change(cli: GitHunkCLI, request: pytest.FixtureRequest) -> _NewlineC
 
 
 @pytest.fixture
-def staged_newline_change(newline_change: _NewlineChange) -> _NewlineChange:
+def staged_newline_change(*, newline_change: _NewlineChange) -> _NewlineChange:
     cli = newline_change.cli
     cli.run_ok("stage", cli.get_only_hunk_id("--unstaged"))
     return newline_change
 
 
-def test_stage_edit_last_line_no_newline(cli: GitHunkCLI) -> None:
+def test_stage_edit_last_line_no_newline(*, cli: GitHunkCLI) -> None:
     _commit(cli=cli, content="a\nb\nc")
     cli.repo.write_file("f.txt", "a\nb\ncX")
 
@@ -42,7 +46,9 @@ def test_stage_edit_last_line_no_newline(cli: GitHunkCLI) -> None:
     assert cli.repo.git("show", ":f.txt") == "a\nb\ncX"
 
 
-def test_stage_newline_to_no_newline_removes_trailing_newline(cli: GitHunkCLI) -> None:
+def test_stage_newline_to_no_newline_removes_trailing_newline(
+    *, cli: GitHunkCLI
+) -> None:
     _commit(cli=cli, content="a\nb\nc\n")
     cli.repo.write_file("f.txt", "a\nb\nc")
 
@@ -51,7 +57,7 @@ def test_stage_newline_to_no_newline_removes_trailing_newline(cli: GitHunkCLI) -
     assert cli.repo.git("show", ":f.txt") == "a\nb\nc"
 
 
-def test_stage_no_newline_to_newline_adds_trailing_newline(cli: GitHunkCLI) -> None:
+def test_stage_no_newline_to_newline_adds_trailing_newline(*, cli: GitHunkCLI) -> None:
     _commit(cli=cli, content="a\nb\nc")
     cli.repo.write_file("f.txt", "a\nb\nc\n")
 
@@ -60,7 +66,7 @@ def test_stage_no_newline_to_newline_adds_trailing_newline(cli: GitHunkCLI) -> N
     assert cli.repo.git("show", ":f.txt") == "a\nb\nc\n"
 
 
-def test_unstage_round_trips_no_newline(cli: GitHunkCLI) -> None:
+def test_unstage_round_trips_no_newline(*, cli: GitHunkCLI) -> None:
     _commit(cli=cli, content="a\nb\nc")
     cli.repo.write_file("f.txt", "a\nb\ncX")
 
@@ -72,7 +78,7 @@ def test_unstage_round_trips_no_newline(cli: GitHunkCLI) -> None:
     assert cli.repo.git("show", ":f.txt") == "a\nb\nc"
 
 
-def test_discard_round_trips_no_newline(cli: GitHunkCLI) -> None:
+def test_discard_round_trips_no_newline(*, cli: GitHunkCLI) -> None:
     _commit(cli=cli, content="a\nb\nc")
     cli.repo.write_file("f.txt", "a\nb\ncX")
 
@@ -81,7 +87,7 @@ def test_discard_round_trips_no_newline(cli: GitHunkCLI) -> None:
     assert (Path(cli.repo.path) / "f.txt").read_text() == "a\nb\nc"
 
 
-def test_stage_line_selection_on_no_newline_hunk(cli: GitHunkCLI) -> None:
+def test_stage_line_selection_on_no_newline_hunk(*, cli: GitHunkCLI) -> None:
     _commit(cli=cli, content="a\nb\nc")
     cli.repo.write_file("f.txt", "aX\nb\ncX")
 
@@ -97,7 +103,7 @@ def test_stage_line_selection_on_no_newline_hunk(cli: GitHunkCLI) -> None:
     assert any(line.get("no_newline") for line in body["lines"])
 
 
-def test_list_counts_ignore_no_newline_marker(cli: GitHunkCLI) -> None:
+def test_list_counts_ignore_no_newline_marker(*, cli: GitHunkCLI) -> None:
     _commit(cli=cli, content="a\nb\nc")
     cli.repo.write_file("f.txt", "a\nb\ncX")
 
@@ -107,6 +113,7 @@ def test_list_counts_ignore_no_newline_marker(cli: GitHunkCLI) -> None:
 
 
 def test_stage_addition_of_no_newline_to_newline_keeps_lines_separate(
+    *,
     cli: GitHunkCLI,
 ) -> None:
     # Regression for #54: staging only the addition of a no-newline -> newline
@@ -122,7 +129,7 @@ def test_stage_addition_of_no_newline_to_newline_keeps_lines_separate(
     assert cli.repo.git("show", ":f.txt") == "a\nb\nB\n"
 
 
-def test_stage_addition_then_remainder_reaches_working_tree(cli: GitHunkCLI) -> None:
+def test_stage_addition_then_remainder_reaches_working_tree(*, cli: GitHunkCLI) -> None:
     _commit(cli=cli, content="a\nb")
     cli.repo.write_file("f.txt", "a\nB\n")
 
@@ -138,6 +145,7 @@ def test_stage_addition_then_remainder_reaches_working_tree(cli: GitHunkCLI) -> 
 
 
 def test_stage_addition_both_sides_no_newline_keeps_lines_separate(
+    *,
     cli: GitHunkCLI,
 ) -> None:
     _commit(cli=cli, content="a\nb")
@@ -152,6 +160,7 @@ def test_stage_addition_both_sides_no_newline_keeps_lines_separate(
 
 
 def test_discard_addition_of_no_newline_to_newline_keeps_lines_separate(
+    *,
     cli: GitHunkCLI,
 ) -> None:
     _commit(cli=cli, content="a\nb")
@@ -166,6 +175,7 @@ def test_discard_addition_of_no_newline_to_newline_keeps_lines_separate(
 
 
 def test_unstage_addition_of_no_newline_to_newline_keeps_lines_separate(
+    *,
     cli: GitHunkCLI,
 ) -> None:
     _commit(cli=cli, content="a\nb")
@@ -182,6 +192,7 @@ def test_unstage_addition_of_no_newline_to_newline_keeps_lines_separate(
 
 
 def test_stage_deletion_preserves_each_side_newline_state(
+    *,
     newline_change: _NewlineChange,
 ) -> None:
     cli = newline_change.cli
@@ -194,6 +205,7 @@ def test_stage_deletion_preserves_each_side_newline_state(
 
 
 def test_stage_addition_preserves_each_side_newline_state(
+    *,
     newline_change: _NewlineChange,
 ) -> None:
     cli = newline_change.cli
@@ -207,6 +219,7 @@ def test_stage_addition_preserves_each_side_newline_state(
 
 
 def test_stage_replacement_preserves_each_side_newline_state(
+    *,
     newline_change: _NewlineChange,
 ) -> None:
     cli = newline_change.cli
@@ -218,6 +231,7 @@ def test_stage_replacement_preserves_each_side_newline_state(
 
 
 def test_unstage_deletion_preserves_each_side_newline_state(
+    *,
     staged_newline_change: _NewlineChange,
 ) -> None:
     cli = staged_newline_change.cli
@@ -230,6 +244,7 @@ def test_unstage_deletion_preserves_each_side_newline_state(
 
 
 def test_discard_deletion_preserves_each_side_newline_state(
+    *,
     newline_change: _NewlineChange,
 ) -> None:
     cli = newline_change.cli
@@ -246,6 +261,7 @@ def test_discard_deletion_preserves_each_side_newline_state(
 
 
 def test_commit_addition_preserves_each_side_newline_state(
+    *,
     newline_change: _NewlineChange,
 ) -> None:
     cli = newline_change.cli
@@ -266,6 +282,7 @@ def test_commit_addition_preserves_each_side_newline_state(
 
 
 def test_unstage_addition_preserves_each_side_newline_state(
+    *,
     staged_newline_change: _NewlineChange,
 ) -> None:
     cli = staged_newline_change.cli
@@ -277,6 +294,7 @@ def test_unstage_addition_preserves_each_side_newline_state(
 
 
 def test_unstage_replacement_preserves_each_side_newline_state(
+    *,
     staged_newline_change: _NewlineChange,
 ) -> None:
     cli = staged_newline_change.cli

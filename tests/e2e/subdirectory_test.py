@@ -2,6 +2,7 @@ from .conftest import GitHunkCLI
 
 
 def test_untracked_file_path_matches_tracked_basis_from_subdirectory(
+    *,
     cli: GitHunkCLI,
 ) -> None:
     cli.repo.write_file("sub/tracked.py", "line1\n")
@@ -19,6 +20,7 @@ def test_untracked_file_path_matches_tracked_basis_from_subdirectory(
 
 
 def test_untracked_file_filtered_by_repository_path_from_subdirectory(
+    *,
     cli: GitHunkCLI,
 ) -> None:
     cli.repo.write_file("sub/keep.py", "init\n")

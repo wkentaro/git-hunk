@@ -28,7 +28,7 @@ _REQUIRED_HUNK_KEYS: Final = {
 _STATUSES: Final = {"staged", "unstaged", "untracked"}
 
 
-def test_json_envelope_contract(cli: GitHunkCLI) -> None:
+def test_json_envelope_contract(*, cli: GitHunkCLI) -> None:
     cli.repo.write_file("f.py", "old\n")
     cli.repo.git("add", ".")
     cli.repo.git("commit", "-m", "init")
@@ -45,7 +45,7 @@ def test_json_envelope_contract(cli: GitHunkCLI) -> None:
         assert "lines" not in hunk
 
 
-def test_json_envelope_present_when_empty(cli: GitHunkCLI) -> None:
+def test_json_envelope_present_when_empty(*, cli: GitHunkCLI) -> None:
     cli.repo.write_file("f.py", "x\n")
     cli.repo.git("add", ".")
     cli.repo.git("commit", "-m", "init")
@@ -55,7 +55,7 @@ def test_json_envelope_present_when_empty(cli: GitHunkCLI) -> None:
     assert envelope["hunks"] == []
 
 
-def test_no_changes_returns_empty_list(cli: GitHunkCLI) -> None:
+def test_no_changes_returns_empty_list(*, cli: GitHunkCLI) -> None:
     cli.repo.write_file("f.py", "hello\n")
     cli.repo.git("add", ".")
     cli.repo.git("commit", "-m", "init")
@@ -64,7 +64,7 @@ def test_no_changes_returns_empty_list(cli: GitHunkCLI) -> None:
     assert hunks == []
 
 
-def test_single_file_single_hunk(cli: GitHunkCLI) -> None:
+def test_single_file_single_hunk(*, cli: GitHunkCLI) -> None:
     cli.repo.write_file("f.py", "line1\nline2\nline3\n")
     cli.repo.git("add", ".")
     cli.repo.git("commit", "-m", "init")
@@ -78,7 +78,7 @@ def test_single_file_single_hunk(cli: GitHunkCLI) -> None:
     assert "id" in hunks[0]
 
 
-def test_single_file_multiple_hunks(cli: GitHunkCLI) -> None:
+def test_single_file_multiple_hunks(*, cli: GitHunkCLI) -> None:
     lines = [f"line{i}" for i in range(1, 21)]
     cli.repo.write_file("f.py", "\n".join(lines) + "\n")
     cli.repo.git("add", ".")
@@ -93,7 +93,7 @@ def test_single_file_multiple_hunks(cli: GitHunkCLI) -> None:
     assert all(h["file"]["text"] == "f.py" for h in hunks)
 
 
-def test_multi_file_changes(cli: GitHunkCLI) -> None:
+def test_multi_file_changes(*, cli: GitHunkCLI) -> None:
     cli.repo.write_file("a.py", "aaa\n")
     cli.repo.write_file("b.py", "bbb\n")
     cli.repo.git("add", ".")
@@ -108,7 +108,7 @@ def test_multi_file_changes(cli: GitHunkCLI) -> None:
     assert files == {"a.py", "b.py"}
 
 
-def test_list_staged(cli: GitHunkCLI) -> None:
+def test_list_staged(*, cli: GitHunkCLI) -> None:
     cli.repo.write_file("f.py", "old\n")
     cli.repo.git("add", ".")
     cli.repo.git("commit", "-m", "init")
@@ -120,7 +120,7 @@ def test_list_staged(cli: GitHunkCLI) -> None:
     assert hunks[0]["file"]["text"] == "f.py"
 
 
-def test_list_file_filter(cli: GitHunkCLI) -> None:
+def test_list_file_filter(*, cli: GitHunkCLI) -> None:
     cli.repo.write_file("a.py", "aaa\n")
     cli.repo.write_file("b.py", "bbb\n")
     cli.repo.git("add", ".")
@@ -134,7 +134,7 @@ def test_list_file_filter(cli: GitHunkCLI) -> None:
     assert hunks[0]["file"]["text"] == "a.py"
 
 
-def test_list_file_filter_untracked_normalizes_path(cli: GitHunkCLI) -> None:
+def test_list_file_filter_untracked_normalizes_path(*, cli: GitHunkCLI) -> None:
     cli.repo.write_file("f.py", "init\n")
     cli.repo.git("add", ".")
     cli.repo.git("commit", "-m", "init")
@@ -150,7 +150,7 @@ def test_list_file_filter_untracked_normalizes_path(cli: GitHunkCLI) -> None:
     assert [h["file"]["text"] for h in hunks] == ["sub/nested.py"]
 
 
-def test_list_new_file(cli: GitHunkCLI) -> None:
+def test_list_new_file(*, cli: GitHunkCLI) -> None:
     cli.repo.write_file("f.py", "init\n")
     cli.repo.git("add", ".")
     cli.repo.git("commit", "-m", "init")
@@ -165,7 +165,7 @@ def test_list_new_file(cli: GitHunkCLI) -> None:
     assert hunks[0]["deletions"] == 0
 
 
-def test_list_default_shows_staged_and_unstaged(cli: GitHunkCLI) -> None:
+def test_list_default_shows_staged_and_unstaged(*, cli: GitHunkCLI) -> None:
     cli.repo.write_file("f.py", "old\n")
     cli.repo.git("add", ".")
     cli.repo.git("commit", "-m", "init")
@@ -179,7 +179,7 @@ def test_list_default_shows_staged_and_unstaged(cli: GitHunkCLI) -> None:
     assert statuses == {"staged", "unstaged"}
 
 
-def test_list_default_shows_untracked(cli: GitHunkCLI) -> None:
+def test_list_default_shows_untracked(*, cli: GitHunkCLI) -> None:
     cli.repo.write_file("f.py", "init\n")
     cli.repo.git("add", ".")
     cli.repo.git("commit", "-m", "init")
@@ -198,7 +198,7 @@ def test_list_default_shows_untracked(cli: GitHunkCLI) -> None:
     assert untracked[0]["id_stability"] == "stable"
 
 
-def test_status_filters_exclude_untracked(cli: GitHunkCLI) -> None:
+def test_status_filters_exclude_untracked(*, cli: GitHunkCLI) -> None:
     cli.repo.write_file("f.py", "old\n")
     cli.repo.git("add", ".")
     cli.repo.git("commit", "-m", "init")
@@ -220,7 +220,7 @@ def test_status_filters_exclude_untracked(cli: GitHunkCLI) -> None:
 @pytest.mark.skipif(
     sys.platform == "win32", reason="git does not track symlinks on Windows"
 )
-def test_list_untracked_symlink_reports_symlink_mode(cli: GitHunkCLI) -> None:
+def test_list_untracked_symlink_reports_symlink_mode(*, cli: GitHunkCLI) -> None:
     # An untracked symlink derives its would-be added mode from the working tree
     # (lstat), so b_mode must be "120000" rather than a regular-file mode.
     cli.repo.write_file("f.py", "init\n")
@@ -241,7 +241,7 @@ def test_list_untracked_symlink_reports_symlink_mode(cli: GitHunkCLI) -> None:
 @pytest.mark.skipif(
     sys.platform == "win32", reason="git does not track the executable bit on Windows"
 )
-def test_list_untracked_executable_reports_executable_mode(cli: GitHunkCLI) -> None:
+def test_list_untracked_executable_reports_executable_mode(*, cli: GitHunkCLI) -> None:
     os.chmod(cli.repo.write_file("run.sh", "echo hi\n"), 0o755)
 
     [hunk] = cli.run_list_json("list", "--json")
@@ -249,7 +249,7 @@ def test_list_untracked_executable_reports_executable_mode(cli: GitHunkCLI) -> N
     assert hunk["b_mode"] == "100755"
 
 
-def test_empty_new_file_is_whole_file_hunk(cli: GitHunkCLI) -> None:
+def test_empty_new_file_is_whole_file_hunk(*, cli: GitHunkCLI) -> None:
     cli.repo.write_file("keep.txt", "x\n")
     cli.repo.git("add", ".")
     cli.repo.git("commit", "-m", "init")
@@ -264,7 +264,7 @@ def test_empty_new_file_is_whole_file_hunk(cli: GitHunkCLI) -> None:
     assert "Empty file (added)" in cli.run_ok("list", "--staged")
 
 
-def test_no_hunks_message_goes_to_stderr(cli: GitHunkCLI) -> None:
+def test_no_hunks_message_goes_to_stderr(*, cli: GitHunkCLI) -> None:
     cli.repo.write_file("f.py", "x\n")
     cli.repo.git("add", ".")
     cli.repo.git("commit", "-m", "init")
@@ -274,7 +274,7 @@ def test_no_hunks_message_goes_to_stderr(cli: GitHunkCLI) -> None:
     assert "No hunks." in r.stderr
 
 
-def test_list_unstaged_filter(cli: GitHunkCLI) -> None:
+def test_list_unstaged_filter(*, cli: GitHunkCLI) -> None:
     cli.repo.write_file("f.py", "old\n")
     cli.repo.git("add", ".")
     cli.repo.git("commit", "-m", "init")
@@ -288,14 +288,14 @@ def test_list_unstaged_filter(cli: GitHunkCLI) -> None:
     assert len(hunks) == 1
 
 
-def test_list_staged_and_unstaged_mutual_exclusion(cli: GitHunkCLI) -> None:
+def test_list_staged_and_unstaged_mutual_exclusion(*, cli: GitHunkCLI) -> None:
     r = cli.run("list", "--staged", "--unstaged")
     assert r.returncode != 0
     assert "cannot use --staged and --unstaged together" in r.stderr
     assert "Usage: git-hunk list" in r.stderr
 
 
-def test_list_status_field_in_json(cli: GitHunkCLI) -> None:
+def test_list_status_field_in_json(*, cli: GitHunkCLI) -> None:
     cli.repo.write_file("f.py", "old\n")
     cli.repo.git("add", ".")
     cli.repo.git("commit", "-m", "init")
@@ -308,6 +308,7 @@ def test_list_status_field_in_json(cli: GitHunkCLI) -> None:
 
 
 def test_list_plaintext_blank_lines_separate_sections_and_file_groups(
+    *,
     cli: GitHunkCLI,
 ) -> None:
     cli.repo.write_file("s.py", "s\n")
@@ -330,7 +331,7 @@ def test_list_plaintext_blank_lines_separate_sections_and_file_groups(
     assert "b.py" in blocks[2]
 
 
-def test_list_context_before_field_in_json_matches_display(cli: GitHunkCLI) -> None:
+def test_list_context_before_field_in_json_matches_display(*, cli: GitHunkCLI) -> None:
     body = ["def foo():"] + [f"    x{i} = {i}" for i in range(8)]
     cli.repo.write_file("f.py", "\n".join(body) + "\n")
     cli.repo.git("add", ".")
@@ -347,6 +348,7 @@ def test_list_context_before_field_in_json_matches_display(cli: GitHunkCLI) -> N
 
 
 def test_list_plaintext_untracked_paths_are_not_separated_by_blank_lines(
+    *,
     cli: GitHunkCLI,
 ) -> None:
     # The tracked sections put a blank line between file groups; the untracked

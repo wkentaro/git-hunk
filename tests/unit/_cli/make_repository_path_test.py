@@ -20,11 +20,12 @@ _WORKTREE_ROOT: Final = "/repo"
         ("./sub/../foo.py", "foo.py"),
     ],
 )
-def test_make_repository_path_collapses_to_git_form(arg: str, expected: str) -> None:
+def test_make_repository_path_collapses_to_git_form(*, arg: str, expected: str) -> None:
     assert _make_repository_path(arg=arg, worktree_root=_WORKTREE_ROOT) == expected
 
 
 def test_make_repository_path_translates_windows_separator(
+    *,
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     monkeypatch.setattr(_cli.os, "sep", "\\")
@@ -34,18 +35,19 @@ def test_make_repository_path_translates_windows_separator(
 
 
 @pytest.mark.parametrize("arg", ["/repo/file.py", "/"])
-def test_make_repository_path_rejects_absolute_path(arg: str) -> None:
+def test_make_repository_path_rejects_absolute_path(*, arg: str) -> None:
     with pytest.raises(CliError, match="repository path must be relative"):
         _make_repository_path(arg=arg, worktree_root=_WORKTREE_ROOT)
 
 
 @pytest.mark.parametrize("arg", ["..", "../file.py", "sub/../../file.py"])
-def test_make_repository_path_rejects_path_that_escapes_worktree(arg: str) -> None:
+def test_make_repository_path_rejects_path_that_escapes_worktree(*, arg: str) -> None:
     with pytest.raises(CliError, match="repository path escapes the worktree"):
         _make_repository_path(arg=arg, worktree_root=_WORKTREE_ROOT)
 
 
 def test_make_repository_path_rejects_windows_drive_relative_path(
+    *,
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     monkeypatch.setattr(_cli.os.path, "splitdrive", ntpath.splitdrive)

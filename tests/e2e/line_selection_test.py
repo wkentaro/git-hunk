@@ -10,7 +10,7 @@ from .conftest import GitHunkCLI
 
 
 @pytest.fixture
-def two_group(cli: GitHunkCLI) -> GitHunkCLI:
+def two_group(*, cli: GitHunkCLI) -> GitHunkCLI:
     cli.repo.write_file("f.txt", "a\nb\nc\nd\n")
     cli.repo.git("add", ".")
     cli.repo.git("commit", "-m", "init")
@@ -28,7 +28,7 @@ def _working(*, cli: GitHunkCLI) -> str:
     return (Path(cli.repo.path) / "f.txt").read_text()
 
 
-def test_stage_include_first_group(two_group: GitHunkCLI) -> None:
+def test_stage_include_first_group(*, two_group: GitHunkCLI) -> None:
     two_group.run_ok(
         "stage",
         _only_id(
@@ -41,7 +41,7 @@ def test_stage_include_first_group(two_group: GitHunkCLI) -> None:
     assert two_group.repo.git("show", ":f.txt") == "a\nB\nc\nd\n"
 
 
-def test_stage_exclude_first_group(two_group: GitHunkCLI) -> None:
+def test_stage_exclude_first_group(*, two_group: GitHunkCLI) -> None:
     two_group.run_ok(
         "stage",
         _only_id(
@@ -54,7 +54,7 @@ def test_stage_exclude_first_group(two_group: GitHunkCLI) -> None:
     assert two_group.repo.git("show", ":f.txt") == "a\nb\nc\nD\n"
 
 
-def test_unstage_include_first_group(two_group: GitHunkCLI) -> None:
+def test_unstage_include_first_group(*, two_group: GitHunkCLI) -> None:
     two_group.run_ok(
         "stage",
         _only_id(
@@ -74,7 +74,7 @@ def test_unstage_include_first_group(two_group: GitHunkCLI) -> None:
     assert two_group.repo.git("show", ":f.txt") == "a\nb\nc\nD\n"
 
 
-def test_unstage_exclude_first_group(two_group: GitHunkCLI) -> None:
+def test_unstage_exclude_first_group(*, two_group: GitHunkCLI) -> None:
     two_group.run_ok(
         "stage",
         _only_id(
@@ -94,7 +94,7 @@ def test_unstage_exclude_first_group(two_group: GitHunkCLI) -> None:
     assert two_group.repo.git("show", ":f.txt") == "a\nB\nc\nd\n"
 
 
-def test_discard_include_first_group(two_group: GitHunkCLI) -> None:
+def test_discard_include_first_group(*, two_group: GitHunkCLI) -> None:
     two_group.run_ok(
         "discard",
         _only_id(
@@ -107,7 +107,7 @@ def test_discard_include_first_group(two_group: GitHunkCLI) -> None:
     assert _working(cli=two_group) == "a\nb\nc\nD\n"
 
 
-def test_discard_exclude_first_group(two_group: GitHunkCLI) -> None:
+def test_discard_exclude_first_group(*, two_group: GitHunkCLI) -> None:
     two_group.run_ok(
         "discard",
         _only_id(
@@ -120,7 +120,7 @@ def test_discard_exclude_first_group(two_group: GitHunkCLI) -> None:
     assert _working(cli=two_group) == "a\nB\nc\nd\n"
 
 
-def test_full_round_trip(two_group: GitHunkCLI) -> None:
+def test_full_round_trip(*, two_group: GitHunkCLI) -> None:
     two_group.run_ok(
         "stage",
         _only_id(

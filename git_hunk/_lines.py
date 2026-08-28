@@ -23,7 +23,7 @@ def _parse_line_number(*, token: str) -> int:
     return n
 
 
-def parse_line_spec(spec: str, *, total: int) -> tuple[set[int], bool]:
+def parse_line_spec(spec: str, /, *, total: int) -> tuple[set[int], bool]:
     """Parse "-l" value into (line_numbers, exclude_mode).
 
     "3,5-7"   -> ({3, 5, 6, 7}, False)
@@ -101,8 +101,8 @@ def _parse_body_lines(*, body: list[str]) -> list[_BodyLine]:
     return parsed
 
 
-def count_hunk_body_lines(hunk: Hunk) -> int:
-    body = split_diff_body(diff=hunk.diff)
+def count_hunk_body_lines(hunk: Hunk, /) -> int:
+    body = split_diff_body(hunk.diff)
     return len(_parse_body_lines(body=body))
 
 
@@ -220,7 +220,7 @@ def _validate_group_selection(
 
 
 def resolve_matching_lines(
-    hunk: Hunk, patterns: Sequence[str], *, regex: bool
+    hunk: Hunk, patterns: Sequence[str], /, *, regex: bool
 ) -> set[int]:
     """Return 1-based body line numbers of changed lines matching any pattern.
 
@@ -243,7 +243,7 @@ def resolve_matching_lines(
             raise ValueError(f"invalid regex: {exc}") from exc
 
     selected: set[int] = set()
-    body = _parse_body_lines(body=split_diff_body(diff=hunk.diff))
+    body = _parse_body_lines(body=split_diff_body(hunk.diff))
     for line_num, line in enumerate(body, start=1):
         if line.prefix not in ("+", "-"):
             continue
@@ -263,6 +263,7 @@ def resolve_matching_lines(
 def filter_hunk_lines(
     hunk: Hunk,
     lines: set[int],
+    /,
     *,
     exclude: bool,
     reverse: bool = False,
@@ -276,7 +277,7 @@ def filter_hunk_lines(
     NEW content the index or working tree already holds.
     """
     header = hunk.diff.split("\n", 1)[0]
-    body = _parse_body_lines(body=split_diff_body(diff=hunk.diff))
+    body = _parse_body_lines(body=split_diff_body(hunk.diff))
     total = len(body)
 
     out_of_range = [n for n in lines if n < 1 or n > total]

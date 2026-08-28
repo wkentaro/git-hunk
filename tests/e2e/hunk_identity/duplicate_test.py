@@ -23,6 +23,7 @@ def _commit_prefixed_duplicate_blocks(*, cli: GitHunkCLI) -> list[str]:
 
 
 def test_duplicate_hunks_have_unique_conditional_ids(
+    *,
     duplicate_hunks: GitHunkCLI,
 ) -> None:
     hunks = duplicate_hunks.run_list_json("list", "--json")
@@ -33,6 +34,7 @@ def test_duplicate_hunks_have_unique_conditional_ids(
 
 
 def test_plain_output_marks_conditional_hunk_ids(
+    *,
     duplicate_hunks: GitHunkCLI,
 ) -> None:
     output = duplicate_hunks.run_ok("list")
@@ -41,6 +43,7 @@ def test_plain_output_marks_conditional_hunk_ids(
 
 
 def test_duplicate_ids_share_one_address_space_across_statuses(
+    *,
     duplicate_hunks: GitHunkCLI,
 ) -> None:
     before = duplicate_hunks.run_list_json("list", "--json")
@@ -63,6 +66,7 @@ def test_duplicate_ids_share_one_address_space_across_statuses(
 
 
 def test_duplicate_group_keeps_ids_when_a_non_member_is_committed(
+    *,
     duplicate_hunks: GitHunkCLI,
 ) -> None:
     # A Conditional Hunk ID survives a commit of a Hunk outside its group, so a
@@ -107,6 +111,7 @@ def test_duplicate_group_keeps_ids_when_a_non_member_is_committed(
 
 
 def test_staged_duplicate_member_ignores_unstaged_hunks_in_other_files(
+    *,
     duplicate_hunks: GitHunkCLI,
 ) -> None:
     # Ordering a Duplicate Hunk group's members adds the net line delta of the
@@ -162,6 +167,7 @@ def test_staged_duplicate_member_ignores_unstaged_hunks_in_other_files(
 
 
 def test_staged_duplicate_member_ignores_staged_hunks_ahead_of_it(
+    *,
     cli: GitHunkCLI,
 ) -> None:
     # Ordering a Duplicate Hunk group's members adds the net line delta of the
@@ -200,7 +206,7 @@ def test_staged_duplicate_member_ignores_staged_hunks_ahead_of_it(
 
 @pytest.mark.parametrize("ordinal", [0, 1])
 def test_duplicate_member_keeps_id_across_different_diff_coordinates(
-    cli: GitHunkCLI, ordinal: int
+    *, cli: GitHunkCLI, ordinal: int
 ) -> None:
     original = _commit_prefixed_duplicate_blocks(cli=cli)
     insertion = [f"inserted {number}" for number in range(100)]

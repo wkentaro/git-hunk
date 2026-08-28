@@ -1,7 +1,7 @@
 from .conftest import GitHunkCLI
 
 
-def test_discard_hunk(cli: GitHunkCLI) -> None:
+def test_discard_hunk(*, cli: GitHunkCLI) -> None:
     cli.repo.write_file("f.py", "old\n")
     cli.repo.git("add", ".")
     cli.repo.git("commit", "-m", "init")
@@ -19,7 +19,7 @@ def test_discard_hunk(cli: GitHunkCLI) -> None:
     assert content == "old\n"
 
 
-def test_discard_one_of_multiple(cli: GitHunkCLI) -> None:
+def test_discard_one_of_multiple(*, cli: GitHunkCLI) -> None:
     lines = [f"line{i}" for i in range(1, 21)]
     cli.repo.write_file("f.py", "\n".join(lines) + "\n")
     cli.repo.git("add", ".")
@@ -41,7 +41,7 @@ def test_discard_one_of_multiple(cli: GitHunkCLI) -> None:
     assert "CHANGED18" in content
 
 
-def test_discard_restores_from_index_not_head(cli: GitHunkCLI) -> None:
+def test_discard_restores_from_index_not_head(*, cli: GitHunkCLI) -> None:
     cli.repo.write_file("f.py", "line1\nline2\nline3\n")
     cli.repo.git("add", ".")
     cli.repo.git("commit", "-m", "init")
