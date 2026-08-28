@@ -79,14 +79,14 @@ Each task declares two independent forms of ground truth:
 
 The grader checks the first failed invariant in this order:
 
-| Check              | Required state                                                   | Failure reason       |
+| Check | Required state | Failure reason |
 | ------------------ | ---------------------------------------------------------------- | -------------------- |
-| Commit parses      | Every `.py` blob in each commit's own tree parses                | `broken-commit`      |
-| Partition          | Actual commits match the declared changed-line groups            | `partition`          |
-| Order              | Required before and after constraints hold                       | `order`              |
-| Final commit       | The complete `HEAD` tree matches the declared files              | `final-tree`         |
-| Index              | Its tree and exact paths equal `HEAD`                            | `leftover-index`     |
-| Tracked worktree   | Exact bytes and modes match the declared tracked state           | `leftover-worktree`  |
+| Commit parses | Every `.py` blob in each commit's own tree parses | `broken-commit` |
+| Partition | Actual commits match the declared changed-line groups | `partition` |
+| Order | Required before and after constraints hold | `order` |
+| Final commit | The complete `HEAD` tree matches the declared files | `final-tree` |
+| Index | Its tree and exact paths equal `HEAD` | `leftover-index` |
+| Tracked worktree | Exact bytes and modes match the declared tracked state | `leftover-worktree` |
 | Untracked worktree | Exact paths, bytes, and modes match the declared untracked state | `leftover-untracked` |
 
 The parse check is first because a partial selection that splits a syntactic

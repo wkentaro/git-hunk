@@ -29,11 +29,11 @@ and exposing simple stage/unstage/discard commands.
 
 ## Comparison
 
-|                  | Interactive | Programmatic | Hunk IDs | Line-level control | JSON output |
+| | Interactive | Programmatic | Hunk IDs | Line-level control | JSON output |
 | ---------------- | ----------- | ------------ | -------- | ------------------ | ----------- |
-| `git add -p`     | Yes         | No           | No       | Yes                | No          |
-| `git add <file>` | No          | Yes          | No       | No                 | No          |
-| **`git-hunk`**   | **No**      | **Yes**      | **Yes**  | **Yes**            | **Yes**     |
+| `git add -p` | Yes | No | No | Yes | No |
+| `git add <file>` | No | Yes | No | No | No |
+| **`git-hunk`** | **No** | **Yes** | **Yes** | **Yes** | **Yes** |
 
 ### Eval
 
@@ -46,17 +46,17 @@ grades the exact resulting repository state — commit partition and order, fina
 tree, index, and leftovers. This table records the qualifying run; `make eval`
 reruns the protocol and prints a table in the same format.
 
-| Task                                                                                                                                                    | git-hunk                            | bare Git                                        |
+| Task | git-hunk | bare Git |
 | ------------------------------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------- | ----------------------------------------------- |
-| [split_refactor_vs_feature](https://github.com/wkentaro/git-hunk/blob/0ef14bef657e187b5ab7283b0dbd64751a02736f/eval/tasks/split_refactor_vs_feature.py) | PASS 5/5 · 3c · 4t                  | PASS 5/5 · 3c [2-5] · 4t [3-6]                  |
-| [separate_mixed_hunks](https://github.com/wkentaro/git-hunk/blob/0ef14bef657e187b5ab7283b0dbd64751a02736f/eval/tasks/separate_mixed_hunks.py)           | PASS 5/5 · 3c · 4t                  | PASS 5/5 · 8c [7-12] · 9t [8-13]                |
-| [drop_debug_lines](https://github.com/wkentaro/git-hunk/blob/0ef14bef657e187b5ab7283b0dbd64751a02736f/eval/tasks/drop_debug_lines.py)                   | PASS 5/5 · 3c [3-4] · 4t [4-5]      | MIXED 4/5 partition · 8c [7-27] · 9t [8-28]     |
-| [protect_unrelated_work](https://github.com/wkentaro/git-hunk/blob/0ef14bef657e187b5ab7283b0dbd64751a02736f/eval/tasks/protect_unrelated_work.py)       | PASS 5/5 · 3c · 4t                  | PASS 5/5 · 3c [3-4] · 4t [4-5]                  |
-| [split_single_hunk](https://github.com/wkentaro/git-hunk/blob/0ef14bef657e187b5ab7283b0dbd64751a02736f/eval/tasks/split_single_hunk.py)                 | PASS 5/5 · 4c [3-4] · 5t [4-5]      | PASS 5/5 · 11c [9-19] · 12t [10-20]             |
-| [separate_formatter_noise](https://github.com/wkentaro/git-hunk/blob/0ef14bef657e187b5ab7283b0dbd64751a02736f/eval/tasks/separate_formatter_noise.py)   | PASS 5/5 · 4c [4-6] · 5t [5-7]      | PASS 5/5 · 13c [12-16] · 14t [13-17]            |
-| [pick_duplicate_hunk](https://github.com/wkentaro/git-hunk/blob/0ef14bef657e187b5ab7283b0dbd64751a02736f/eval/tasks/pick_duplicate_hunk.py)             | PASS 5/5 · 3c · 4t                  | PASS 5/5 · 8c [7-25] · 9t [8-26]                |
-| [commit_parseable_subset](https://github.com/wkentaro/git-hunk/blob/0ef14bef657e187b5ab7283b0dbd64751a02736f/eval/tasks/commit_parseable_subset.py)     | PASS 5/5 · 4c [3-5] · 5t [4-6]      | MIXED 4/5 partition · 13c [10-23] · 14t [11-24] |
-| **total**                                                                                                                                               | **8/8 · 27c [25-31] · 35t [33-39]** | **6/8 (2 mixed) · 67c [57-131] · 75t [65-139]** |
+| [split_refactor_vs_feature](https://github.com/wkentaro/git-hunk/blob/0ef14bef657e187b5ab7283b0dbd64751a02736f/eval/tasks/split_refactor_vs_feature.py) | PASS 5/5 · 3c · 4t | PASS 5/5 · 3c [2-5] · 4t [3-6] |
+| [separate_mixed_hunks](https://github.com/wkentaro/git-hunk/blob/0ef14bef657e187b5ab7283b0dbd64751a02736f/eval/tasks/separate_mixed_hunks.py) | PASS 5/5 · 3c · 4t | PASS 5/5 · 8c [7-12] · 9t [8-13] |
+| [drop_debug_lines](https://github.com/wkentaro/git-hunk/blob/0ef14bef657e187b5ab7283b0dbd64751a02736f/eval/tasks/drop_debug_lines.py) | PASS 5/5 · 3c [3-4] · 4t [4-5] | MIXED 4/5 partition · 8c [7-27] · 9t [8-28] |
+| [protect_unrelated_work](https://github.com/wkentaro/git-hunk/blob/0ef14bef657e187b5ab7283b0dbd64751a02736f/eval/tasks/protect_unrelated_work.py) | PASS 5/5 · 3c · 4t | PASS 5/5 · 3c [3-4] · 4t [4-5] |
+| [split_single_hunk](https://github.com/wkentaro/git-hunk/blob/0ef14bef657e187b5ab7283b0dbd64751a02736f/eval/tasks/split_single_hunk.py) | PASS 5/5 · 4c [3-4] · 5t [4-5] | PASS 5/5 · 11c [9-19] · 12t [10-20] |
+| [separate_formatter_noise](https://github.com/wkentaro/git-hunk/blob/0ef14bef657e187b5ab7283b0dbd64751a02736f/eval/tasks/separate_formatter_noise.py) | PASS 5/5 · 4c [4-6] · 5t [5-7] | PASS 5/5 · 13c [12-16] · 14t [13-17] |
+| [pick_duplicate_hunk](https://github.com/wkentaro/git-hunk/blob/0ef14bef657e187b5ab7283b0dbd64751a02736f/eval/tasks/pick_duplicate_hunk.py) | PASS 5/5 · 3c · 4t | PASS 5/5 · 8c [7-25] · 9t [8-26] |
+| [commit_parseable_subset](https://github.com/wkentaro/git-hunk/blob/0ef14bef657e187b5ab7283b0dbd64751a02736f/eval/tasks/commit_parseable_subset.py) | PASS 5/5 · 4c [3-5] · 5t [4-6] | MIXED 4/5 partition · 13c [10-23] · 14t [11-24] |
+| **total** | **8/8 · 27c [25-31] · 35t [33-39]** | **6/8 (2 mixed) · 67c [57-131] · 75t [65-139]** |
 
 `c` = tool calls, `t` = turns; a cell reports the median of its five repeats
 with the observed range in brackets, dropped where every repeat agreed, and the
@@ -286,32 +286,32 @@ body; `show --json` adds a structured `lines` array. A `show --json` hunk
 }
 ```
 
-| Field            | Type           | Description                                                                                                                                                                            |
+| Field | Type | Description |
 | ---------------- | -------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `schema_version` | int            | Envelope version; bumped on any incompatible change to the shape below.                                                                                                                |
-| `hunks`          | array          | The hunks (empty array when there are no changes).                                                                                                                                     |
-| `id`             | string         | Full canonical SHA-256 Hunk ID; empty for an `untracked` entry, which no command can address. Human output uses a unique prefix of at least seven characters.                          |
-| `id_stability`   | string         | `stable` or `conditional`. An untracked inventory entry reports `stable`, but its empty `id` remains unaddressable.                                                                    |
-| `file`           | union          | Repository path of the changed file, as a byte-safe `{text\|bytes}` union (see below).                                                                                                 |
-| `status`         | string         | One of `staged`, `unstaged`, `untracked`.                                                                                                                                              |
-| `change_kind`    | string         | Git status letter: `A` added, `D` deleted, `M` modified, `T` typechange (`R`/`C` reserved and currently rejected). Always present.                                                     |
-| `a_mode`         | string \| null | 6-digit octal git mode on the pre-image side; `null` when that side does not exist.                                                                                                    |
-| `b_mode`         | string \| null | 6-digit octal git mode on the post-image side; `null` when that side does not exist.                                                                                                   |
-| `binary`         | bool           | Whether the change is binary. Always present.                                                                                                                                          |
-| `header`         | string \| null | The bare `@@ -a,b +c,d @@` range for a text hunk; `null` for a whole-file hunk (binary, mode-only, type, or empty tracked file change) or an `untracked` inventory entry.              |
-| `context_before` | union \| null  | The function/section name after a text hunk's `@@` header, as a `{text\|bytes}` union; `null` for a text hunk without a heading, a whole-file hunk, or an `untracked` inventory entry. |
-| `additions`      | int            | Number of added lines.                                                                                                                                                                 |
-| `deletions`      | int            | Number of removed lines.                                                                                                                                                               |
-| `lines`          | array          | `show --json` only. The structured body; `[]` for a whole-file hunk. See below.                                                                                                        |
+| `schema_version` | int | Envelope version; bumped on any incompatible change to the shape below. |
+| `hunks` | array | The hunks (empty array when there are no changes). |
+| `id` | string | Full canonical SHA-256 Hunk ID; empty for an `untracked` entry, which no command can address. Human output uses a unique prefix of at least seven characters. |
+| `id_stability` | string | `stable` or `conditional`. An untracked inventory entry reports `stable`, but its empty `id` remains unaddressable. |
+| `file` | union | Repository path of the changed file, as a byte-safe `{text\|bytes}` union (see below). |
+| `status` | string | One of `staged`, `unstaged`, `untracked`. |
+| `change_kind` | string | Git status letter: `A` added, `D` deleted, `M` modified, `T` typechange (`R`/`C` reserved and currently rejected). Always present. |
+| `a_mode` | string | null | 6-digit octal git mode on the pre-image side; `null` when that side does not exist. |
+| `b_mode` | string | null | 6-digit octal git mode on the post-image side; `null` when that side does not exist. |
+| `binary` | bool | Whether the change is binary. Always present. |
+| `header` | string | null | The bare `@@ -a,b +c,d @@` range for a text hunk; `null` for a whole-file hunk (binary, mode-only, type, or empty tracked file change) or an `untracked` inventory entry. |
+| `context_before` | union | null | The function/section name after a text hunk's `@@` header, as a `{text\|bytes}` union; `null` for a text hunk without a heading, a whole-file hunk, or an `untracked` inventory entry. |
+| `additions` | int | Number of added lines. |
+| `deletions` | int | Number of removed lines. |
+| `lines` | array | `show --json` only. The structured body; `[]` for a whole-file hunk. See below. |
 
 A `lines` entry is `{ "n", "op", "content", "no_newline"? }`:
 
-| Field        | Type   | Description                                                                                         |
+| Field | Type | Description |
 | ------------ | ------ | --------------------------------------------------------------------------------------------------- |
-| `n`          | int    | 1-based position within the hunk body — the index `-l` line selection uses. Counts every body line. |
-| `op`         | string | `" "` context, `"+"` addition, `"-"` deletion.                                                      |
-| `content`    | union  | The line text **without** its leading op character, as a `{text\|bytes}` union.                     |
-| `no_newline` | bool   | Present and `true` only when the line has no trailing newline; consumes no `n`.                     |
+| `n` | int | 1-based position within the hunk body — the index `-l` line selection uses. Counts every body line. |
+| `op` | string | `" "` context, `"+"` addition, `"-"` deletion. |
+| `content` | union | The line text **without** its leading op character, as a `{text\|bytes}` union. |
+| `no_newline` | bool | Present and `true` only when the line has no trailing newline; consumes no `n`. |
 
 Any field carrying arbitrary git/source bytes (`file`, `context_before`,
 `lines[].content`) is a byte-safe `{text | bytes}` union: `{"text": "..."}` for

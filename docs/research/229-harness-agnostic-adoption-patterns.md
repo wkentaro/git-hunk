@@ -25,13 +25,13 @@ targets.
 
 ## Pattern summary table
 
-| #   | Pattern                                                                                               | Adoption evidence strength                                                       | git-hunk today                                                                                                                                           |
+| # | Pattern | Adoption evidence strength | git-hunk today |
 | --- | ----------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| 1   | Plain CLI + instruction-file conventions (AGENTS.md / CLAUDE.md / rules)                              | Strong for famous tools (gh, jq, git); weak for new tools                        | README "For AI agents" section; no prescribed AGENTS.md/CLAUDE.md snippet                                                                                |
-| 2   | Harness bundling / special-casing                                                                     | Strongest driver (ripgrep, uv/ruff in codex-universal)                           | None; not actionable by a tool author                                                                                                                    |
-| 3   | MCP wrapper                                                                                           | Weak unless bundled by a harness (github-mcp-server in Copilot is the exception) | None                                                                                                                                                     |
-| 4   | Skills in the Agent Skills open standard (files on disk; optionally a Claude Code plugin/marketplace) | Emerging, real but modest traction (ast-grep, Astral)                            | Two spec-shaped SKILL.md files bundled in the package, but no documented path onto disk in `.agents/skills/` or `.claude/skills/`; no plugin/marketplace |
-| 5   | Skill text served by the CLI itself (`git-hunk skills get`)                                           | No harness formalizes it; works today via shell in every harness                 | Fully built: `skills list/get/path`, `--json`, `--help` pointer                                                                                          |
+| 1 | Plain CLI + instruction-file conventions (AGENTS.md / CLAUDE.md / rules) | Strong for famous tools (gh, jq, git); weak for new tools | README "For AI agents" section; no prescribed AGENTS.md/CLAUDE.md snippet |
+| 2 | Harness bundling / special-casing | Strongest driver (ripgrep, uv/ruff in codex-universal) | None; not actionable by a tool author |
+| 3 | MCP wrapper | Weak unless bundled by a harness (github-mcp-server in Copilot is the exception) | None |
+| 4 | Skills in the Agent Skills open standard (files on disk; optionally a Claude Code plugin/marketplace) | Emerging, real but modest traction (ast-grep, Astral) | Two spec-shaped SKILL.md files bundled in the package, but no documented path onto disk in `.agents/skills/` or `.claude/skills/`; no plugin/marketplace |
+| 5 | Skill text served by the CLI itself (`git-hunk skills get`) | No harness formalizes it; works today via shell in every harness | Fully built: `skills list/get/path`, `--json`, `--help` pointer |
 
 ## Part 1 — How each harness discovers third-party tools
 

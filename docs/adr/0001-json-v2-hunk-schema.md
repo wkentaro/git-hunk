@@ -52,12 +52,12 @@ consistent with the per-line `op` field's git-native single chars (see §6).
 (`"100644"`, `"100755"`, `"120000"`, …), not a decimal int. **Always present**, `null`
 when that side does not exist:
 
-| case                        | a_mode     | b_mode     |
+| case | a_mode | b_mode |
 | --------------------------- | ---------- | ---------- |
-| modify                      | `"100644"` | `"100644"` |
-| chmod                       | `"100644"` | `"100755"` |
-| added                       | `null`     | `"100644"` |
-| deleted                     | `"100644"` | `null`     |
+| modify | `"100644"` | `"100644"` |
+| chmod | `"100644"` | `"100755"` |
+| added | `null` | `"100644"` |
+| deleted | `"100644"` | `null` |
 | typechange (file → symlink) | `"100644"` | `"120000"` |
 
 A mode change is simply `a_mode != b_mode`; the UI derives the "Mode 100644 → 100755"
