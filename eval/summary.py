@@ -238,17 +238,13 @@ def _format_spread(
     return f"{center} [{minimum}-{maximum}]"
 
 
-# The two renderers below take their value positionally, unlike the rest of this
-# module, because `_format_spread` accepts one as a plain `Callable[[float], str]`.
-
-
-def _format_count(value: float) -> str:  # noqa: GR001 -- numeric formatter callback
+def _format_count(value: float, /) -> str:
     # An even number of repeats can put the median between two samples; keeping
     # the half shows that rather than rounding it away.
     return str(int(value)) if float(value).is_integer() else f"{value:.1f}"
 
 
-def _format_cost(value: float) -> str:  # noqa: GR001 -- numeric formatter callback
+def _format_cost(value: float, /) -> str:
     if 0 < value < _ROUNDS_TO_ZERO_USD:
         return "<$0.01"
     return f"${value:.2f}"
