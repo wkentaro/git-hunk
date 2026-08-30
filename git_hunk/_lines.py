@@ -169,21 +169,13 @@ def _render_body_lines(*, kept: list[_BodyLine]) -> list[str]:
     return rendered
 
 
-def _validate_group(
+def _reject_partial_group(
     *, group: list[tuple[int, str]], selected: set[int], allow_one_sided: bool
 ) -> None:
-    """Reject a partial subset of a grouped replacement.
-
-    Git pairs no old line with any new line inside a run of changed lines, so a
-    subset of a replacement wider than one-for-one has no defined meaning. Pure
-    additions and pure deletions stay unrestricted.
-
-    A one-for-one replacement has a defined half, but taking one is almost never
-    what the caller meant: it leaves the old line deleted with nothing put back,
-    or the new line added beside the old one. Reject it unless the caller asks
-    for that half deliberately with allow_one_sided; the wider grouped
-    replacement stays a hard error either way.
-    """
+    # Git pairs no old line with any new line inside a changed run, so a partial
+    # replacement wider than one-for-one has no defined meaning. A one-for-one
+    # replacement has defined halves, but requires an explicit opt-in because
+    # selecting one usually leaves a deletion or duplicate line behind.
     deletions = sum(prefix == "-" for _, prefix in group)
     additions = sum(prefix == "+" for _, prefix in group)
     if not deletions or not additions:
@@ -214,9 +206,13 @@ def _validate_group_selection(
         if line.prefix in ("+", "-"):
             group.append((line_num, line.prefix))
             continue
-        _validate_group(group=group, selected=selected, allow_one_sided=allow_one_sided)
+        _reject_partial_group(
+            group=group, selected=selected, allow_one_sided=allow_one_sided
+        )
         group = []
-    _validate_group(group=group, selected=selected, allow_one_sided=allow_one_sided)
+    _reject_partial_group(
+        group=group, selected=selected, allow_one_sided=allow_one_sided
+    )
 
 
 def resolve_matching_lines(

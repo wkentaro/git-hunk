@@ -376,8 +376,7 @@ def whole_file_hunk(
     )
 
 
-def _block_modes(*, file_diff: str) -> tuple[str, str | None, str | None]:
-    """Derive (change_kind, a_mode, b_mode) from one file diff's header lines."""
+def _parse_file_change(*, file_diff: str) -> tuple[str, str | None, str | None]:
     new_file = re.search(r"^new file mode (\d+)", file_diff, flags=re.MULTILINE)
     if new_file:
         return "A", None, new_file.group(1)
@@ -427,14 +426,14 @@ def parse_diff(diff_output: str, /) -> list[Hunk]:
             i += 1
             continue
 
-        change_kind, a_mode, b_mode = _block_modes(file_diff=file_diff)
+        change_kind, a_mode, b_mode = _parse_file_change(file_diff=file_diff)
         a_object_id, b_object_id = _extract_block_object_ids(file_diff=file_diff)
 
         # git emits a type change (e.g. file -> symlink) as two consecutive blocks
         # for the same path: a delete of the old type then an add of the new one.
         next_diff = file_diffs[i + 1] if i + 1 < len(file_diffs) else None
         if change_kind == "D" and next_diff is not None:
-            next_kind, _, new_b_mode = _block_modes(file_diff=next_diff)
+            next_kind, _, new_b_mode = _parse_file_change(file_diff=next_diff)
             if next_kind == "A" and extract_file_path(next_diff) == filepath:
                 _, new_object_id = _extract_block_object_ids(file_diff=next_diff)
                 hunks.append(

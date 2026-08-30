@@ -29,7 +29,6 @@ _REPEAT_CAVEAT: Final = (
 
 
 def _run_eval_cli(*args: str) -> subprocess.CompletedProcess[str]:
-    """Invoke the runner as a user does, from the checkout root."""
     return subprocess.run(
         [sys.executable, "-m", "eval", *args],
         capture_output=True,
@@ -112,12 +111,6 @@ def _install_fake_run(
     monotonic: Callable[[], float],
     prepared_tasks: list[str] | None,
 ) -> EvalEnvironment:
-    """Drive `_run_scenarios` without a model: fake solver, grade, and clock.
-
-    `prepared_tasks` collects the name of every task the runner prepares, so a
-    caller can check that repeats share one prepared initial state.
-    """
-
     def make_solver(
         *,
         task: Task,
