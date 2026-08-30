@@ -84,7 +84,7 @@ class CliError(Exception):
 class CliGroup(click.Group):
     def resolve_command(
         self, ctx: click.Context, args: list[str]
-    ) -> tuple[str | None, click.Command | None, list[str]]:  # noqa: GR001 -- framework override
+    ) -> tuple[str | None, click.Command | None, list[str]]:  # noqa: GR005 -- framework override
         try:
             return super().resolve_command(ctx, args)
         except click.UsageError:
@@ -93,7 +93,7 @@ class CliGroup(click.Group):
                 f"unrecognized subcommand '{cmd_name}'", usage=USAGE
             ) from None
 
-    def invoke(self, ctx: click.Context) -> None:  # noqa: GR001 -- framework override
+    def invoke(self, ctx: click.Context) -> None:  # noqa: GR005 -- framework override
         try:
             super().invoke(ctx)
         except CliError as exc:
