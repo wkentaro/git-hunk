@@ -243,10 +243,10 @@ def resolve_matching_lines(
     for line_num, line in enumerate(body, start=1):
         if line.prefix not in ("+", "-"):
             continue
-        if compiled is not None:
-            matched = any(pattern.search(line.text) for pattern in compiled)
-        else:
+        if compiled is None:
             matched = any(pattern in line.text for pattern in patterns)
+        else:
+            matched = any(pattern.search(line.text) for pattern in compiled)
         if matched:
             selected.add(line_num)
 

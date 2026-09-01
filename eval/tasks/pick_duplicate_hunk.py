@@ -54,10 +54,11 @@ def _find_hunk_under(*, repo: GitRepo, function_line: str) -> str:
     # each hunk; the fixture's layout is load-bearing for that.
     for hunk in list_hunks(repo, "handlers.py"):
         context = hunk["context_before"]
-        if context is not None and context.get("text") == function_line:
-            if hunk["id_stability"] != "conditional":
-                raise RuntimeError("handlers.py no longer holds a Duplicate Hunk group")
-            return str(hunk["id"])
+        if context is None or context.get("text") != function_line:
+            continue
+        if hunk["id_stability"] != "conditional":
+            raise RuntimeError("handlers.py no longer holds a Duplicate Hunk group")
+        return str(hunk["id"])
     raise RuntimeError(f"no hunk in handlers.py sits under {function_line!r}")
 
 
