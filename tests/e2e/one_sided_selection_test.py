@@ -10,16 +10,12 @@ from .conftest import GitHunkCLI
 # body lines are 1=" def fetch(...)", 2="-...session.get(url)",
 # 3="+...session.get(url, timeout=30)": a one-for-one replacement pair.
 
-_HEAD: Final = "def fetch(session, url):\n    return session.get(url)\n"
 _WORKING: Final = "def fetch(session, url):\n    return session.get(url, timeout=30)\n"
 
 # `session.get(url)` matches only the deleted line: the added line continues
 # with a comma, so it has no `url)` substring. That is exactly the trap #225
 # describes.
 _ONE_SIDED_PATTERN: Final = "session.get(url)"
-# `session.get(url` matches both sides of the pair.
-_BOTH_SIDES_PATTERN: Final = "session.get(url"
-
 _ONE_SIDED_SELECTORS: Final = pytest.mark.parametrize(
     "selector",
     [
@@ -34,7 +30,8 @@ _ONE_SIDED_SELECTORS: Final = pytest.mark.parametrize(
 
 @pytest.fixture
 def one_for_one(*, cli: GitHunkCLI) -> GitHunkCLI:
-    cli.repo.write_file("client.py", _HEAD)
+    HEAD: Final = "def fetch(session, url):\n    return session.get(url)\n"
+    cli.repo.write_file("client.py", HEAD)
     cli.repo.git("add", "client.py")
     cli.repo.git("commit", "-m", "init")
     cli.repo.write_file("client.py", _WORKING)
@@ -250,13 +247,15 @@ def test_dry_run_with_allow_one_sided_previews_without_mutating(
 
 
 def test_pattern_matching_both_lines_needs_no_flag(*, one_for_one: GitHunkCLI) -> None:
+    # `session.get(url` matches both sides of the pair.
+    BOTH_SIDES_PATTERN: Final = "session.get(url"
     cli = one_for_one
 
     cli.run_ok(
         "stage",
         cli.get_only_hunk_id("--unstaged"),
         "--include-matching",
-        _BOTH_SIDES_PATTERN,
+        BOTH_SIDES_PATTERN,
     )
 
     assert cli.repo.git("show", ":client.py") == _WORKING

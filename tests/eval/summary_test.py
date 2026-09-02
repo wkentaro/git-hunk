@@ -17,10 +17,6 @@ _CACHE_CAVEAT: Final = (
     "bare-git runs second and may read cache written by the git-hunk run; "
     "costs are not order-neutral."
 )
-_REPEAT_CAVEAT: Final = (
-    "Only the first repeat starts cold, so a cost range mixes cache warmup with "
-    "run-to-run noise."
-)
 
 
 def _make_usage(*, turns: int, cost_usd: float) -> TraceUsage:
@@ -313,6 +309,10 @@ def test_render_summary_lists_only_reasons_that_occurred_in_grader_order() -> No
 
 
 def test_render_summary_reports_a_median_and_range_over_repeats() -> None:
+    REPEAT_CAVEAT: Final = (
+        "Only the first repeat starts cold, so a cost range mixes cache warmup with "
+        "run-to-run noise."
+    )
     runs = [
         *_make_repeats(
             scenario=SCENARIOS[0],
@@ -374,7 +374,7 @@ def test_render_summary_reports_a_median_and_range_over_repeats() -> None:
         "| **0/2 (1 mixed) · 34c [32-37] "
         "· 36t [34-39] · $0.61 [$0.57-$0.65]**          |",
         "",
-        f"{_CACHE_CAVEAT} {_REPEAT_CAVEAT}",
+        f"{_CACHE_CAVEAT} {REPEAT_CAVEAT}",
         "",
         f"- order: {REASON_LEGEND['order']}",
         f"- leftover-worktree: {REASON_LEGEND['leftover-worktree']}",

@@ -139,19 +139,17 @@ def test_keep_deletion_drops_no_newline_marker_from_dropped_addition(
     assert result.deletions == 1
 
 
-_REVERSE_NEW_SIDE_NO_NEWLINE: Final = (
-    f"@@ -1,4 +1,4 @@\n a\n-b\n+B\n c\n-d\n+D\n{NO_NEWLINE_MARKER}"
-)
-
-
 def test_reverse_keeps_no_newline_new_context_without_split(
     *,
     make_hunk: Callable[[str], Hunk],
 ) -> None:
+    REVERSE_NEW_SIDE_NO_NEWLINE: Final = (
+        f"@@ -1,4 +1,4 @@\n a\n-b\n+B\n c\n-d\n+D\n{NO_NEWLINE_MARKER}"
+    )
     # Reverse keeps the unselected '+D' (new-side EOF, no trailing newline) as
     # context. It is always the last body line, so its marker stays put and it
     # never splits: the '+'-origin split branch of _render_body_lines is dead.
-    hunk = make_hunk(_REVERSE_NEW_SIDE_NO_NEWLINE)
+    hunk = make_hunk(REVERSE_NEW_SIDE_NO_NEWLINE)
     result = filter_hunk_lines(
         hunk, {3}, exclude=False, reverse=True, allow_one_sided=True
     )

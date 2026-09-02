@@ -11,24 +11,23 @@ from git_hunk._cli import JSON_SCHEMA_VERSION
 
 from .conftest import GitHunkCLI
 
-_REQUIRED_HUNK_KEYS: Final = {
-    "id",
-    "id_stability",
-    "file",
-    "status",
-    "change_kind",
-    "a_mode",
-    "b_mode",
-    "binary",
-    "header",
-    "context_before",
-    "additions",
-    "deletions",
-}
-_STATUSES: Final = {"staged", "unstaged", "untracked"}
-
 
 def test_json_envelope_contract(*, cli: GitHunkCLI) -> None:
+    REQUIRED_HUNK_KEYS: Final = {
+        "id",
+        "id_stability",
+        "file",
+        "status",
+        "change_kind",
+        "a_mode",
+        "b_mode",
+        "binary",
+        "header",
+        "context_before",
+        "additions",
+        "deletions",
+    }
+    STATUSES: Final = {"staged", "unstaged", "untracked"}
     cli.repo.write_file("f.py", "old\n")
     cli.repo.git("add", ".")
     cli.repo.git("commit", "-m", "init")
@@ -39,8 +38,8 @@ def test_json_envelope_contract(*, cli: GitHunkCLI) -> None:
     hunks = cast("list[dict[str, Any]]", envelope["hunks"])
     assert hunks
     for hunk in hunks:
-        assert _REQUIRED_HUNK_KEYS <= hunk.keys()
-        assert hunk["status"] in _STATUSES
+        assert REQUIRED_HUNK_KEYS <= hunk.keys()
+        assert hunk["status"] in STATUSES
         assert "diff" not in hunk
         assert "lines" not in hunk
 

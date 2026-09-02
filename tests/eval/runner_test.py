@@ -22,10 +22,6 @@ _CACHE_CAVEAT: Final = (
     "bare-git runs second and may read cache written by the git-hunk run; "
     "costs are not order-neutral."
 )
-_REPEAT_CAVEAT: Final = (
-    "Only the first repeat starts cold, so a cost range mixes cache warmup with "
-    "run-to-run noise."
-)
 
 
 def _run_eval_cli(*args: str) -> subprocess.CompletedProcess[str]:
@@ -68,22 +64,6 @@ def test_runner_rejects_model_override_before_running_tasks() -> None:
     assert "unrecognized arguments: --model opus" in result.stderr
 
 
-_RESULT_EVENT: Final[dict[str, Any]] = {
-    "type": "result",
-    "subtype": "success",
-    "duration_ms": 22670,
-    "duration_api_ms": 22618,
-    "num_turns": 8,
-    "total_cost_usd": 0.0891406,
-    "usage": {
-        "input_tokens": 16,
-        "cache_creation_input_tokens": 8434,
-        "cache_read_input_tokens": 59782,
-        "output_tokens": 1327,
-    },
-    "modelUsage": {},
-}
-
 _TOOL_USE_EVENTS: Final[list[dict[str, Any]]] = [
     {
         "type": "assistant",
@@ -111,6 +91,22 @@ def _install_fake_run(
     monotonic: Callable[[], float],
     prepared_tasks: list[str] | None,
 ) -> EvalEnvironment:
+    RESULT_EVENT: Final[dict[str, Any]] = {
+        "type": "result",
+        "subtype": "success",
+        "duration_ms": 22670,
+        "duration_api_ms": 22618,
+        "num_turns": 8,
+        "total_cost_usd": 0.0891406,
+        "usage": {
+            "input_tokens": 16,
+            "cache_creation_input_tokens": 8434,
+            "cache_read_input_tokens": 59782,
+            "output_tokens": 1327,
+        },
+        "modelUsage": {},
+    }
+
     def make_solver(
         *,
         task: Task,
@@ -126,7 +122,7 @@ def _install_fake_run(
             trace_path.write_text(
                 "".join(
                     f"{json.dumps(event)}\n"
-                    for event in (*_TOOL_USE_EVENTS, _RESULT_EVENT)
+                    for event in (*_TOOL_USE_EVENTS, RESULT_EVENT)
                 ),
                 encoding="utf-8",
             )
@@ -278,6 +274,10 @@ def test_run_samples_each_variant_repeatedly_from_one_prepared_task(
     monkeypatch: pytest.MonkeyPatch,
     capsys: pytest.CaptureFixture[str],
 ) -> None:
+    REPEAT_CAVEAT: Final = (
+        "Only the first repeat starts cold, so a cost range mixes cache warmup with "
+        "run-to-run noise."
+    )
     run_dir = tmp_path / "run"
     run_dir.mkdir()
     pending = [
@@ -336,7 +336,7 @@ def test_run_samples_each_variant_repeatedly_from_one_prepared_task(
         for variant in ("git-hunk", "bare-git")
     ]
     assert len({task["trace_sha256"] for task in manifest["tasks"]}) == 1
-    assert f"{_CACHE_CAVEAT} {_REPEAT_CAVEAT}" in output.out
+    assert f"{_CACHE_CAVEAT} {REPEAT_CAVEAT}" in output.out
 
 
 def test_run_gates_on_every_repeat_of_the_subject_variant(

@@ -7,14 +7,14 @@ import pytest
 from .conftest import GitHunkCLI
 
 # 0xe9 is "é" in Latin-1 and an invalid standalone UTF-8 byte.
-_BEFORE: Final = b"pass\xe9\nline2\n"
 _AFTER: Final = b"pass\xe9\nLINE2\n"
 
 
 @pytest.fixture
 def latin1_repo(*, cli: GitHunkCLI) -> GitHunkCLI:
+    BEFORE: Final = b"pass\xe9\nline2\n"
     path = Path(cli.repo.path) / "latin1.txt"
-    path.write_bytes(_BEFORE)
+    path.write_bytes(BEFORE)
     cli.repo.git("add", ".")
     cli.repo.git("commit", "-m", "init")
     path.write_bytes(_AFTER)

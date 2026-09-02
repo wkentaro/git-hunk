@@ -11,22 +11,23 @@ from eval.task import Task
 from eval.task import make_file
 
 _VALIDATE_LINE: Final = "        validate(message)"
-_HANDLER_TEMPLATE: Final = (
-    "def {name}(batch):\n"
-    "    for message in batch:\n"
-    "        log(message)\n"
-    "        decode(message)\n"
-    "{validate}"
-    "        process(message)\n"
-    "        ack(message)\n"
-    "        done(message)\n"
-)
 
 
 def _handlers(*, orders_validated: bool, refunds_validated: bool) -> str:
+    HANDLER_TEMPLATE: Final = (
+        "def {name}(batch):\n"
+        "    for message in batch:\n"
+        "        log(message)\n"
+        "        decode(message)\n"
+        "{validate}"
+        "        process(message)\n"
+        "        ack(message)\n"
+        "        done(message)\n"
+    )
+
     def handler(*, name: str, validated: bool) -> str:
         validate = f"{_VALIDATE_LINE}\n" if validated else ""
-        return _HANDLER_TEMPLATE.format(name=name, validate=validate)
+        return HANDLER_TEMPLATE.format(name=name, validate=validate)
 
     return (
         handler(name="handle_orders", validated=orders_validated)
