@@ -9,16 +9,6 @@ from eval.grader import FailureReason
 from eval.model import TaskRun
 from eval.model import TraceUsage
 
-_CACHE_CAVEAT: Final = (
-    "{second} runs second and may read cache written by the {first} run; "
-    "costs are not order-neutral."
-)
-
-_REPEAT_CAVEAT: Final = (
-    "Only the first repeat starts cold, so a cost range mixes cache warmup with "
-    "run-to-run noise."
-)
-
 REASON_LEGEND: Final[dict[FailureReason, str]] = {
     "broken-commit": "a commit leaves a Python file that does not parse",
     "partition": "commits do not match the required change groups",
@@ -31,10 +21,6 @@ REASON_LEGEND: Final[dict[FailureReason, str]] = {
 }
 
 _MISSING_METRICS: Final = "—"
-
-# A cost strictly below this rounds to $0.00 at cent precision, which would read
-# as free rather than as cheap.
-_ROUNDS_TO_ZERO_USD: Final = 0.005
 
 
 @dataclasses.dataclass(frozen=True)
@@ -100,6 +86,14 @@ class _Metrics:
 def render_summary(*, runs: list[TaskRun]) -> str:
     if not runs:
         return ""
+    CACHE_CAVEAT: Final = (
+        "{second} runs second and may read cache written by the {first} run; "
+        "costs are not order-neutral."
+    )
+    REPEAT_CAVEAT: Final = (
+        "Only the first repeat starts cold, so a cost range mixes cache warmup with "
+        "run-to-run noise."
+    )
     variant_names = _unique_in_order(values=(run.variant.name for run in runs))
     task_names = _unique_in_order(values=(run.scenario.task.name for run in runs))
     cells: dict[tuple[str, str], list[TaskRun]] = {}
@@ -137,9 +131,9 @@ def render_summary(*, runs: list[TaskRun]) -> str:
     COMPARISON_VARIANT_COUNT: Final = 2
     if len(variant_names) == COMPARISON_VARIANT_COUNT:
         first, second = variant_names
-        caveats.append(_CACHE_CAVEAT.format(first=first, second=second))
+        caveats.append(CACHE_CAVEAT.format(first=first, second=second))
     if any(len(cell) > 1 for cell in cells.values()):
-        caveats.append(_REPEAT_CAVEAT)
+        caveats.append(REPEAT_CAVEAT)
     if caveats:
         # One paragraph, not one line each: consecutive bare lines would render
         # as a single paragraph anyway, so join them deliberately.
@@ -245,7 +239,10 @@ def _format_count(value: float, /) -> str:
 
 
 def _format_cost(value: float, /) -> str:
-    if 0 < value < _ROUNDS_TO_ZERO_USD:
+    # A cost strictly below this rounds to $0.00 at cent precision, which would
+    # read as free rather than as cheap.
+    ROUNDS_TO_ZERO_USD: Final = 0.005
+    if 0 < value < ROUNDS_TO_ZERO_USD:
         return "<$0.01"
     return f"${value:.2f}"
 

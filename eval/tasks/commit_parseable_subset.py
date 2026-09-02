@@ -26,28 +26,6 @@ _MESSAGE: Final = "Skip voided rows"
 # them also swallows line 6, so all three tempting selections stage a file that
 # no longer parses.
 _KEEP_LINES: Final = "4,6"
-_DEBUG_PATTERN: Final = 'print("DEBUG"'
-_STRANDING_RANGE: Final = "^5-8"
-
-_BASE: Final = (
-    "def summarize(rows):\n"
-    "    total = 0\n"
-    "    for row in rows:\n"
-    "        total += row.amount\n"
-    "    return total\n"
-)
-_DIRTY: Final = (
-    "def summarize(rows):\n"
-    "    total = 0\n"
-    "    for row in rows:\n"
-    "        if row.voided:\n"
-    '            print("DEBUG", "voided", row)\n'
-    "            continue\n"
-    "        if total > 1000:\n"
-    '            print("DEBUG", "large total", total)\n'
-    "        total += row.amount\n"
-    "    return total\n"
-)
 _FINAL: Final = (
     "def summarize(rows):\n"
     "    total = 0\n"
@@ -60,10 +38,29 @@ _FINAL: Final = (
 
 
 def _build(repo: GitRepo, /) -> None:
-    repo.write_file(name=_PATH, content=_BASE)
+    BASE: Final = (
+        "def summarize(rows):\n"
+        "    total = 0\n"
+        "    for row in rows:\n"
+        "        total += row.amount\n"
+        "    return total\n"
+    )
+    DIRTY: Final = (
+        "def summarize(rows):\n"
+        "    total = 0\n"
+        "    for row in rows:\n"
+        "        if row.voided:\n"
+        '            print("DEBUG", "voided", row)\n'
+        "            continue\n"
+        "        if total > 1000:\n"
+        '            print("DEBUG", "large total", total)\n'
+        "        total += row.amount\n"
+        "    return total\n"
+    )
+    repo.write_file(name=_PATH, content=BASE)
     repo.git("add", _PATH)
     repo.git("commit", "-m", "Initial state")
-    repo.write_file(name=_PATH, content=_DIRTY)
+    repo.write_file(name=_PATH, content=DIRTY)
 
 
 def _single_hunk_id(*, repo: GitRepo) -> str:
@@ -94,17 +91,19 @@ def _golden(repo: GitRepo, /) -> None:
 
 
 def _commit_without_matching_debug_lines(repo: GitRepo, /) -> None:
+    DEBUG_PATTERN: Final = 'print("DEBUG"'
     _commit_selection(
         "--exclude-matching",
-        _DEBUG_PATTERN,
+        DEBUG_PATTERN,
         repo=repo,
     )
 
 
 def _commit_without_the_debug_range(repo: GitRepo, /) -> None:
+    STRANDING_RANGE: Final = "^5-8"
     _commit_selection(
         "-l",
-        _STRANDING_RANGE,
+        STRANDING_RANGE,
         repo=repo,
     )
 
