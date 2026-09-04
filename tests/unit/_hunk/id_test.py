@@ -153,6 +153,24 @@ def test_staged_position_reads_a_peer_start_from_its_pre_image_side() -> None:
     assert result[1].id == _hash_id("conditional", group_id, "0")
 
 
+def test_staged_position_counts_only_same_start_pure_insertion() -> None:
+    group_id = "a" * 64
+    staged = _make_hunk(hunk_id=group_id, header="@@ -20 +20 @@", status="staged")
+    group_peer = _make_hunk(hunk_id=group_id, header="@@ -21 +21 @@", status="unstaged")
+    insertion = _make_hunk(
+        hunk_id="b" * 64, header="@@ -20,0 +21,2 @@", status="unstaged"
+    )
+    replacement = _make_hunk(
+        hunk_id="b" * 64, header="@@ -20 +20,3 @@", status="unstaged"
+    )
+
+    with_insertion = assign_hunk_ids([staged, group_peer, insertion])
+    with_replacement = assign_hunk_ids([staged, group_peer, replacement])
+
+    assert with_insertion[0].id == _hash_id("conditional", group_id, "1")
+    assert with_replacement[0].id == _hash_id("conditional", group_id, "0")
+
+
 def test_single_group_member_uses_stable_base_id() -> None:
     base_id = "a" * 64
     hunk = _make_hunk(hunk_id=base_id, header="@@ -1 +1 @@", status="unstaged")
