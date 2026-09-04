@@ -9,6 +9,16 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 
 <!-- towncrier release notes start -->
 
+## 0.4.0 - 2026-09-04
+
+### Added
+
+- Suggest the worktree-root-relative Repository path when a mutation command is given a changed path relative to its invocation directory ([#290](https://github.com/wkentaro/git-hunk/pull/290))
+
+### Changed
+
+- Explain exact-path semantics and shell-expanded glob guidance when a mutation operand names a directory containing eligible changes. ([#291](https://github.com/wkentaro/git-hunk/pull/291))
+
 ## 0.3.1 - 2026-09-04
 
 ### Fixed
