@@ -6,6 +6,7 @@ import stat
 from collections.abc import Callable
 from dataclasses import dataclass
 from dataclasses import replace
+from pathlib import Path
 from typing import Final
 
 import click
@@ -248,9 +249,11 @@ def _select_hunks(
     targets: list[_Target],
     inventory_hunks: list[Hunk],
     invocation_prefix: str,
+    worktree_root: str,
 ) -> list[Hunk]:
     files = {h.file for h in hunks}
     eligible_ids = {hunk.id for hunk in hunks}
+    resolved_worktree_root = Path(worktree_root).resolve()
     selected: list[Hunk] = []
     seen: set[str] = set()
     for target in targets:
@@ -263,6 +266,20 @@ def _select_hunks(
             if matches[0].id not in eligible_ids:
                 raise CliError(f"hunk '{target.arg}' is not eligible for this command")
         else:
+            operand_path = resolved_worktree_root / target.path
+            if (
+                operand_path.is_dir()
+                and operand_path.resolve().is_relative_to(resolved_worktree_root)
+                and any(
+                    target.path == "." or path.startswith(f"{target.path}/")
+                    for path in files
+                )
+            ):
+                raise CliError(
+                    f"directory operands are not expanded: '{target.arg}'",
+                    tip="pass exact Repository paths (a shell-expanded glob is "
+                    "acceptable when it covers the intended tracked files)",
+                )
             suggested_path = posixpath.normpath(
                 posixpath.join(invocation_prefix, target.path)
             )
@@ -397,6 +414,7 @@ def _apply_selection(
         targets=targets,
         inventory_hunks=inventory.hunks,
         invocation_prefix=invocation_prefix,
+        worktree_root=worktree_root,
     )
     selected = _apply_line_filter(hunks=selected, selection=selection, reverse=reverse)
 
