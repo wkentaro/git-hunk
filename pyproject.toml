@@ -67,9 +67,25 @@ dev = [
   "pytest>=7",
   "ruff>=0.15.9",
   "taplo>=0.9",
+  "towncrier>=24.8",
   "ty>=0.0.28",
   "typos>=1.44",
   "yamlfix>=1.17",
+]
+
+[tool.towncrier]
+directory = "changelog.d"
+filename = "CHANGELOG.md"
+ignore = ["README.md"]
+issue_format = "[#{issue}](https://github.com/wkentaro/git-hunk/pull/{issue})"
+title_format = "## {version} - {project_date}"
+type = [
+  { directory = "added", name = "Added", showcontent = true },
+  { directory = "changed", name = "Changed", showcontent = true },
+  { directory = "deprecated", name = "Deprecated", showcontent = true },
+  { directory = "fixed", name = "Fixed", showcontent = true },
+  { directory = "removed", name = "Removed", showcontent = true },
+  { directory = "security", name = "Security", showcontent = true },
 ]
 
 [tool.ruff.lint]
