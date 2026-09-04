@@ -92,3 +92,43 @@ def test_invalid_mixed_selection_changes_nothing(
     assert result.returncode != 0
     assert "staged" not in result.stderr
     assert snapshot_repository(cli) == before
+
+
+@pytest.mark.parametrize("command", ["stage", "unstage", "discard", "commit"])
+def test_cwd_relative_miss_suggests_eligible_repository_path_and_changes_nothing(
+    *, make_mutation_repo: MutationRepoFactory, command: str
+) -> None:
+    cli = make_mutation_repo("sub/change.txt", b"old\n", b"new\n")
+    if command == "unstage":
+        cli.repo.git("add", "sub/change.txt")
+    before = snapshot_repository(cli)
+
+    args = (
+        ["commit", "-m", "msg", "change.txt"]
+        if command == "commit"
+        else [command, "change.txt"]
+    )
+    result = cli.run(*args, subdir="sub")
+
+    assert result.returncode != 0
+    assert "no changed file matches 'change.txt'" in result.stderr
+    assert (
+        "tip: Repository paths are worktree-root-relative; "
+        "did you mean 'sub/change.txt'?"
+    ) in result.stderr
+    assert snapshot_repository(cli) == before
+
+
+def test_cwd_relative_miss_does_not_suggest_an_ineligible_repository_path(
+    *, make_mutation_repo: MutationRepoFactory
+) -> None:
+    cli = make_mutation_repo("sub/change.txt", b"old\n", b"new\n")
+    cli.repo.git("add", "sub/change.txt")
+    before = snapshot_repository(cli)
+
+    result = cli.run("stage", "change.txt", subdir="sub")
+
+    assert result.returncode != 0
+    assert "tip: run 'git-hunk list' to see changed files and hunk ids" in result.stderr
+    assert "did you mean" not in result.stderr
+    assert snapshot_repository(cli) == before

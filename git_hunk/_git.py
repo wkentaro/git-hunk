@@ -17,8 +17,8 @@ class UnsupportedChange:
 
 
 def run_git(*args: str, worktree_root: str | None, input: str | None = None) -> str:
-    # worktree_root=None is for bootstrap only: the rev-parse that discovers
-    # the root runs in the invocation directory. Every other call anchors there.
+    # A missing root is only for the bootstrap query that discovers both
+    # repository coordinates. Every later call anchors there.
     # Git output and input may contain bytes that are not valid UTF-8 (e.g. a
     # Latin-1 source file). surrogateescape round-trips those bytes losslessly
     # so a rebuilt patch hands git back exactly what it emitted.
@@ -60,9 +60,14 @@ def get_diff(*, worktree_root: str, staged: bool) -> str:
     return run_git(*args, worktree_root=worktree_root)
 
 
-def get_worktree_root() -> str:
-    output = run_git("rev-parse", "--show-toplevel", worktree_root=None)
-    return output.removesuffix("\n")
+def get_worktree_context() -> tuple[str, str]:
+    # Ask Git for this coordinate because Windows can give Git and Python
+    # different spellings for the same directory.
+    output = run_git(
+        "rev-parse", "--show-toplevel", "--show-prefix", worktree_root=None
+    )
+    worktree_root, invocation_prefix = output.removesuffix("\n").split("\n", 1)
+    return worktree_root, invocation_prefix.removesuffix("/")
 
 
 def get_untracked_files(*, worktree_root: str) -> list[str]:

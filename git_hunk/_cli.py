@@ -19,7 +19,7 @@ from ._git import get_diff
 from ._git import get_unmerged_files
 from ._git import get_unsupported_changes
 from ._git import get_untracked_files
-from ._git import get_worktree_root
+from ._git import get_worktree_context
 from ._git import stage_files
 from ._git import unstage_added_files
 from ._git import unstage_files
@@ -103,9 +103,9 @@ class CliGroup(click.Group):
             ctx.exit(130)
 
 
-def _require_worktree_root() -> str:
+def _require_worktree_context() -> tuple[str, str]:
     try:
-        return get_worktree_root()
+        return get_worktree_context()
     # Usually there is no worktree to anchor to, but rev-parse also refuses on
     # dubious ownership or a bad config value, and those say how to fix them.
     # Classifying git's English is what this avoids; passing it on is not.
@@ -243,7 +243,11 @@ def _make_targets(
 
 
 def _select_hunks(
-    *, hunks: list[Hunk], targets: list[_Target], inventory_hunks: list[Hunk]
+    *,
+    hunks: list[Hunk],
+    targets: list[_Target],
+    inventory_hunks: list[Hunk],
+    invocation_prefix: str,
 ) -> list[Hunk]:
     files = {h.file for h in hunks}
     eligible_ids = {hunk.id for hunk in hunks}
@@ -259,9 +263,18 @@ def _select_hunks(
             if matches[0].id not in eligible_ids:
                 raise CliError(f"hunk '{target.arg}' is not eligible for this command")
         else:
+            suggested_path = posixpath.normpath(
+                posixpath.join(invocation_prefix, target.path)
+            )
+            tip = (
+                "Repository paths are worktree-root-relative; "
+                f"did you mean '{suggested_path}'?"
+                if suggested_path in files
+                else "run 'git-hunk list' to see changed files and hunk ids"
+            )
             raise CliError(
                 f"no changed file matches '{target.arg}'",
-                tip="run 'git-hunk list' to see changed files and hunk ids",
+                tip=tip,
             )
         for hunk in matches:
             if hunk.id not in seen:
@@ -368,6 +381,7 @@ def _apply_selection(
     targets: list[_Target],
     selection: _Selection,
     worktree_root: str,
+    invocation_prefix: str,
     staged: bool,
     cached: bool,
     reverse: bool,
@@ -379,7 +393,10 @@ def _apply_selection(
     hunks = [hunk for hunk in inventory.hunks if hunk.status == status]
     diff_output = inventory.staged_diff if staged else inventory.unstaged_diff
     selected = _select_hunks(
-        hunks=hunks, targets=targets, inventory_hunks=inventory.hunks
+        hunks=hunks,
+        targets=targets,
+        inventory_hunks=inventory.hunks,
+        invocation_prefix=invocation_prefix,
     )
     selected = _apply_line_filter(hunks=selected, selection=selection, reverse=reverse)
 
@@ -473,7 +490,7 @@ def _run_patch_command(
     verb: str,
     dry_run: bool,
 ) -> None:
-    worktree_root = _require_worktree_root()
+    worktree_root, invocation_prefix = _require_worktree_context()
     targets = _make_targets(
         args=args,
         worktree_root=worktree_root,
@@ -484,6 +501,7 @@ def _run_patch_command(
         targets=targets,
         selection=selection,
         worktree_root=worktree_root,
+        invocation_prefix=invocation_prefix,
         staged=staged,
         cached=cached,
         reverse=reverse,
@@ -571,7 +589,7 @@ def cmd_list(
         print_help(HELP_LIST)
         return
 
-    worktree_root = _require_worktree_root()
+    worktree_root, _ = _require_worktree_context()
     selected_paths = {
         _make_repository_path(arg=path, worktree_root=worktree_root) for path in files
     }
@@ -612,7 +630,7 @@ def cmd_show(
         print_help(HELP_SHOW)
         return
 
-    worktree_root = _require_worktree_root()
+    worktree_root, _ = _require_worktree_context()
     inventory = _get_inventory(worktree_root=worktree_root)
     hunks = _filter_inventory_hunks(
         inventory=inventory,
@@ -857,7 +875,7 @@ def cmd_commit(
     if message is None or not message.strip():
         raise CliError("commit requires a message (-m)", usage=USAGE_COMMIT)
 
-    worktree_root = _require_worktree_root()
+    worktree_root, invocation_prefix = _require_worktree_context()
     commit_targets = _make_targets(
         args=list(targets),
         worktree_root=worktree_root,
@@ -883,6 +901,7 @@ def cmd_commit(
         targets=commit_targets,
         selection=selection,
         worktree_root=worktree_root,
+        invocation_prefix=invocation_prefix,
         staged=False,
         cached=True,
         reverse=False,
