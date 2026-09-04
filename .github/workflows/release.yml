@@ -52,11 +52,8 @@ jobs:
       - name: Extract release notes from CHANGELOG.md
         run: |
           version="${GITHUB_REF_NAME#v}"
-          awk -v ver="$version" '
-            $0 ~ "^## \\[" ver "\\]" { capture = 1; next }
-            capture && /^## \[/ { exit }
-            capture { print }
-          ' CHANGELOG.md > release-notes.md
+          awk -v heading="## $version " 'index($0, heading) == 1 {found = 1; next}
+            found && /^## / {exit} found' CHANGELOG.md > release-notes.md
           if [ ! -s release-notes.md ]; then
             echo "::error::no CHANGELOG.md section for ${version}; promote" \
               "Unreleased before tagging"

@@ -2,9 +2,8 @@
 
 ## Changelog
 
-User-facing changes go in `CHANGELOG.md` under `## [Unreleased]`
-([Keep a Changelog](https://keepachangelog.com/) format), with the PR number.
-At release, that section is promoted to the new version.
+Record user-facing changes to the packaged tool as towncrier fragments,
+following `changelog.d/README.md`; never edit `CHANGELOG.md` directly.
 
 The changelog records changes to the tool as installed. If a change cannot
 reach a user through the published package, it gets no entry. That excludes

@@ -5,13 +5,11 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and this project adheres to
 [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [Unreleased]
+## Unreleased
 
-### Fixed
+<!-- towncrier release notes start -->
 
-- Read the diff with color disabled, so `color.ui` or `color.diff` set to `always` no longer hides every tracked hunk — `list` reported `No hunks.` on a dirty tree, and mutation commands could not resolve their targets (#275).
-
-## [0.3.0] - 2026-08-10
+## 0.3.0 - 2026-08-10
 
 ### Added
 
@@ -78,7 +76,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 - Report a git failure while checking for already-staged changes in `commit` (e.g. a corrupt index) as a clean `error:` message instead of crashing with a raw Python traceback (#124).
 - Scope the "requires exactly one hunk" note in `--help` to all line-selection options, so `--include-matching` / `--exclude-matching` no longer read as working across multiple hunks when they share the same single-hunk constraint as `-l` (#155).
 
-## [0.2.0] - 2026-04-16
+## 0.2.0 - 2026-04-16
 
 ### Changed
 
@@ -88,7 +86,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 
 - Windows: git subprocess calls use binary mode, so CRLF translation no longer mangles diffs. CI covers macOS and Windows alongside Linux (#2).
 
-## [0.1.0] - 2026-04-04
+## 0.1.0 - 2026-04-04
 
 ### Added
 
@@ -98,8 +96,3 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 - Line-level selection with `-l 3,5-7`.
 - JSON output via `--json`.
 - Binary and untracked file handling.
-
-[0.1.0]: https://github.com/wkentaro/git-hunk/releases/tag/v0.1.0
-[0.2.0]: https://github.com/wkentaro/git-hunk/compare/v0.1.0...v0.2.0
-[0.3.0]: https://github.com/wkentaro/git-hunk/compare/v0.2.0...v0.3.0
-[unreleased]: https://github.com/wkentaro/git-hunk/compare/v0.3.0...HEAD
