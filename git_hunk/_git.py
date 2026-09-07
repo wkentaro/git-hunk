@@ -5,8 +5,12 @@ from typing import Final
 
 class GitCommandError(RuntimeError):
     def __init__(self, command: tuple[str, ...], stderr: str, /) -> None:
-        self.stderr = stderr
+        self._stderr = stderr
         super().__init__(f"git {' '.join(command)} failed: {stderr}")
+
+    @property
+    def stderr(self) -> str:
+        return self._stderr
 
 
 @dataclass(frozen=True)

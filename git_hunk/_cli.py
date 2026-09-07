@@ -78,8 +78,16 @@ class CliError(Exception):
         usage: str | None = None,
     ) -> None:
         super().__init__(message)
-        self.tip = tip
-        self.usage = usage
+        self._tip = tip
+        self._usage = usage
+
+    @property
+    def tip(self) -> str | None:
+        return self._tip
+
+    @property
+    def usage(self) -> str | None:
+        return self._usage
 
 
 class CliGroup(click.Group):
