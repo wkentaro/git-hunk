@@ -14,6 +14,8 @@ from typing import cast
 
 
 class GitRepo:
+    path: Path
+
     def __init__(self, path: str | Path, /) -> None:
         self.path = Path(path)
 

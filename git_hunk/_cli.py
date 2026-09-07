@@ -69,6 +69,9 @@ JSON_SCHEMA_VERSION: Final = 2
 
 
 class CliError(Exception):
+    tip: str | None
+    usage: str | None
+
     def __init__(
         self,
         message: str,
