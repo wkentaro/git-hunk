@@ -4,6 +4,8 @@ from typing import Final
 
 
 class GitCommandError(RuntimeError):
+    stderr: str
+
     def __init__(self, command: tuple[str, ...], stderr: str, /) -> None:
         self.stderr = stderr
         super().__init__(f"git {' '.join(command)} failed: {stderr}")

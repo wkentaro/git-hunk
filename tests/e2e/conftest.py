@@ -12,6 +12,8 @@ from tests.conftest import GitRepo
 
 
 class GitHunkCLI:
+    repo: GitRepo
+
     def __init__(self, repo: GitRepo, /) -> None:
         self.repo = repo
 
