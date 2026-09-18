@@ -9,6 +9,12 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 
 <!-- towncrier release notes start -->
 
+## 0.4.1 - 2026-09-18
+
+### Fixed
+
+- `git-hunk commit` accepts `-m` more than once and joins the values as separate paragraphs, like `git commit`, instead of keeping only the last one. ([#295](https://github.com/wkentaro/git-hunk/pull/295))
+
 ## 0.4.0 - 2026-09-04
 
 ### Added
