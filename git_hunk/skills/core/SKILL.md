@@ -30,7 +30,8 @@ git-hunk list
 `git-hunk commit <id-or-path>... -m <message>` stages exactly those hunks and
 commits them; it aborts when the index already holds staged changes. A
 Repository path selects every changed hunk in one exact file and beats an ID
-when committing a whole file.
+when committing a whole file. Repeat `-m` as with `git commit`: each one
+becomes its own paragraph.
 
 Committing a complete hunk leaves every other non-`conditional` ID valid, so a
 whole plan of complete hunks chains in one call.

@@ -119,6 +119,25 @@ def test_commit_by_file_path(*, cli: GitHunkCLI) -> None:
     assert "BBB" in cli.repo.git("diff")
 
 
+def test_commit_joins_repeated_messages_as_paragraphs(*, cli: GitHunkCLI) -> None:
+    _init(cli=cli, files={"f.txt": "a\n"})
+    cli.repo.write_file("f.txt", "AAA\n")
+
+    cli.run_ok(
+        "commit",
+        _unstaged_ids(cli=cli)[0],
+        "-m",
+        "feat: subject",
+        "-m",
+        "",
+        "-m",
+        "Body paragraph.",
+    )
+
+    body = cli.repo.git("log", "-1", "--format=%B").strip()
+    assert body == "feat: subject\n\nBody paragraph."
+
+
 def test_commit_requires_message(*, cli: GitHunkCLI) -> None:
     _init(cli=cli, files={"f.txt": "a\n"})
     cli.repo.write_file("f.txt", "AAA\n")
@@ -131,13 +150,17 @@ def test_commit_requires_message(*, cli: GitHunkCLI) -> None:
     assert cli.repo.git("diff", "--cached").strip() == ""
 
 
-@pytest.mark.parametrize("message", ["", "   "], ids=["empty", "whitespace"])
-def test_commit_rejects_blank_message(*, cli: GitHunkCLI, message: str) -> None:
+@pytest.mark.parametrize(
+    "m_args",
+    [["-m", ""], ["-m", "   "], ["-m", "", "-m", "   "]],
+    ids=["empty", "whitespace", "all-repeated-blank"],
+)
+def test_commit_rejects_blank_message(*, cli: GitHunkCLI, m_args: list[str]) -> None:
     _init(cli=cli, files={"f.txt": "a\n"})
     cli.repo.write_file("f.txt", "AAA\n")
 
     before = _commit_count(cli=cli)
-    r = cli.run("commit", _unstaged_ids(cli=cli)[0], "-m", message)
+    r = cli.run("commit", _unstaged_ids(cli=cli)[0], *m_args)
     assert r.returncode != 0
     assert "message" in r.stderr
     assert _commit_count(cli=cli) == before
