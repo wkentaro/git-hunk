@@ -438,7 +438,7 @@ can retry with [bold cyan]git commit[/bold cyan].
 {USAGE_COMMIT}
 
 [bold green]Options:[/bold green]
-  [bold cyan]-m[/bold cyan] [cyan]<msg>[/cyan]    Commit message (required)
+  [bold cyan]-m[/bold cyan] [cyan]<msg>[/cyan]    Commit message (required; repeat for more paragraphs)
 {_LINE_OPT_ROW}
 
 {_format_examples(rows=_EXAMPLES_COMMIT)}"""  # noqa: E501

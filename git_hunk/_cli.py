@@ -871,7 +871,7 @@ def cmd_discard(
 
 
 @cli.command("commit", add_help_option=False)
-@click.option("-m", "message", default=None)
+@click.option("-m", "messages", multiple=True)
 @click.option("-l", "line_spec", default=None)
 @click.option("--include-matching", "include_matching", multiple=True)
 @click.option("--exclude-matching", "exclude_matching", multiple=True)
@@ -882,7 +882,7 @@ def cmd_discard(
 def cmd_commit(
     *,
     targets: tuple[str, ...],
-    message: str | None,
+    messages: tuple[str, ...],
     line_spec: str | None,
     include_matching: tuple[str, ...],
     exclude_matching: tuple[str, ...],
@@ -893,7 +893,10 @@ def cmd_commit(
     if show_help:
         print_help(HELP_COMMIT)
         return
-    if message is None or not message.strip():
+    # Each -m is its own paragraph, as in git commit; git's own cleanup then
+    # collapses blank ones.
+    message = "\n\n".join(messages)
+    if not message.strip():
         raise CliError("commit requires a message (-m)", usage=USAGE_COMMIT)
 
     worktree_root, invocation_prefix = _require_worktree_context()
