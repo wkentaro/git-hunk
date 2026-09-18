@@ -9,6 +9,14 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 
 <!-- towncrier release notes start -->
 
+## 0.4.2 - 2026-09-18
+
+### Fixed
+
+- Prevent configured external diff and textconv drivers from hiding tracked changes from inventory and mutation commands. ([#299](https://github.com/wkentaro/git-hunk/pull/299))
+- Report when a mixed selection fails after partially changing the repository, preserving the original Git error and prompting inspection before retry. ([#300](https://github.com/wkentaro/git-hunk/pull/300))
+- Report untracked-inventory query and file-inspection failures as clean CLI errors instead of Python tracebacks. ([#301](https://github.com/wkentaro/git-hunk/pull/301))
+
 ## 0.4.1 - 2026-09-18
 
 ### Fixed
