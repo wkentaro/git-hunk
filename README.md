@@ -43,7 +43,7 @@ variant: organize a dirty working tree into correct, focused commits, once
 following git-hunk's bundled skills and once restricted to bare Git. The
 [checked-in eval harness](https://github.com/wkentaro/git-hunk/tree/0ef14bef657e187b5ab7283b0dbd64751a02736f/eval)
 grades the exact resulting repository state — commit partition and order, final
-tree, index, and leftovers. This table records the qualifying run; `make eval`
+tree, index, and leftovers. This table records the qualifying run; `just eval`
 reruns the protocol and prints a table in the same format.
 
 | Task | git-hunk | bare Git |
@@ -342,12 +342,16 @@ content and creates new IDs.
 Bug reports, feature requests, and pull requests are welcome on
 [GitHub](https://github.com/wkentaro/git-hunk).
 
+Install [just](https://just.systems/man/en/packages.html) 1.58.0 or newer and
+[uv](https://docs.astral.sh/uv/getting-started/installation/). Recipes use Bash;
+on Windows, install Git for Windows and make its Bash available on `PATH`.
+
 ```bash
 git clone https://github.com/wkentaro/git-hunk.git
 cd git-hunk
-make setup   # install dependencies
-make test    # run tests
-make lint    # run linters
+just setup   # install dependencies
+just test    # run tests
+just lint    # run linters
 ```
 
 ## License

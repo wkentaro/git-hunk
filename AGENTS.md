@@ -8,7 +8,7 @@ following `changelog.d/README.md`; never edit `CHANGELOG.md` directly.
 The changelog records changes to the tool as installed. If a change cannot
 reach a user through the published package, it gets no entry. That excludes
 documentation-only changes (README, CONTEXT.md, ADRs, `docs/`) and
-repository-only tooling (`tests/`, `eval/`, CI config, `Makefile` targets).
+repository-only tooling (`tests/`, `eval/`, CI config, `justfile` recipes).
 Docs that ship inside the package (`--help` text, bundled skills) still count
 as the tool.
 
