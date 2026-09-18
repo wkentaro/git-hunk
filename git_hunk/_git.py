@@ -48,9 +48,13 @@ def get_diff(*, worktree_root: str, staged: bool) -> str:
     # floor stays at --no-relative's 2.28 instead of --default-prefix's 2.41.
     # --no-color: a color.diff or color.ui set to always emits ANSI escapes
     # even into a pipe, and the parse would find nothing.
+    # Display drivers can replace source patches with transformed or empty
+    # output, while inventory and mutation need the canonical source bytes.
     args = [
         "diff",
         "--no-color",
+        "--no-ext-diff",
+        "--no-textconv",
         "--no-relative",
         "--src-prefix=a/",
         "--dst-prefix=b/",
