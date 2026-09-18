@@ -428,6 +428,7 @@ def _apply_selection(
         hunk for hunk in selected if hunk.binary or hunk.change_kind == "T"
     ]
 
+    changes_applied = False
     try:
         patch = (
             build_patch(patch_hunks, diff_output, reverse=reverse)
@@ -472,6 +473,7 @@ def _apply_selection(
                 reverse=reverse,
                 dry_run=False,
             )
+            changes_applied = True
         if file_command_files:
             if reverse and not cached:
                 discard_files(file_command_files, worktree_root=worktree_root)
@@ -482,6 +484,7 @@ def _apply_selection(
                         worktree_root=worktree_root,
                         dry_run=False,
                     )
+                    changes_applied = True
                 if tracked_file_command_files:
                     unstage_files(
                         tracked_file_command_files,
@@ -494,7 +497,13 @@ def _apply_selection(
                     dry_run=False,
                 )
     except RuntimeError as exc:
-        raise CliError(str(exc)) from exc
+        message = str(exc)
+        if changes_applied:
+            message = (
+                f"{message}; earlier changes were applied, so the repository may be "
+                "partially changed; inspect its state before retrying"
+            )
+        raise CliError(message) from exc
 
     return selected
 
