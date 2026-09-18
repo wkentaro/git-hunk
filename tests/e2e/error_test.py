@@ -23,6 +23,40 @@ def test_missing_git_binary_reports_clean_error(
     assert "Traceback" not in r.stderr
 
 
+def test_untracked_git_failure_reports_clean_error(
+    *, cli: GitHunkCLI, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    def raise_query_failure(*, worktree_root: str) -> list[str]:
+        raise RuntimeError(f"cannot query untracked files in {worktree_root}")
+
+    monkeypatch.setattr("git_hunk._cli.get_untracked_files", raise_query_failure)
+
+    r = cli.run("list", "--json")
+    assert r.returncode == 1
+    assert r.stdout == ""
+    assert "error: cannot query untracked files" in r.stderr
+    assert "Traceback" not in r.stderr
+
+
+def test_disappearing_untracked_file_reports_clean_error(
+    *, cli: GitHunkCLI, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    def list_vanished_file(*, worktree_root: str) -> list[str]:
+        return [Path(worktree_root, "vanished.txt").name]
+
+    monkeypatch.setattr(
+        "git_hunk._cli.get_untracked_files",
+        list_vanished_file,
+    )
+
+    r = cli.run("list", "--json")
+    assert r.returncode == 1
+    assert r.stdout == ""
+    assert "error:" in r.stderr
+    assert "vanished.txt" in r.stderr
+    assert "Traceback" not in r.stderr
+
+
 def test_not_a_git_repo(*, tmp_path: Path) -> None:
     repo = GitRepo(str(tmp_path))
     cli = GitHunkCLI(repo)

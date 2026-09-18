@@ -562,22 +562,25 @@ def _working_tree_mode(*, path: str) -> str:
 
 
 def _get_untracked_entries(*, worktree_root: str) -> list[Hunk]:
-    paths = get_untracked_files(worktree_root=worktree_root)
-    if not paths:
-        return []
-    return [
-        whole_file_hunk(
-            p,
-            change_kind="A",
-            a_mode=None,
-            b_mode=_working_tree_mode(path=posixpath.join(worktree_root, p)),
-            binary=False,
-            a_object_id=None,
-            b_object_id=None,
-            status="untracked",
-        )
-        for p in paths
-    ]
+    try:
+        paths = get_untracked_files(worktree_root=worktree_root)
+        if not paths:
+            return []
+        return [
+            whole_file_hunk(
+                p,
+                change_kind="A",
+                a_mode=None,
+                b_mode=_working_tree_mode(path=posixpath.join(worktree_root, p)),
+                binary=False,
+                a_object_id=None,
+                b_object_id=None,
+                status="untracked",
+            )
+            for p in paths
+        ]
+    except (OSError, RuntimeError) as exc:
+        raise CliError(str(exc)) from exc
 
 
 def _filter_inventory_hunks(
