@@ -36,7 +36,9 @@ def test_directory_without_eligible_descendants_keeps_no_match_error(
     *, make_mutation_repo: MutationRepoFactory, command: str
 ) -> None:
     cli = make_mutation_repo("sibling/change.txt", b"old\n", b"new\n")
-    cli.repo.write_file("unchanged/untracked.txt", "content\n")
+    cli.repo.write_file("unchanged/kept.txt", "content\n")
+    cli.repo.git("add", "unchanged/kept.txt")
+    cli.repo.git("commit", "-q", "-m", "add unchanged")
     before = snapshot_repository(cli)
     args = (
         ["commit", "-m", "message", "unchanged"]
@@ -53,9 +55,11 @@ def test_directory_without_eligible_descendants_keeps_no_match_error(
 
 
 @pytest.mark.skipif(os.name == "nt", reason="git does not track symlinks on Windows")
-def test_directory_symlink_outside_worktree_keeps_no_match_error(
+def test_untracked_symlink_replacing_tracked_directory_is_refused(
     *, make_mutation_repo: MutationRepoFactory, tmp_path: Path
 ) -> None:
+    # git add would also stage the deletion of changed/file.txt, which nobody
+    # selected, so the untracked symlink is refused instead.
     cli = make_mutation_repo("changed/file.txt", b"old\n", b"new\n")
     changed = Path(cli.repo.path) / "changed"
     (tmp_path / "external").mkdir()
@@ -67,6 +71,5 @@ def test_directory_symlink_outside_worktree_keeps_no_match_error(
     result = cli.run("stage", "changed")
 
     assert result.returncode != 0
-    assert "no changed file matches 'changed'" in result.stderr
-    assert "tip: run 'git-hunk list' to see changed files and hunk ids" in result.stderr
+    assert "conflict with tracked paths: 'changed/file.txt'" in result.stderr
     assert cli.repo.git("status", "--short") == before

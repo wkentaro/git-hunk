@@ -193,7 +193,7 @@ def test_list_default_shows_untracked(*, cli: GitHunkCLI) -> None:
     assert untracked[0]["change_kind"] == "A"
     assert untracked[0]["a_mode"] is None
     assert untracked[0]["b_mode"] == "100644"
-    assert untracked[0]["id"] == ""
+    assert untracked[0]["id"]
     assert untracked[0]["id_stability"] == "stable"
 
 
@@ -359,6 +359,11 @@ def test_list_plaintext_untracked_paths_are_not_separated_by_blank_lines(
     cli.repo.write_file("a.py", "new\n")
     cli.repo.write_file("b.py", "new\n")
 
+    ids = {h["file"]["text"]: h["id"][:7] for h in cli.run_list_json("list", "--json")}
     blocks = cli.run_ok("list").strip("\n").split("\n\n")
     assert len(blocks) == 1
-    assert blocks[0].splitlines() == ["untracked:", "a.py", "b.py"]
+    assert [line.rstrip() for line in blocks[0].splitlines()] == [
+        "untracked:",
+        f"a.py  {ids['a.py']}",
+        f"b.py  {ids['b.py']}",
+    ]

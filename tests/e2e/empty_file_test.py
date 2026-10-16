@@ -153,10 +153,8 @@ def test_unstaged_empty_addition_is_untracked_after_unstage(
 
     [untracked] = cli.run_list_json("list", "empty.txt", "--json")
     assert untracked["status"] == "untracked"
-    assert untracked["id"] == ""
-    result = cli.run("stage", "empty.txt")
-    assert result.returncode != 0
-    assert "no changed file matches" in result.stderr
+    cli.run_ok("stage", untracked["id"])
+    assert cli.repo.git("diff", "--cached", "--name-only").strip() == "empty.txt"
 
 
 def test_unstage_empty_addition_in_unborn_repository(*, cli: GitHunkCLI) -> None:

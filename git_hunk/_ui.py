@@ -44,6 +44,8 @@ def _safe_escape(*, text: str) -> str:
 def _whole_file_label(*, hunk: Hunk) -> str:
     # Human label for a hunk with no @@ range, derived from its typed fields
     # (the data layer no longer stores the label string).
+    if hunk.status == "untracked":
+        return "Untracked file"
     if hunk.change_kind == "T":
         return f"Type change ({hunk.a_mode} -> {hunk.b_mode})"
     if hunk.binary:
@@ -115,7 +117,12 @@ def _print_status_section(
             if i < len(by_file) - 1:
                 out.print()
         else:
-            out.print(f"[{color}]{_safe_escape(text=filepath)}[/{color}]")
+            line = Text(_safe(text=filepath), style=color)
+            for hunk in file_hunks:
+                if hunk.id:
+                    line.append("  ")
+                    _append_hunk_id(text=line, hunk=hunk, style="cyan")
+            out.print(line)
 
 
 def print_hunk_list(hunks: list[Hunk], /) -> None:

@@ -179,6 +179,33 @@ def stage_files(files: list[str], /, *, worktree_root: str, dry_run: bool) -> No
     )
 
 
+def get_index_conflicts(files: list[str], /, *, worktree_root: str) -> list[str]:
+    # Index entries that block adding these paths: one below a path (it is a
+    # tracked directory) or one at a parent directory (it is a tracked file).
+    # A literal pathspec matches both the entry itself and entries below it.
+    parents = {f[:i] for f in files for i, char in enumerate(f) if char == "/"}
+    output = run_git(
+        _LITERAL_PATHSPECS,
+        "ls-files",
+        "-z",
+        "--",
+        *files,
+        *sorted(parents),
+        worktree_root=worktree_root,
+    )
+    return [
+        entry
+        for entry in output.split("\0")
+        if entry and (entry in parents or any(entry.startswith(f"{f}/") for f in files))
+    ]
+
+
+def add_untracked_files(files: list[str], /, *, worktree_root: str) -> None:
+    # Unlike git add, update-index refuses a path that would replace a tracked
+    # directory instead of also staging that directory's deletion.
+    run_git("update-index", "--add", "--", *files, worktree_root=worktree_root)
+
+
 def unstage_added_files(
     files: list[str], /, *, worktree_root: str, dry_run: bool
 ) -> None:

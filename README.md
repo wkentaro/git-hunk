@@ -290,8 +290,8 @@ body; `show --json` adds a structured `lines` array. A `show --json` hunk
 | ---------------- | -------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | `schema_version` | int | Envelope version; bumped on any incompatible change to the shape below. |
 | `hunks` | array | The hunks (empty array when there are no changes). |
-| `id` | string | Full canonical SHA-256 Hunk ID; empty for an `untracked` entry, which no command can address. Human output uses a unique prefix of at least seven characters. |
-| `id_stability` | string | `stable` or `conditional`. An untracked inventory entry reports `stable`, but its empty `id` remains unaddressable. |
+| `id` | string | Full canonical SHA-256 Hunk ID. An `untracked` entry's ID covers the file's content; it is empty only for an untracked path git-hunk cannot read, such as an embedded repository. Human output uses a unique prefix of at least seven characters. |
+| `id_stability` | string | `stable` or `conditional`. An untracked inventory entry reports `stable`. |
 | `file` | union | Repository path of the changed file, as a byte-safe `{text\|bytes}` union (see below). |
 | `status` | string | One of `staged`, `unstaged`, `untracked`. |
 | `change_kind` | string | Git status letter: `A` added, `D` deleted, `M` modified, `T` typechange (`R`/`C` reserved and currently rejected). Always present. |
