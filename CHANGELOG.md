@@ -9,6 +9,17 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 
 <!-- towncrier release notes start -->
 
+## 0.5.0 - 2026-10-16
+
+### Added
+
+- Add `--amend` and `--fixup <commit>` to `git-hunk commit`, so hunks can be folded into existing history without `git add`. ([#306](https://github.com/wkentaro/git-hunk/pull/306))
+- Untracked files now get a Hunk ID, and `stage` and `commit` add them whole by ID or path. `discard` refuses them. ([#307](https://github.com/wkentaro/git-hunk/pull/307))
+
+### Fixed
+
+- Keep the commit message out of the error when a hook rejects `git-hunk commit`, and say the selected hunks are still staged. ([#304](https://github.com/wkentaro/git-hunk/pull/304))
+
 ## 0.4.2 - 2026-09-18
 
 ### Fixed
