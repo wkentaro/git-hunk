@@ -12,12 +12,15 @@ from typing import Final
 from typing import TextIO
 from typing import cast
 
-from eval.config import EFFORT
 from eval.grader import Result
 from eval.repo import GitRepo
 from eval.scenario import Scenario
 from eval.scenario import Solver
 from eval.task import Task
+
+MODEL: Final = "claude-sonnet-5"
+EFFORT: Final = "high"
+EFFORT_LEVELS: Final = ("low", "medium", "high", "xhigh", "max")
 
 
 @dataclasses.dataclass(frozen=True)
@@ -149,12 +152,12 @@ def build_prompt(*, task_prompt: str, variant: EvalVariant) -> str:
     return f"{preamble}\n\n{task_prompt}"
 
 
-def build_command_flags(*, variant: EvalVariant, model: str) -> list[str]:
+def build_command_flags(*, variant: EvalVariant, model: str, effort: str) -> list[str]:
     return [
         "--model",
         model,
         "--effort",
-        EFFORT,
+        effort,
         "--tools",
         "Bash",
         "--allowedTools",
@@ -173,8 +176,15 @@ def build_command_flags(*, variant: EvalVariant, model: str) -> list[str]:
     ]
 
 
-def build_command(*, prompt: str, variant: EvalVariant, model: str) -> list[str]:
-    return ["claude", "-p", prompt, *build_command_flags(variant=variant, model=model)]
+def build_command(
+    *, prompt: str, variant: EvalVariant, model: str, effort: str
+) -> list[str]:
+    return [
+        "claude",
+        "-p",
+        prompt,
+        *build_command_flags(variant=variant, model=model, effort=effort),
+    ]
 
 
 def make_claude_solver(
@@ -182,6 +192,7 @@ def make_claude_solver(
     task: Task,
     variant: EvalVariant,
     model: str,
+    effort: str,
     trace_path: Path,
     transcript_path: Path,
     echo: bool,
@@ -194,6 +205,7 @@ def make_claude_solver(
             prompt=prompt,
             variant=variant,
             model=model,
+            effort=effort,
             trace_path=trace_path,
             transcript_path=transcript_path,
             echo=echo,
@@ -208,6 +220,7 @@ def run_claude(
     prompt: str,
     variant: EvalVariant,
     model: str,
+    effort: str,
     trace_path: Path,
     transcript_path: Path,
     echo: bool,
@@ -223,7 +236,9 @@ def run_claude(
         reporter.report_tool_calls_header()
         try:
             result = repo.run_stream(
-                *build_command(prompt=prompt, variant=variant, model=model),
+                *build_command(
+                    prompt=prompt, variant=variant, model=model, effort=effort
+                ),
                 timeout_seconds=MODEL_TIMEOUT_SECONDS,
                 on_stdout_line=reporter.consume_line,
             )

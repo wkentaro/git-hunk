@@ -8,8 +8,8 @@ from typing import NoReturn
 
 import pytest
 
-from eval.config import EFFORT
-from eval.config import MODEL
+from eval.model import EFFORT
+from eval.model import MODEL
 from eval.model import VARIANTS
 from eval.model import aggregate_usage
 from eval.model import build_command
@@ -99,12 +99,15 @@ def test_variant_prompts_differ_only_by_tool_instruction() -> None:
 def test_command_runs_the_requested_model_and_isolates_claude() -> None:
     git_hunk_variant, bare_git_variant = VARIANTS
     command = build_command(
-        prompt="Do the task", variant=git_hunk_variant, model="claude-opus-5-5"
+        prompt="Do the task",
+        variant=git_hunk_variant,
+        model="claude-opus-5-5",
+        effort="medium",
     )
 
     assert command[:3] == ["claude", "-p", "Do the task"]
     assert command[command.index("--model") + 1] == "claude-opus-5-5"
-    assert command[command.index("--effort") + 1] == EFFORT
+    assert command[command.index("--effort") + 1] == "medium"
     assert command[command.index("--tools") + 1] == "Bash"
     assert command[command.index("--permission-mode") + 1] == "dontAsk"
     assert command[command.index("--output-format") + 1] == "stream-json"
@@ -121,7 +124,7 @@ def test_command_runs_the_requested_model_and_isolates_claude() -> None:
     ]
 
     bare_git_command = build_command(
-        prompt="Do the task", variant=bare_git_variant, model=MODEL
+        prompt="Do the task", variant=bare_git_variant, model=MODEL, effort=EFFORT
     )
     bare_allowed_index = bare_git_command.index("--allowedTools")
     assert bare_git_command[bare_allowed_index + 1 : bare_allowed_index + 2] == [
@@ -275,6 +278,7 @@ def test_run_claude_writes_partial_trace_on_timeout(
             prompt="Do the task",
             variant=VARIANTS[0],
             model=MODEL,
+            effort=EFFORT,
             trace_path=trace_path,
             transcript_path=transcript_path,
             echo=True,
@@ -347,6 +351,7 @@ def test_run_claude_streams_tool_calls_without_results(
         prompt="First line.\n\nSecond line.",
         variant=VARIANTS[0],
         model=MODEL,
+        effort=EFFORT,
         trace_path=trace_path,
         transcript_path=transcript_path,
         echo=True,

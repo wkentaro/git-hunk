@@ -11,9 +11,10 @@ from typing import Final
 import pytest
 
 import eval.__main__ as eval_main
-from eval.config import MODEL
 from eval.environment import EvalEnvironment
 from eval.grader import Result
+from eval.model import EFFORT
+from eval.model import MODEL
 from eval.model import EvalVariant
 from eval.repo import GitRepo
 from eval.scenario import Solver
@@ -59,11 +60,15 @@ def test_runner_rejects_a_repeat_count_below_one() -> None:
     assert "--repeat must be at least 1" in result.stderr
 
 
-def test_runner_help_documents_the_model_default() -> None:
+def test_runner_help_documents_the_model_and_effort_defaults() -> None:
     result = _run_eval_cli("--help")
 
     assert result.returncode == 0
-    assert f"(default: {MODEL})" in " ".join(result.stdout.split())
+    # argparse may wrap a hyphenated default across lines, so compare the
+    # help with all whitespace removed.
+    help_text = "".join(result.stdout.split())
+    assert f"(default:{MODEL})" in help_text
+    assert f"(default:{EFFORT})" in help_text
 
 
 _TOOL_USE_EVENTS: Final[list[dict[str, Any]]] = [
@@ -115,11 +120,12 @@ def _install_fake_run(
         task: Task,
         variant: EvalVariant,
         model: str,
+        effort: str,
         trace_path: Path,
         transcript_path: Path,
         echo: bool,
     ) -> Solver:
-        del task, model, echo
+        del task, model, effort, echo
 
         def solve(repo: GitRepo, /) -> None:
             del repo
@@ -219,6 +225,7 @@ def test_run_reports_context_usage_and_artifacts(
         scenarios=SCENARIOS[:scenario_count],
         repeats=1,
         model=MODEL,
+        effort=EFFORT,
         jobs=1,
     )
 
@@ -313,6 +320,7 @@ def test_run_samples_each_variant_repeatedly_from_one_prepared_task(
         scenarios=SCENARIOS[:1],
         repeats=3,
         model=MODEL,
+        effort=EFFORT,
         jobs=1,
     )
 
@@ -383,6 +391,7 @@ def test_run_gates_on_every_repeat_of_the_subject_variant(
         scenarios=SCENARIOS[:1],
         repeats=3,
         model=MODEL,
+        effort=EFFORT,
         jobs=1,
     )
 
@@ -429,6 +438,7 @@ def test_run_gates_on_subject_variant_outcomes_and_solver_errors(
         scenarios=SCENARIOS[:1],
         repeats=1,
         model=MODEL,
+        effort=EFFORT,
         jobs=1,
     )
 
@@ -471,6 +481,7 @@ def test_run_with_jobs_overlaps_runs_in_separate_slots_and_keeps_order(
         scenarios=SCENARIOS[:1],
         repeats=2,
         model=MODEL,
+        effort=EFFORT,
         jobs=2,
     )
 
