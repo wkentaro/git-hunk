@@ -89,6 +89,9 @@ removes unstaged changes: use it only on an explicit request or confirmation.
 
 ## Boundaries
 
+- Spell out the command in every call, as `git-hunk` or `uvx git-hunk@latest`.
+  zsh does not split a variable into words, so `GH="uvx git-hunk@latest"` then
+  `$GH list` fails with `command not found`.
 - Repository paths are exact and worktree-root-relative, never globs or Git
   pathspecs. `show` takes Hunk IDs only, `list` takes paths only, and mutations
   take either. Shell-quote every path copied from inventory output.
