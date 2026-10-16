@@ -215,4 +215,6 @@ def discard_files(files: list[str], /, *, worktree_root: str) -> None:
 
 
 def commit(message: str, /, *, worktree_root: str) -> None:
-    run_git("commit", "-m", message, worktree_root=worktree_root)
+    # Pass the message on stdin, not as -m: a failure reports the command line,
+    # and a hook rejection would otherwise repeat the whole message.
+    run_git("commit", "--file=-", worktree_root=worktree_root, input=message)

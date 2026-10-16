@@ -183,12 +183,24 @@ def test_commit_failure_leaves_hunk_staged(*, cli: GitHunkCLI) -> None:
     cli.repo.write_file("f.txt", "AAA\n")
 
     hook = Path(cli.repo.path) / ".git" / "hooks" / "pre-commit"
-    hook.write_text("#!/bin/sh\nexit 1\n")
+    hook.write_text("#!/bin/sh\necho lint failed >&2\nexit 1\n")
     hook.chmod(0o755)
 
     before = _commit_count(cli=cli)
-    r = cli.run("commit", _unstaged_ids(cli=cli)[0], "-m", "fix: blocked by hook")
+    r = cli.run(
+        "commit",
+        _unstaged_ids(cli=cli)[0],
+        "-m",
+        "fix: blocked by hook",
+        "-m",
+        "Body paragraph.",
+    )
     assert r.returncode != 0
+    assert "lint failed" in r.stderr
+    assert "still staged" in r.stderr
+    # The error names the command, not the message it was given.
+    assert "blocked by hook" not in r.stderr
+    assert "Body paragraph." not in r.stderr
     assert _commit_count(cli=cli) == before
     # The hunk is left staged so the user can retry, not silently lost.
     assert "AAA" in cli.repo.git("diff", "--cached")
