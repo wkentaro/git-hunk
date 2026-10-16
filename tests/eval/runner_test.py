@@ -10,6 +10,7 @@ from typing import Final
 import pytest
 
 import eval.__main__ as eval_main
+from eval.config import MODEL
 from eval.environment import EvalEnvironment
 from eval.grader import Result
 from eval.model import EvalVariant
@@ -57,11 +58,11 @@ def test_runner_rejects_a_repeat_count_below_one() -> None:
     assert "--repeat must be at least 1" in result.stderr
 
 
-def test_runner_rejects_model_override_before_running_tasks() -> None:
-    result = _run_eval_cli("--model", "opus")
+def test_runner_help_documents_the_model_default() -> None:
+    result = _run_eval_cli("--help")
 
-    assert result.returncode == 2
-    assert "unrecognized arguments: --model opus" in result.stderr
+    assert result.returncode == 0
+    assert f"(default: {MODEL})" in " ".join(result.stdout.split())
 
 
 _TOOL_USE_EVENTS: Final[list[dict[str, Any]]] = [
@@ -111,10 +112,11 @@ def _install_fake_run(
         *,
         task: Task,
         variant: EvalVariant,
+        model: str,
         trace_path: Path,
         transcript_path: Path,
     ) -> Solver:
-        del task
+        del task, model
 
         def solve(repo: GitRepo, /) -> None:
             del repo
@@ -211,6 +213,7 @@ def test_run_reports_context_usage_and_artifacts(
         environment=environment,
         scenarios=SCENARIOS[:scenario_count],
         repeats=1,
+        model=MODEL,
     )
 
     expected_usage = (
@@ -302,6 +305,7 @@ def test_run_samples_each_variant_repeatedly_from_one_prepared_task(
         environment=environment,
         scenarios=SCENARIOS[:1],
         repeats=3,
+        model=MODEL,
     )
 
     output = capsys.readouterr()
@@ -369,6 +373,7 @@ def test_run_gates_on_every_repeat_of_the_subject_variant(
         environment=environment,
         scenarios=SCENARIOS[:1],
         repeats=3,
+        model=MODEL,
     )
 
     output = capsys.readouterr()
@@ -412,6 +417,7 @@ def test_run_gates_on_subject_variant_outcomes_and_solver_errors(
         environment=environment,
         scenarios=SCENARIOS[:1],
         repeats=1,
+        model=MODEL,
     )
 
     capsys.readouterr()

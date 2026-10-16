@@ -13,7 +13,6 @@ from typing import TextIO
 from typing import cast
 
 from eval.config import EFFORT
-from eval.config import MODEL
 from eval.grader import Result
 from eval.repo import GitRepo
 from eval.scenario import Scenario
@@ -146,10 +145,10 @@ def build_prompt(*, task_prompt: str, variant: EvalVariant) -> str:
     return f"{preamble}\n\n{task_prompt}"
 
 
-def build_command_flags(*, variant: EvalVariant) -> list[str]:
+def build_command_flags(*, variant: EvalVariant, model: str) -> list[str]:
     return [
         "--model",
-        MODEL,
+        model,
         "--effort",
         EFFORT,
         "--tools",
@@ -170,14 +169,15 @@ def build_command_flags(*, variant: EvalVariant) -> list[str]:
     ]
 
 
-def build_command(*, prompt: str, variant: EvalVariant) -> list[str]:
-    return ["claude", "-p", prompt, *build_command_flags(variant=variant)]
+def build_command(*, prompt: str, variant: EvalVariant, model: str) -> list[str]:
+    return ["claude", "-p", prompt, *build_command_flags(variant=variant, model=model)]
 
 
 def make_claude_solver(
     *,
     task: Task,
     variant: EvalVariant,
+    model: str,
     trace_path: Path,
     transcript_path: Path,
 ) -> Solver:
@@ -188,6 +188,7 @@ def make_claude_solver(
             repo=repo,
             prompt=prompt,
             variant=variant,
+            model=model,
             trace_path=trace_path,
             transcript_path=transcript_path,
         )
@@ -200,6 +201,7 @@ def run_claude(
     repo: GitRepo,
     prompt: str,
     variant: EvalVariant,
+    model: str,
     trace_path: Path,
     transcript_path: Path,
 ) -> None:
@@ -214,7 +216,7 @@ def run_claude(
         reporter.report_tool_calls_header()
         try:
             result = repo.run_stream(
-                *build_command(prompt=prompt, variant=variant),
+                *build_command(prompt=prompt, variant=variant, model=model),
                 timeout_seconds=MODEL_TIMEOUT_SECONDS,
                 on_stdout_line=reporter.consume_line,
             )
@@ -249,7 +251,7 @@ def run_claude(
         raise RuntimeError(
             f"claude exited {result.returncode}: {result.stderr.strip()}"
         )
-    validate_trace(trace_path=trace_path)
+    validate_trace(trace_path=trace_path, model=model)
 
 
 class TranscriptReporter:
@@ -576,7 +578,7 @@ def _separate_trace_output(*, raw_trace: str) -> tuple[str, str | None]:
     return "\n".join(lines), incomplete_output
 
 
-def validate_trace(*, trace_path: Path) -> None:
+def validate_trace(*, trace_path: Path, model: str) -> None:
     try:
         lines = trace_path.read_text(encoding="utf-8").splitlines()
     except OSError as error:
@@ -599,14 +601,14 @@ def validate_trace(*, trace_path: Path) -> None:
         raise RuntimeError("trace is missing assistant turns")
 
     reported_models = {
-        model
+        reported_model
         for event in assistant_events
         if isinstance((message := event.get("message")), dict)
-        and isinstance((model := message.get("model")), str)
+        and isinstance((reported_model := message.get("model")), str)
     }
-    if reported_models != {MODEL}:
+    if reported_models != {model}:
         raise RuntimeError(
-            f"reported model must be {MODEL!r}, got {sorted(reported_models)!r}"
+            f"reported model must be {model!r}, got {sorted(reported_models)!r}"
         )
 
     bash_tool_use_ids: set[str] = set()

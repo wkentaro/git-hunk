@@ -92,12 +92,14 @@ def test_variant_prompts_differ_only_by_tool_instruction() -> None:
     assert bare_git_prompt.endswith(task_prompt)
 
 
-def test_command_pins_model_and_isolates_claude() -> None:
+def test_command_runs_the_requested_model_and_isolates_claude() -> None:
     git_hunk_variant, bare_git_variant = VARIANTS
-    command = build_command(prompt="Do the task", variant=git_hunk_variant)
+    command = build_command(
+        prompt="Do the task", variant=git_hunk_variant, model="claude-opus-5-5"
+    )
 
     assert command[:3] == ["claude", "-p", "Do the task"]
-    assert command[command.index("--model") + 1] == MODEL
+    assert command[command.index("--model") + 1] == "claude-opus-5-5"
     assert command[command.index("--effort") + 1] == EFFORT
     assert command[command.index("--tools") + 1] == "Bash"
     assert command[command.index("--permission-mode") + 1] == "dontAsk"
@@ -114,7 +116,9 @@ def test_command_pins_model_and_isolates_claude() -> None:
         "Bash(git:*)",
     ]
 
-    bare_git_command = build_command(prompt="Do the task", variant=bare_git_variant)
+    bare_git_command = build_command(
+        prompt="Do the task", variant=bare_git_variant, model=MODEL
+    )
     bare_allowed_index = bare_git_command.index("--allowedTools")
     assert bare_git_command[bare_allowed_index + 1 : bare_allowed_index + 2] == [
         "Bash(git:*)"
@@ -128,7 +132,7 @@ def test_validate_trace_accepts_complete_trace(
     trace_path = tmp_path / "trace.jsonl"
     _write_trace(trace_path=trace_path, events=trace_events)
 
-    validate_trace(trace_path=trace_path)
+    validate_trace(trace_path=trace_path, model=MODEL)
 
 
 @pytest.mark.parametrize(
@@ -153,7 +157,7 @@ def test_validate_trace_rejects_incomplete_or_wrong_model(
     _write_trace(trace_path=trace_path, events=events)
 
     with pytest.raises(RuntimeError, match=error):
-        validate_trace(trace_path=trace_path)
+        validate_trace(trace_path=trace_path, model=MODEL)
 
 
 def test_validate_trace_rejects_malformed_json(*, tmp_path: Path) -> None:
@@ -161,7 +165,7 @@ def test_validate_trace_rejects_malformed_json(*, tmp_path: Path) -> None:
     trace_path.write_text("{bad json}\n", encoding="utf-8")
 
     with pytest.raises(RuntimeError, match="malformed JSON"):
-        validate_trace(trace_path=trace_path)
+        validate_trace(trace_path=trace_path, model=MODEL)
 
 
 def test_validate_trace_rejects_empty_bash_command(
@@ -172,7 +176,7 @@ def test_validate_trace_rejects_empty_bash_command(
     _write_trace(trace_path=trace_path, events=trace_events)
 
     with pytest.raises(RuntimeError, match="nonempty command"):
-        validate_trace(trace_path=trace_path)
+        validate_trace(trace_path=trace_path, model=MODEL)
 
 
 def test_validate_trace_rejects_unmatched_tool_result(
@@ -183,7 +187,7 @@ def test_validate_trace_rejects_unmatched_tool_result(
     _write_trace(trace_path=trace_path, events=trace_events)
 
     with pytest.raises(RuntimeError, match="missing tool results"):
-        validate_trace(trace_path=trace_path)
+        validate_trace(trace_path=trace_path, model=MODEL)
 
 
 @pytest.mark.parametrize(
@@ -212,7 +216,7 @@ def test_validate_trace_rejects_invalid_result_events(
     _write_trace(trace_path=trace_path, events=trace_events)
 
     with pytest.raises(RuntimeError, match=error):
-        validate_trace(trace_path=trace_path)
+        validate_trace(trace_path=trace_path, model=MODEL)
 
 
 @pytest.mark.parametrize(
@@ -239,7 +243,7 @@ def test_validate_trace_rejects_invalid_metadata(
     _write_trace(trace_path=trace_path, events=trace_events)
 
     with pytest.raises(RuntimeError, match=error):
-        validate_trace(trace_path=trace_path)
+        validate_trace(trace_path=trace_path, model=MODEL)
 
 
 def test_run_claude_writes_partial_trace_on_timeout(
@@ -266,6 +270,7 @@ def test_run_claude_writes_partial_trace_on_timeout(
             repo=repo,
             prompt="Do the task",
             variant=VARIANTS[0],
+            model=MODEL,
             trace_path=trace_path,
             transcript_path=transcript_path,
         )
@@ -336,6 +341,7 @@ def test_run_claude_streams_tool_calls_without_results(
         repo=repo,
         prompt="First line.\n\nSecond line.",
         variant=VARIANTS[0],
+        model=MODEL,
         trace_path=trace_path,
         transcript_path=transcript_path,
     )
