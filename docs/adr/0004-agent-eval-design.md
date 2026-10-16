@@ -283,6 +283,27 @@ significance. It remains an agent demonstration. `--repeat 1` is the default and
 produces the single-sample run this ADR described before this section, output
 and artifact names included.
 
+### Run task variants concurrently on request
+
+`--jobs N` runs up to N task variants at once. Every selected task is prepared
+up front, and each running variant copies that snapshot into its own checkout
+slot, so concurrent runs share no worktree, index, or Git directory. Results
+are collected in the sequential order, so the manifest, artifact names, and
+table are laid out exactly as a `--jobs 1` run lays them out.
+
+Concurrency gives up two properties of the sequential run. The two variants of
+a task no longer see an identical checkout path: a path differs by its slot
+suffix. Cache order is no longer fixed either, so the runner replaces both cost
+caveats with one saying runs overlapped and may read each other's cache. The
+live view would interleave, so a concurrent run prints one result line per task
+variant and leaves the prompt and tool calls to the transcripts.
+
+`--jobs 1` is the default and keeps the sequential run this ADR describes
+above. Concurrency cannot change the prompt, the tools offered, the prepared
+Repository state, or what the agent reads back, so a `--jobs N` run grades the
+same way. A qualifying run still uses `--jobs 1` until a concurrent study shows
+its pass counts and tool-call medians agree with a sequential one.
+
 ### Accepted on the v0.3.0 qualifying run
 
 The integration ticket added the deterministic evaluation and the model-pinned

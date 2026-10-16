@@ -41,11 +41,18 @@ class PreparedTask:
     checkout_path: Path
     base: str
 
-    def run_and_grade(self, solver: Solver, /) -> Result:
-        if self.checkout_path.exists():
-            shutil.rmtree(self.checkout_path, onerror=_remove_readonly)
-        shutil.copytree(self.snapshot_path, self.checkout_path, symlinks=True)
-        repo = GitRepo(self.checkout_path)
+    def run_and_grade(self, solver: Solver, /, *, slot: int = 0) -> Result:
+        # Concurrent runs each hold their own slot, so they never share a
+        # checkout; slot 0 keeps the one path a sequential run reuses.
+        checkout_path = (
+            self.checkout_path
+            if slot == 0
+            else self.checkout_path.with_name(f"{self.checkout_path.name}-{slot}")
+        )
+        if checkout_path.exists():
+            shutil.rmtree(checkout_path, onerror=_remove_readonly)
+        shutil.copytree(self.snapshot_path, checkout_path, symlinks=True)
+        repo = GitRepo(checkout_path)
         try:
             solver(repo)
         except RuntimeError as error:

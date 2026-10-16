@@ -95,24 +95,35 @@ class GitRepo:
         stderr_thread = threading.Thread(target=read_stderr, daemon=True)
         stdout_thread.start()
         stderr_thread.start()
+        CANCEL_POLL_SECONDS: Final = 0.2
         deadline = time.monotonic() + timeout_seconds
+
+        def next_wait() -> float:
+            # Every wait below is sliced by this, so a cancel or the deadline
+            # is noticed wherever the stream is blocked.
+            if _cancelled.is_set():
+                raise RuntimeError("streaming subprocess was cancelled")
+            remaining = deadline - time.monotonic()
+            if remaining <= 0:
+                raise subprocess.TimeoutExpired(command, timeout_seconds)
+            return min(remaining, CANCEL_POLL_SECONDS)
 
         try:
             while True:
-                remaining = deadline - time.monotonic()
-                if remaining <= 0:
-                    raise queue.Empty
-                line = stdout_queue.get(timeout=remaining)
+                try:
+                    line = stdout_queue.get(timeout=next_wait())
+                except queue.Empty:
+                    continue
                 if line is None:
                     break
                 stdout_lines.append(line)
                 on_stdout_line(line)
-            process.wait(timeout=max(0, deadline - time.monotonic()))
+            while process.poll() is None:
+                time.sleep(next_wait())
             for reader_thread in (stdout_thread, stderr_thread):
-                reader_thread.join(timeout=max(0, deadline - time.monotonic()))
-                if reader_thread.is_alive():
-                    raise subprocess.TimeoutExpired(command, timeout_seconds)
-        except (queue.Empty, subprocess.TimeoutExpired) as error:
+                while reader_thread.is_alive():
+                    reader_thread.join(timeout=next_wait())
+        except subprocess.TimeoutExpired as error:
             _stop_process_tree(
                 process=process,
                 stdout_thread=stdout_thread,
@@ -347,6 +358,18 @@ class _WindowsJob:
         if self._handle is not None:
             self._kernel32.CloseHandle(self._handle)
             self._handle = None
+
+
+# ponytail: one process-wide flag, because a run is one eval invocation that
+# stops as a whole; a per-run token is the upgrade if runs ever need to stop
+# independently.
+_cancelled = threading.Event()
+
+
+def cancel_streams() -> None:
+    # A stream started off the main thread never sees Ctrl-C, and its child
+    # runs in its own session, so the interrupt has to be relayed by hand.
+    _cancelled.set()
 
 
 def _stop_process_tree(

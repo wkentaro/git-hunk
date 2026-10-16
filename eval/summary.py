@@ -83,7 +83,7 @@ class _Metrics:
         )
 
 
-def render_summary(*, runs: list[TaskRun]) -> str:
+def render_summary(*, runs: list[TaskRun], parallel: bool = False) -> str:
     if not runs:
         return ""
     CACHE_CAVEAT: Final = (
@@ -93,6 +93,10 @@ def render_summary(*, runs: list[TaskRun]) -> str:
     REPEAT_CAVEAT: Final = (
         "Only the first repeat starts cold, so a cost range mixes cache warmup with "
         "run-to-run noise."
+    )
+    PARALLEL_CAVEAT: Final = (
+        "Runs overlapped and may read cache written by one another; "
+        "costs are not order-neutral."
     )
     variant_names = _unique_in_order(values=(run.variant.name for run in runs))
     task_names = _unique_in_order(values=(run.scenario.task.name for run in runs))
@@ -129,11 +133,14 @@ def render_summary(*, runs: list[TaskRun]) -> str:
     lines = _format_table(rows=rows)
     caveats: list[str] = []
     COMPARISON_VARIANT_COUNT: Final = 2
-    if len(variant_names) == COMPARISON_VARIANT_COUNT:
-        first, second = variant_names
-        caveats.append(CACHE_CAVEAT.format(first=first, second=second))
-    if any(len(cell) > 1 for cell in cells.values()):
-        caveats.append(REPEAT_CAVEAT)
+    if parallel:
+        caveats.append(PARALLEL_CAVEAT)
+    else:
+        if len(variant_names) == COMPARISON_VARIANT_COUNT:
+            first, second = variant_names
+            caveats.append(CACHE_CAVEAT.format(first=first, second=second))
+        if any(len(cell) > 1 for cell in cells.values()):
+            caveats.append(REPEAT_CAVEAT)
     if caveats:
         # One paragraph, not one line each: consecutive bare lines would render
         # as a single paragraph anyway, so join them deliberately.

@@ -1,10 +1,12 @@
 import subprocess
 import sys
+import threading
 import time
 from pathlib import Path
 
 import pytest
 
+import eval.repo as eval_repo
 from eval.repo import GitRepo
 
 
@@ -154,3 +156,66 @@ def test_run_stream_interrupt_kills_descendants(*, tmp_path: Path) -> None:
         marker_path=marker_path,
         sentinel_path=sentinel_path,
     )
+
+
+@pytest.mark.parametrize(
+    "close_stdout",
+    [False, True],
+    ids=["while-streaming", "after-stdout-closes"],
+)
+def test_cancel_streams_stops_a_stream_on_another_thread(
+    *, tmp_path: Path, monkeypatch: pytest.MonkeyPatch, close_stdout: bool
+) -> None:
+    # A fresh flag keeps the cancellation from leaking into other tests.
+    monkeypatch.setattr(eval_repo, "_cancelled", threading.Event())
+    marker_path = tmp_path / "marker"
+    sentinel_path = tmp_path / "sentinel"
+    closed_path = tmp_path / "closed"
+    script = "\n".join(
+        [
+            "import os",
+            "import time",
+            "from pathlib import Path",
+            "print('ready', flush=True)",
+            *(
+                ["os.close(1)", f"Path({str(closed_path)!r}).touch()"]
+                if close_stdout
+                else []
+            ),
+            f"marker = Path({str(marker_path)!r})",
+            "while not marker.exists():",
+            "    time.sleep(0.01)",
+            f"Path({str(sentinel_path)!r}).write_text('alive')",
+        ]
+    )
+    ready = threading.Event()
+    errors: list[BaseException] = []
+
+    def stream() -> None:
+        try:
+            GitRepo(tmp_path).run_stream(
+                sys.executable,
+                "-c",
+                script,
+                timeout_seconds=60,
+                on_stdout_line=lambda _line: ready.set(),
+            )
+        except BaseException as error:  # noqa: BLE001 -- recorded for the assert
+            errors.append(error)
+
+    thread = threading.Thread(target=stream)
+    thread.start()
+    assert ready.wait(timeout=10)
+    if close_stdout:
+        # Cancel only once the stream has seen EOF and moved on to waiting
+        # for the process, which is the wait that must still notice it.
+        while not closed_path.exists():
+            time.sleep(0.01)
+        time.sleep(0.5)
+    eval_repo.cancel_streams()
+    thread.join(timeout=10)
+
+    assert not thread.is_alive()
+    assert len(errors) == 1
+    assert "cancelled" in str(errors[0])
+    _assert_descendant_stopped(marker_path=marker_path, sentinel_path=sentinel_path)

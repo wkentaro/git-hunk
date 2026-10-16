@@ -159,3 +159,21 @@ def test_drop_debug_golden_ignores_global_autocrlf(
     result = run_and_grade(task=scenario.task, solver=scenario.golden)
 
     assert result.passed, result.detail
+
+
+def test_prepared_task_gives_each_slot_its_own_checkout() -> None:
+    scenario = SCENARIOS[0]
+    paths: list[Path] = []
+
+    def record_and_solve(repo: GitRepo, /) -> None:
+        paths.append(repo.path)
+        scenario.golden(repo)
+
+    with prepare_task(scenario.task) as prepared:
+        first = prepared.run_and_grade(record_and_solve)
+        second = prepared.run_and_grade(record_and_solve, slot=1)
+
+    assert first.passed, first.detail
+    assert second.passed, second.detail
+    assert paths[0].name == "checkout"
+    assert paths[1] == paths[0].with_name("checkout-1")

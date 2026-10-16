@@ -2,6 +2,7 @@ import contextlib
 import json
 import subprocess
 import sys
+import threading
 from collections.abc import Callable
 from pathlib import Path
 from typing import Any
@@ -91,6 +92,7 @@ def _install_fake_run(
     next_result: Callable[[], Result],
     monotonic: Callable[[], float],
     prepared_tasks: list[str] | None,
+    on_run: Callable[[int], None],
 ) -> EvalEnvironment:
     RESULT_EVENT: Final[dict[str, Any]] = {
         "type": "result",
@@ -115,8 +117,9 @@ def _install_fake_run(
         model: str,
         trace_path: Path,
         transcript_path: Path,
+        echo: bool,
     ) -> Solver:
-        del task, model
+        del task, model, echo
 
         def solve(repo: GitRepo, /) -> None:
             del repo
@@ -136,7 +139,8 @@ def _install_fake_run(
         return solve
 
     class PreparedTask:
-        def run_and_grade(self, solver: Solver, /) -> Result:
+        def run_and_grade(self, solver: Solver, /, *, slot: int = 0) -> Result:
+            on_run(slot)
             solver(GitRepo(tmp_path))
             return next_result()
 
@@ -207,6 +211,7 @@ def test_run_reports_context_usage_and_artifacts(
         next_result=lambda: Result(passed=True),
         monotonic=lambda: next(monotonic_values),
         prepared_tasks=None,
+        on_run=lambda _slot: None,
     )
 
     exit_code = eval_main._run_scenarios(
@@ -214,6 +219,7 @@ def test_run_reports_context_usage_and_artifacts(
         scenarios=SCENARIOS[:scenario_count],
         repeats=1,
         model=MODEL,
+        jobs=1,
     )
 
     expected_usage = (
@@ -299,6 +305,7 @@ def test_run_samples_each_variant_repeatedly_from_one_prepared_task(
         next_result=lambda: pending.pop(0),
         monotonic=lambda: 0.0,
         prepared_tasks=prepared,
+        on_run=lambda _slot: None,
     )
 
     exit_code = eval_main._run_scenarios(
@@ -306,6 +313,7 @@ def test_run_samples_each_variant_repeatedly_from_one_prepared_task(
         scenarios=SCENARIOS[:1],
         repeats=3,
         model=MODEL,
+        jobs=1,
     )
 
     output = capsys.readouterr()
@@ -367,6 +375,7 @@ def test_run_gates_on_every_repeat_of_the_subject_variant(
         next_result=lambda: pending.pop(0),
         monotonic=lambda: 0.0,
         prepared_tasks=None,
+        on_run=lambda _slot: None,
     )
 
     exit_code = eval_main._run_scenarios(
@@ -374,6 +383,7 @@ def test_run_gates_on_every_repeat_of_the_subject_variant(
         scenarios=SCENARIOS[:1],
         repeats=3,
         model=MODEL,
+        jobs=1,
     )
 
     output = capsys.readouterr()
@@ -411,6 +421,7 @@ def test_run_gates_on_subject_variant_outcomes_and_solver_errors(
         next_result=lambda: pending.pop(0),
         monotonic=lambda: 0.0,
         prepared_tasks=None,
+        on_run=lambda _slot: None,
     )
 
     exit_code = eval_main._run_scenarios(
@@ -418,6 +429,7 @@ def test_run_gates_on_subject_variant_outcomes_and_solver_errors(
         scenarios=SCENARIOS[:1],
         repeats=1,
         model=MODEL,
+        jobs=1,
     )
 
     capsys.readouterr()
@@ -425,3 +437,54 @@ def test_run_gates_on_subject_variant_outcomes_and_solver_errors(
     manifest = json.loads((run_dir / "run.json").read_text(encoding="utf-8"))
     assert manifest["gate_passed"] is (expected_exit_code == 0)
     assert manifest["exit_code"] == expected_exit_code
+
+
+def test_run_with_jobs_overlaps_runs_in_separate_slots_and_keeps_order(
+    *,
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    run_dir = tmp_path / "run"
+    run_dir.mkdir()
+    # Each pair of runs must meet at the barrier, which only happens when two
+    # run at once; a sequential runner would time out here.
+    barrier = threading.Barrier(2, timeout=10)
+    slots: list[int] = []
+
+    def on_run(slot: int) -> None:
+        slots.append(slot)
+        barrier.wait()
+
+    environment = _install_fake_run(
+        tmp_path=tmp_path,
+        monkeypatch=monkeypatch,
+        run_dir=run_dir,
+        next_result=lambda: Result(passed=True),
+        monotonic=lambda: 0.0,
+        prepared_tasks=None,
+        on_run=on_run,
+    )
+
+    exit_code = eval_main._run_scenarios(
+        environment=environment,
+        scenarios=SCENARIOS[:1],
+        repeats=2,
+        model=MODEL,
+        jobs=2,
+    )
+
+    output = capsys.readouterr()
+    name = SCENARIOS[0].task.name
+    assert exit_code == 0
+    assert sorted(slots) == [0, 0, 1, 1]
+    assert "running:" not in output.out
+    assert f"PASS {name} [bare-git] ({name}.bare-git.r2)" in output.out
+    assert (
+        "Runs overlapped and may read cache written by one another; "
+        "costs are not order-neutral."
+    ) in output.out
+    manifest = json.loads((run_dir / "run.json").read_text(encoding="utf-8"))
+    assert [(task["variant"], task["repeat"]) for task in manifest["tasks"]] == [
+        (variant, repeat) for repeat in (1, 2) for variant in ("git-hunk", "bare-git")
+    ]
