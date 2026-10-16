@@ -947,6 +947,9 @@ def cmd_commit(
     try:
         commit(message, worktree_root=worktree_root)
     except RuntimeError as exc:
-        raise CliError(str(exc)) from exc
+        raise CliError(
+            str(exc),
+            tip="the selected hunks are still staged; retry with 'git commit'",
+        ) from exc
 
     print_committed(selected, message=message)
