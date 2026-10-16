@@ -39,8 +39,9 @@ include skips hunks with no match, exclude takes them whole.
 
 A replacement must keep its `-` and `+` lines together: match text both share
 (`base` to turn `delay = base` into `delay = base * backoff`), or pass one
-`--include-matching` per side. In a wider replacement, take every `-` line plus
-the `+` lines to keep. `--allow-one-sided` is only for a lone deletion or
+`--include-matching` per side. In a wider replacement, `commit` and `stage` take
+every `-` line plus the `+` lines to keep; `discard` and `unstage` take every
+`+` line plus the `-` lines to restore. `--allow-one-sided` is only for a lone deletion or
 addition.
 
 After a partial selection or a `conditional` (Duplicate Hunk) ID, old IDs are
