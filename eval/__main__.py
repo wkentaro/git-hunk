@@ -57,6 +57,12 @@ def main(argv: list[str] | None = None, /) -> int:
             "(default: 1)"
         ),
     )
+    parser.add_argument(
+        "--model",
+        default=MODEL,
+        metavar="ID",
+        help=f"Claude model to run the agent with (default: {MODEL})",
+    )
     args = parser.parse_args(argv)
     if args.repeat < 1:
         parser.error("--repeat must be at least 1")
@@ -72,7 +78,10 @@ def main(argv: list[str] | None = None, /) -> int:
         scenario for scenario in SCENARIOS if scenario.task.name in selected_names
     )
     return _run_scenarios(
-        environment=environment, scenarios=selected, repeats=args.repeat
+        environment=environment,
+        scenarios=selected,
+        repeats=args.repeat,
+        model=args.model,
     )
 
 
@@ -81,6 +90,7 @@ def _run_scenarios(
     environment: EvalEnvironment,
     scenarios: tuple[Scenario, ...],
     repeats: int,
+    model: str,
 ) -> int:
     started_at = datetime.datetime.now(datetime.timezone.utc)
     started_clock = time.monotonic()
@@ -89,7 +99,7 @@ def _run_scenarios(
     )
     run_dir = Path(tempfile.mkdtemp(prefix=run_directory_prefix))
     print(
-        f"eval: model={MODEL} effort={EFFORT} "
+        f"eval: model={model} effort={EFFORT} "
         f"claude={environment.claude_code_version.split()[0]} "
         f"commit={environment.commit[:7]} dirty={str(environment.dirty).lower()}",
         flush=True,
@@ -111,6 +121,7 @@ def _run_scenarios(
                     _run_variant(
                         scenario=scenario,
                         variant=variant,
+                        model=model,
                         prepared=prepared,
                         run_dir=run_dir,
                         repeat=repeat,
@@ -128,6 +139,7 @@ def _run_scenarios(
         environment=environment,
         results=results,
         repeats=repeats,
+        model=model,
         started_at=started_at,
         duration_seconds=duration_seconds,
         exit_code=exit_code,
@@ -151,6 +163,7 @@ def _run_variant(
     *,
     scenario: Scenario,
     variant: EvalVariant,
+    model: str,
     prepared: PreparedTask,
     run_dir: Path,
     repeat: int,
@@ -166,6 +179,7 @@ def _run_variant(
     solver = make_claude_solver(
         task=scenario.task,
         variant=variant,
+        model=model,
         trace_path=trace_path,
         transcript_path=transcript_path,
     )
@@ -212,6 +226,7 @@ def _make_manifest(
     environment: EvalEnvironment,
     results: list[TaskRun],
     repeats: int,
+    model: str,
     started_at: datetime.datetime,
     duration_seconds: float,
     exit_code: int,
@@ -241,7 +256,7 @@ def _make_manifest(
                 "trace_sha256": trace_hash,
                 "transcript": run.transcript_path.name,
                 "transcript_sha256": transcript_hash,
-                "command_flags": build_command_flags(variant=run.variant),
+                "command_flags": build_command_flags(variant=run.variant, model=model),
                 "permission_policy": run.variant.permission_policy,
             }
         )
@@ -258,7 +273,7 @@ def _make_manifest(
         },
         "skill_sha256": environment.skill_sha256,
         "claude_code_version": environment.claude_code_version,
-        "requested_model": MODEL,
+        "requested_model": model,
         "requested_effort": EFFORT,
         "repeats": repeats,
         "gate_passed": gate_passed,

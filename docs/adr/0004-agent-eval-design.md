@@ -152,8 +152,12 @@ grader.
 
 ### Pin the model and isolate the model phase
 
-`eval/config.py` pins the model to `claude-sonnet-5`. The runner has no model
-override and requires the reported stream model to match the model pin.
+`eval/config.py` pins the default model to `claude-sonnet-5`. `--model ID`
+runs one invocation against another model, so a newer model can be compared
+without editing the pin. The runner requires the reported stream model to match
+the requested model, and the manifest records it as `requested_model`. A
+qualifying run uses the pinned default; a run with another model is
+exploratory until ADR 0005's publication bar names that model.
 
 The runner accepts the installed Claude Code version so automatic updates do not
 block an eval run. It records the version in the run manifest.
