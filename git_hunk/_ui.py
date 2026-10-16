@@ -254,7 +254,7 @@ _LINE_OPT_ROW: Final = f"""\
 {_LINE_SELECT_EXAMPLE}
   [bold cyan]--include-matching[/bold cyan] [cyan]<pattern>[/cyan]  Select changed lines containing <pattern> (repeatable, OR'd)
   [bold cyan]--exclude-matching[/bold cyan] [cyan]<pattern>[/cyan]  Select every changed line except those matching (repeatable, OR'd)
-             Line selection (-l, --include-matching, --exclude-matching) requires exactly one hunk.
+             -l requires exactly one hunk; matching applies to every selected hunk.
   [bold cyan]--regex[/bold cyan]    Treat matching patterns as regular expressions (default: literal substring)
   [bold cyan]--allow-one-sided[/bold cyan]  Permit selecting one side of a one-for-one replacement (rejected by default)"""  # noqa: E501
 

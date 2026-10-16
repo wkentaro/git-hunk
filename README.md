@@ -224,7 +224,11 @@ git-hunk discard d161935 -l ^3,^5-7    # discard excluding specific lines
 `--include-matching` / `--exclude-matching` select changed lines by content
 instead of line number (literal substring by default, `--regex` for regular
 expressions). Both are repeatable and OR'd, case-sensitive, and error if nothing
-matches. They are mutually exclusive with `-l` and with each other.
+matches. They are mutually exclusive with `-l` and with each other. `-l` needs
+exactly one Hunk, but matching applies to every Hunk the targets select, so a
+path selects matching lines across a whole file: `--include-matching` leaves out
+a Hunk with no matching line, `--exclude-matching` takes it whole, and a Hunk
+whose every change is excluded is left out.
 
 Line selection accepts any subset of a pure addition or pure deletion. Selecting
 one side of a one-for-one replacement is rejected, because it would leave a

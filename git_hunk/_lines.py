@@ -246,13 +246,15 @@ def _validate_group_selection(
 
 
 def resolve_matching_lines(
-    hunk: Hunk, patterns: Sequence[str], /, *, regex: bool
+    hunk: Hunk, patterns: Sequence[str], /, *, regex: bool, require_match: bool = True
 ) -> set[int]:
     """Return 1-based body line numbers of changed lines matching any pattern.
 
     Patterns are OR'd. Only changed ('+'/'-') lines are considered, matched
     against their content (the text after the prefix). Raises if nothing matches,
-    so a typo'd pattern never silently selects nothing or everything.
+    so a typo'd pattern never silently selects nothing or everything, unless
+    require_match is False: a multi-hunk caller checks for a match across all
+    of its hunks instead.
 
     An empty pattern is rejected: it would match every changed line and silently
     select the whole hunk, mirroring how an empty -l spec errors rather than
@@ -280,10 +282,13 @@ def resolve_matching_lines(
         if matched:
             selected.add(line_num)
 
-    if not selected:
-        joined = ", ".join(repr(p) for p in patterns)
-        raise ValueError(f"no changed line matches {joined}")
+    if not selected and require_match:
+        raise ValueError(no_match_message(patterns))
     return selected
+
+
+def no_match_message(patterns: Sequence[str], /) -> str:
+    return "no changed line matches " + ", ".join(repr(p) for p in patterns)
 
 
 def filter_hunk_lines(
