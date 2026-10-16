@@ -214,7 +214,23 @@ def discard_files(files: list[str], /, *, worktree_root: str) -> None:
     )
 
 
-def commit(message: str, /, *, worktree_root: str) -> None:
-    # Pass the message on stdin, not as -m: a failure reports the command line,
-    # and a hook rejection would otherwise repeat the whole message.
-    run_git("commit", "--file=-", worktree_root=worktree_root, input=message)
+def commit(
+    message: str, /, *, amend: bool, fixup: str | None, worktree_root: str
+) -> None:
+    args = ["commit"]
+    if amend:
+        args.append("--amend")
+    if fixup is not None:
+        args.append(f"--fixup={fixup}")
+    if message:
+        # Pass the message on stdin, not as -m: a failure reports the command
+        # line, and a hook rejection would otherwise repeat the whole message.
+        run_git(*args, "--file=-", worktree_root=worktree_root, input=message)
+    else:
+        # --no-edit keeps the existing or generated message, and stops git from
+        # opening an editor that nobody can answer.
+        run_git(*args, "--no-edit", worktree_root=worktree_root)
+
+
+def get_head_subject(*, worktree_root: str) -> str:
+    return run_git("log", "-1", "--format=%s", worktree_root=worktree_root).strip()

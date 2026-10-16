@@ -31,7 +31,9 @@ git-hunk list
 commits them; it aborts when the index already holds staged changes. A
 Repository path selects every changed hunk in one exact file and beats an ID
 when committing a whole file. Repeat `-m` as with `git commit`: each one
-becomes its own paragraph.
+becomes its own paragraph. To fold hunks into existing history instead, use
+`--amend` (keeps HEAD's message unless `-m` is given) or `--fixup <commit>`
+(no `-m`) in place of `git add` plus `git commit --amend` or `--fixup`.
 
 Committing a complete hunk leaves every other non-`conditional` ID valid, so a
 whole plan of complete hunks chains in one call.

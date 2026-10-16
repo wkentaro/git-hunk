@@ -17,6 +17,7 @@ from ._git import apply_patch
 from ._git import commit
 from ._git import discard_files
 from ._git import get_diff
+from ._git import get_head_subject
 from ._git import get_unmerged_files
 from ._git import get_unsupported_changes
 from ._git import get_untracked_files
@@ -889,12 +890,16 @@ def cmd_discard(
 @click.option("--exclude-matching", "exclude_matching", multiple=True)
 @click.option("--regex", "use_regex", is_flag=True)
 @click.option("--allow-one-sided", "allow_one_sided", is_flag=True)
+@click.option("--amend", "amend", is_flag=True)
+@click.option("--fixup", "fixup", default=None)
 @click.option("-h", "--help", "show_help", is_flag=True)
 @click.argument("targets", nargs=-1)
 def cmd_commit(
     *,
     targets: tuple[str, ...],
     messages: tuple[str, ...],
+    amend: bool,
+    fixup: str | None,
     line_spec: str | None,
     include_matching: tuple[str, ...],
     exclude_matching: tuple[str, ...],
@@ -908,7 +913,19 @@ def cmd_commit(
     # Each -m is its own paragraph, as in git commit; git's own cleanup then
     # collapses blank ones.
     message = "\n\n".join(messages)
-    if not message.strip():
+    if amend and fixup is not None:
+        raise CliError("--amend and --fixup cannot be combined", usage=USAGE_COMMIT)
+    if fixup is not None and messages:
+        raise CliError("--fixup takes no -m", usage=USAGE_COMMIT)
+    # git's reword: mode commits no changes, so the selected hunks would stay
+    # staged behind a success report.
+    if fixup is not None and fixup.startswith("reword:"):
+        raise CliError(
+            "--fixup reword: commits no hunks",
+            tip="use 'git commit --fixup=reword:<commit>' directly",
+        )
+    # Only a plain commit requires -m, but any -m given must say something.
+    if (messages or not (amend or fixup is not None)) and not message.strip():
         raise CliError("commit requires a message (-m)", usage=USAGE_COMMIT)
 
     worktree_root, invocation_prefix = _require_worktree_context()
@@ -945,11 +962,16 @@ def cmd_commit(
         inventory=inventory,
     )
     try:
-        commit(message, worktree_root=worktree_root)
+        commit(message, amend=amend, fixup=fixup, worktree_root=worktree_root)
     except RuntimeError as exc:
+        retry = "git commit --amend" if amend else "git commit"
+        if fixup is not None:
+            retry += f" --fixup={fixup}"
         raise CliError(
             str(exc),
-            tip="the selected hunks are still staged; retry with 'git commit'",
+            tip=f"the selected hunks are still staged; retry with '{retry}'",
         ) from exc
 
+    if not message:
+        message = get_head_subject(worktree_root=worktree_root)
     print_committed(selected, message=message)

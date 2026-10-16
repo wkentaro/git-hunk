@@ -235,3 +235,90 @@ def test_commit_reports_clean_error_when_staged_diff_fails(*, cli: GitHunkCLI) -
     r = cli.run("commit", "deadbeef", "-m", "fix: x")
     assert r.returncode != 0
     assert r.stderr.startswith("error:")
+
+
+def test_commit_amend_keeps_head_message(*, cli: GitHunkCLI) -> None:
+    _init(cli=cli, files={"a.txt": "a\n", "b.txt": "b\n"})
+    cli.repo.write_file("a.txt", "AAA\n")
+    cli.repo.git("commit", "-qam", "feat: a")
+    cli.repo.write_file("b.txt", "BBB\n")
+
+    before = _commit_count(cli=cli)
+    r = cli.run("commit", "b.txt", "--amend")
+    assert r.returncode == 0, r.stderr
+    assert "feat: a" in r.stderr
+
+    assert _commit_count(cli=cli) == before
+    assert cli.repo.git("log", "-1", "--format=%B").strip() == "feat: a"
+    assert "BBB" in cli.repo.git("show", "HEAD:b.txt")
+    assert cli.repo.git("status", "--porcelain").strip() == ""
+
+
+def test_commit_amend_with_message_rewords_head(*, cli: GitHunkCLI) -> None:
+    _init(cli=cli, files={"a.txt": "a\n"})
+    cli.repo.write_file("a.txt", "AAA\n")
+    cli.repo.git("commit", "-qam", "feat: a")
+    cli.repo.write_file("a.txt", "AAAA\n")
+
+    cli.run_ok("commit", "a.txt", "--amend", "-m", "feat: more a", "-m", "Body.")
+
+    assert cli.repo.git("log", "-1", "--format=%B").strip() == "feat: more a\n\nBody."
+
+
+def test_commit_fixup_targets_earlier_commit(*, cli: GitHunkCLI) -> None:
+    _init(cli=cli, files={"a.txt": "a\n", "b.txt": "b\n"})
+    cli.repo.write_file("a.txt", "AAA\n")
+    cli.repo.git("commit", "-qam", "feat: a")
+    cli.repo.write_file("b.txt", "BBB\n")
+    cli.repo.git("commit", "-qam", "feat: b")
+    cli.repo.write_file("a.txt", "AAAA\n")
+
+    before = _commit_count(cli=cli)
+    r = cli.run("commit", "a.txt", "--fixup", "HEAD~1")
+    assert r.returncode == 0, r.stderr
+    assert "fixup! feat: a" in r.stderr
+
+    assert _commit_count(cli=cli) == before + 1
+    assert cli.repo.git("log", "-1", "--format=%s").strip() == "fixup! feat: a"
+    assert cli.repo.git("status", "--porcelain").strip() == ""
+
+
+@pytest.mark.parametrize(
+    "extra",
+    [
+        ["--amend", "--fixup", "HEAD"],
+        ["--fixup", "HEAD", "-m", "x"],
+        ["--amend", "-m", " "],
+        ["--fixup", "reword:HEAD"],
+    ],
+    ids=[
+        "amend-and-fixup",
+        "fixup-with-message",
+        "amend-blank-message",
+        "fixup-reword",
+    ],
+)
+def test_commit_rejects_invalid_amend_fixup_options(
+    *, cli: GitHunkCLI, extra: list[str]
+) -> None:
+    _init(cli=cli, files={"a.txt": "a\n"})
+    cli.repo.write_file("a.txt", "AAA\n")
+
+    head = cli.repo.git("rev-parse", "HEAD")
+    r = cli.run("commit", "a.txt", *extra)
+    assert r.returncode != 0
+    assert cli.repo.git("rev-parse", "HEAD") == head
+    assert cli.repo.git("diff", "--cached").strip() == ""
+
+
+def test_commit_fixup_failure_tip_keeps_fixup(*, cli: GitHunkCLI) -> None:
+    _init(cli=cli, files={"a.txt": "a\n"})
+    cli.repo.write_file("a.txt", "AAA\n")
+
+    hook = Path(cli.repo.path) / ".git" / "hooks" / "pre-commit"
+    hook.write_text("#!/bin/sh\nexit 1\n")
+    hook.chmod(0o755)
+
+    r = cli.run("commit", "a.txt", "--fixup", "HEAD")
+    assert r.returncode == 1
+    assert "retry with 'git commit --fixup=HEAD'" in r.stderr
