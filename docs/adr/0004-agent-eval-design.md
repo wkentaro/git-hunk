@@ -47,8 +47,14 @@ differ only in the tool instruction.
 The git-hunk variant says:
 
 ```text
-Run `git-hunk skills get core logical-commits` and follow both skills.
+Run `git-hunk skills get core logical-commits && git-hunk list && git-hunk show` and follow both skills.
 ```
+
+The instruction loads the skills and the working tree's hunks in one call,
+as the README recommends for an agent about to commit. Loading the skills
+alone cost the git-hunk variant a round trip that bare Git never pays: a
+bare-Git agent opens with `git status && git diff`, the same inspection
+`git-hunk list && git-hunk show` performs.
 
 The bare-Git variant says:
 
@@ -152,12 +158,13 @@ grader.
 
 ### Pin the model and isolate the model phase
 
-`eval/config.py` pins the default model to `claude-sonnet-5`. `--model ID`
-runs one invocation against another model, so a newer model can be compared
-without editing the pin. The runner requires the reported stream model to match
-the requested model, and the manifest records it as `requested_model`. A
-qualifying run uses the pinned default; a run with another model is
-exploratory until ADR 0005's publication bar names that model.
+`eval/model.py` pins the default model to `claude-sonnet-5` and the default
+effort to `high`. `--model ID` and `--effort LEVEL` run one invocation against
+another model or effort, so they can be compared without editing the pins. The
+runner requires the reported stream model to match the requested model, and the
+manifest records the pair as `requested_model` and `requested_effort`. A
+qualifying run uses the pinned defaults; a run with another model or effort is
+exploratory until ADR 0005's publication bar names it.
 
 The runner accepts the installed Claude Code version so automatic updates do not
 block an eval run. It records the version in the run manifest.

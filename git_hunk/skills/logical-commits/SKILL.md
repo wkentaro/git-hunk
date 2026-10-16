@@ -15,8 +15,10 @@ the repository, and follow that skill's command workflow.
   change.
 - Group by intent, not file. Related hunks across files belong together;
   unrelated hunks in one file stay apart.
-- Preserve incomplete or unrelated work when the user asks. If intent remains
-  genuinely ambiguous after reading the diff, ask instead of guessing.
+- When the user marks some work as unrelated or in progress, commit only the
+  change they asked for and leave the rest in the worktree, even if it looks
+  finished. If intent remains genuinely ambiguous after reading the diff, ask
+  instead of guessing.
 
 ## Ordering
 

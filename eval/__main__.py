@@ -10,15 +10,16 @@ import time
 from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
 from typing import Any
+from typing import Final
 
-from eval.config import EFFORT
-from eval.config import MODEL
-from eval.config import TASK_SCHEMA_VERSION
 from eval.environment import EvalEnvironment
 from eval.environment import resolve_environment
 from eval.grader import SOLVER_ERROR
 from eval.harness import PreparedTask
 from eval.harness import prepare_task
+from eval.model import EFFORT
+from eval.model import EFFORT_LEVELS
+from eval.model import MODEL
 from eval.model import VARIANTS
 from eval.model import EvalVariant
 from eval.model import TaskRun
@@ -33,6 +34,8 @@ from eval.repo import cancel_streams
 from eval.scenario import Scenario
 from eval.summary import render_summary
 from eval.tasks import SCENARIOS
+
+TASK_SCHEMA_VERSION: Final = 1
 
 
 def main(argv: list[str] | None = None, /) -> int:
@@ -68,6 +71,16 @@ def main(argv: list[str] | None = None, /) -> int:
         help=f"Claude model to run the agent with (default: {MODEL})",
     )
     parser.add_argument(
+        "--effort",
+        default=EFFORT,
+        choices=EFFORT_LEVELS,
+        metavar="LEVEL",
+        help=(
+            f"effort level to run the agent with: {', '.join(EFFORT_LEVELS)} "
+            f"(default: {EFFORT})"
+        ),
+    )
+    parser.add_argument(
         "--jobs",
         type=int,
         default=1,
@@ -98,6 +111,7 @@ def main(argv: list[str] | None = None, /) -> int:
         scenarios=selected,
         repeats=args.repeat,
         model=args.model,
+        effort=args.effort,
         jobs=args.jobs,
     )
 
@@ -108,6 +122,7 @@ def _run_scenarios(
     scenarios: tuple[Scenario, ...],
     repeats: int,
     model: str,
+    effort: str,
     jobs: int,
 ) -> int:
     started_at = datetime.datetime.now(datetime.timezone.utc)
@@ -117,7 +132,7 @@ def _run_scenarios(
     )
     run_dir = Path(tempfile.mkdtemp(prefix=run_directory_prefix))
     print(
-        f"eval: model={model} effort={EFFORT} "
+        f"eval: model={model} effort={effort} "
         f"claude={environment.claude_code_version.split()[0]} "
         f"commit={environment.commit[:7]} dirty={str(environment.dirty).lower()}",
         flush=True,
@@ -146,6 +161,7 @@ def _run_scenarios(
                 scenario=scenario,
                 variant=variant,
                 model=model,
+                effort=effort,
                 prepared=prepared,
                 run_dir=run_dir,
                 repeat=repeat,
@@ -192,6 +208,7 @@ def _run_scenarios(
         results=results,
         repeats=repeats,
         model=model,
+        effort=effort,
         started_at=started_at,
         duration_seconds=duration_seconds,
         exit_code=exit_code,
@@ -216,6 +233,7 @@ def _run_variant(
     scenario: Scenario,
     variant: EvalVariant,
     model: str,
+    effort: str,
     prepared: PreparedTask,
     run_dir: Path,
     repeat: int,
@@ -235,6 +253,7 @@ def _run_variant(
         task=scenario.task,
         variant=variant,
         model=model,
+        effort=effort,
         trace_path=trace_path,
         transcript_path=transcript_path,
         echo=echo,
@@ -284,6 +303,7 @@ def _make_manifest(
     results: list[TaskRun],
     repeats: int,
     model: str,
+    effort: str,
     started_at: datetime.datetime,
     duration_seconds: float,
     exit_code: int,
@@ -313,7 +333,9 @@ def _make_manifest(
                 "trace_sha256": trace_hash,
                 "transcript": run.transcript_path.name,
                 "transcript_sha256": transcript_hash,
-                "command_flags": build_command_flags(variant=run.variant, model=model),
+                "command_flags": build_command_flags(
+                    variant=run.variant, model=model, effort=effort
+                ),
                 "permission_policy": run.variant.permission_policy,
             }
         )
@@ -331,7 +353,7 @@ def _make_manifest(
         "skill_sha256": environment.skill_sha256,
         "claude_code_version": environment.claude_code_version,
         "requested_model": model,
-        "requested_effort": EFFORT,
+        "requested_effort": effort,
         "repeats": repeats,
         "gate_passed": gate_passed,
         "usage": usage.to_dict() if usage is not None else None,

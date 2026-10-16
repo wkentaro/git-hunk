@@ -116,6 +116,13 @@ git-hunk skills                           # list available skills
 git-hunk skills get core logical-commits  # load both
 ```
 
+When the agent is about to commit the working tree, load the skills and the
+tree's hunks in one call, so planning needs no extra round trip:
+
+```bash
+git-hunk skills get core logical-commits && git-hunk list && git-hunk show
+```
+
 `git-hunk --help` points here first.
 
 ## Quick start
