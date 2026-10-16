@@ -33,7 +33,8 @@ VARIANTS: Final = (
     EvalVariant(
         name="git-hunk",
         tool_instruction=(
-            "Run `git-hunk skills get core logical-commits` and follow both skills."
+            "Run `git-hunk skills get core logical-commits` and follow both skills. "
+            "Commands other than `git-hunk` and `git` are denied."
         ),
         allowed_tools=("Bash(git-hunk:*)", "Bash(git:*)"),
         permission_policy="Bash only; git-hunk and git commands only",
@@ -41,7 +42,10 @@ VARIANTS: Final = (
     ),
     EvalVariant(
         name="bare-git",
-        tool_instruction="Use only Git commands; do not use `git-hunk`.",
+        tool_instruction=(
+            "Use only Git commands; do not use `git-hunk`. "
+            "Commands other than `git` are denied."
+        ),
         allowed_tools=("Bash(git:*)",),
         permission_policy="Bash only; git commands only",
         subject_under_test=False,
