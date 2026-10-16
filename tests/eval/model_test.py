@@ -80,7 +80,8 @@ def test_variant_prompts_differ_only_by_tool_instruction() -> None:
     )
 
     git_hunk_instruction = (
-        "Run `git-hunk skills get core logical-commits` and follow both skills. "
+        "Run `git-hunk skills get core logical-commits && git-hunk list && "
+        "git-hunk show` and follow both skills. "
         "Commands other than `git-hunk` and `git` are denied."
     )
     bare_git_instruction = (

@@ -12,7 +12,8 @@ mechanics.
 
 ## The core loop
 
-Normally two more Bash calls:
+Normally two Bash calls after this skill loads. If the call that loaded it
+already ran `git-hunk list && git-hunk show`, skip step 1:
 
 1. `git-hunk list && git-hunk show`, once. `list` includes untracked files;
    `show` prints every staged and unstaged diff. Plan every commit from that

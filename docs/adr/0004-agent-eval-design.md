@@ -47,8 +47,14 @@ differ only in the tool instruction.
 The git-hunk variant says:
 
 ```text
-Run `git-hunk skills get core logical-commits` and follow both skills.
+Run `git-hunk skills get core logical-commits && git-hunk list && git-hunk show` and follow both skills.
 ```
+
+The instruction loads the skills and the working tree's hunks in one call,
+as the README recommends for an agent about to commit. Loading the skills
+alone cost the git-hunk variant a round trip that bare Git never pays: a
+bare-Git agent opens with `git status && git diff`, the same inspection
+`git-hunk list && git-hunk show` performs.
 
 The bare-Git variant says:
 

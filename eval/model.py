@@ -36,7 +36,8 @@ VARIANTS: Final = (
     EvalVariant(
         name="git-hunk",
         tool_instruction=(
-            "Run `git-hunk skills get core logical-commits` and follow both skills. "
+            "Run `git-hunk skills get core logical-commits && git-hunk list && "
+            "git-hunk show` and follow both skills. "
             "Commands other than `git-hunk` and `git` are denied."
         ),
         allowed_tools=("Bash(git-hunk:*)", "Bash(git:*)"),
