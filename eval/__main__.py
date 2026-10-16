@@ -1,10 +1,13 @@
 import argparse
+import contextlib
 import datetime
 import hashlib
 import json
+import queue
 import sys
 import tempfile
 import time
+from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
 from typing import Any
 
@@ -26,6 +29,7 @@ from eval.model import build_command_flags
 from eval.model import format_usage
 from eval.model import make_claude_solver
 from eval.model import read_trace_usage
+from eval.repo import cancel_streams
 from eval.scenario import Scenario
 from eval.summary import render_summary
 from eval.tasks import SCENARIOS
@@ -63,9 +67,21 @@ def main(argv: list[str] | None = None, /) -> int:
         metavar="ID",
         help=f"Claude model to run the agent with (default: {MODEL})",
     )
+    parser.add_argument(
+        "--jobs",
+        type=int,
+        default=1,
+        metavar="N",
+        help=(
+            "run up to N task variants at once, each in its own checkout; "
+            "live tool calls are then only in the transcripts (default: 1)"
+        ),
+    )
     args = parser.parse_args(argv)
     if args.repeat < 1:
         parser.error("--repeat must be at least 1")
+    if args.jobs < 1:
+        parser.error("--jobs must be at least 1")
 
     try:
         environment = resolve_environment()
@@ -82,6 +98,7 @@ def main(argv: list[str] | None = None, /) -> int:
         scenarios=selected,
         repeats=args.repeat,
         model=args.model,
+        jobs=args.jobs,
     )
 
 
@@ -91,6 +108,7 @@ def _run_scenarios(
     scenarios: tuple[Scenario, ...],
     repeats: int,
     model: str,
+    jobs: int,
 ) -> int:
     started_at = datetime.datetime.now(datetime.timezone.utc)
     started_clock = time.monotonic()
@@ -104,31 +122,65 @@ def _run_scenarios(
         f"commit={environment.commit[:7]} dirty={str(environment.dirty).lower()}",
         flush=True,
     )
-    results: list[TaskRun] = []
     multiple_tasks = len(scenarios) > 1
+    echo = jobs == 1
+    # Each worker holds one checkout slot for the length of a run, so no two
+    # concurrent runs share a checkout path.
+    free_slots: queue.SimpleQueue[int] = queue.SimpleQueue()
+    for slot in range(jobs):
+        free_slots.put(slot)
 
-    for index, scenario in enumerate(scenarios, start=1):
-        name = scenario.task.name
-        progress = f" {index}/{len(scenarios)}" if multiple_tasks else ""
-        print(f"running{progress}: {name}", flush=True)
-        # One prepared task feeds every repeat, so the repeats differ only in
-        # the model run and not in the initial Repository state.
-        with prepare_task(scenario.task) as prepared:
+    def run(
+        headers: list[str],
+        scenario: Scenario,
+        prepared: PreparedTask,
+        repeat: int,
+        variant: EvalVariant,
+    ) -> TaskRun:
+        if echo:
+            for header in headers:
+                print(header, flush=True)
+        slot = free_slots.get()
+        try:
+            return _run_variant(
+                scenario=scenario,
+                variant=variant,
+                model=model,
+                prepared=prepared,
+                run_dir=run_dir,
+                repeat=repeat,
+                repeats=repeats,
+                slot=slot,
+                echo=echo,
+            )
+        finally:
+            free_slots.put(slot)
+
+    with contextlib.ExitStack() as stack, ThreadPoolExecutor(jobs) as executor:
+        run_args: list[tuple[list[str], Scenario, PreparedTask, int, EvalVariant]] = []
+        for index, scenario in enumerate(scenarios, start=1):
+            name = scenario.task.name
+            progress = f" {index}/{len(scenarios)}" if multiple_tasks else ""
+            headers = [f"running{progress}: {name}"]
+            # One prepared task feeds every repeat, so the repeats differ only
+            # in the model run and not in the initial Repository state.
+            prepared = stack.enter_context(prepare_task(scenario.task))
             for repeat in range(1, repeats + 1):
                 if repeats > 1:
-                    print(f"repeat {repeat}/{repeats}: {name}", flush=True)
-                results += [
-                    _run_variant(
-                        scenario=scenario,
-                        variant=variant,
-                        model=model,
-                        prepared=prepared,
-                        run_dir=run_dir,
-                        repeat=repeat,
-                        repeats=repeats,
-                    )
-                    for variant in VARIANTS
-                ]
+                    headers.append(f"repeat {repeat}/{repeats}: {name}")
+                for variant in VARIANTS:
+                    run_args.append((headers, scenario, prepared, repeat, variant))
+                    headers = []
+        # map() yields in submission order, so results, the manifest, and
+        # the summary keep the sequential order whatever finishes first.
+        try:
+            results = list(executor.map(lambda args: run(*args), run_args))
+        except BaseException:
+            # Workers would otherwise finish every queued model run before the
+            # executor lets an interrupt through.
+            cancel_streams()
+            executor.shutdown(cancel_futures=True)
+            raise
 
     gate_passed = _gate_passed(results=results)
     exit_code = 0 if gate_passed else 1
@@ -150,7 +202,7 @@ def _run_scenarios(
         f"{json.dumps(manifest, indent=2, sort_keys=True)}\n",
         encoding="utf-8",
     )
-    summary = render_summary(runs=results)
+    summary = render_summary(runs=results, parallel=not echo)
     if summary:
         print()
         print(summary)
@@ -168,8 +220,11 @@ def _run_variant(
     run_dir: Path,
     repeat: int,
     repeats: int,
+    slot: int,
+    echo: bool,
 ) -> TaskRun:
-    print(flush=True)
+    if echo:
+        print(flush=True)
     name = scenario.task.name
     artifact_stem = _artifact_stem(
         name=name, variant=variant.name, repeat=repeat, repeats=repeats
@@ -182,8 +237,9 @@ def _run_variant(
         model=model,
         trace_path=trace_path,
         transcript_path=transcript_path,
+        echo=echo,
     )
-    result = prepared.run_and_grade(solver)
+    result = prepared.run_and_grade(solver, slot=slot)
     usage = read_trace_usage(trace_path=trace_path)
     mark = "PASS" if result.passed else "FAIL"
     detail = f": {result.reason}" if result.reason else ""
@@ -193,9 +249,10 @@ def _run_variant(
         format_usage(usage=usage) if usage is not None else "usage: unavailable"
     )
     with transcript_path.open("a", encoding="utf-8") as transcript:
-        TranscriptReporter(transcript=transcript).report_result(
+        TranscriptReporter(transcript=transcript, echo=echo).report_result(
             result_line=f"{mark} {name} [{variant.name}]{detail}",
             usage_line=usage_line,
+            artifact_stem=artifact_stem,
         )
     return TaskRun(
         scenario=scenario,

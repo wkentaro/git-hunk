@@ -180,6 +180,7 @@ def make_claude_solver(
     model: str,
     trace_path: Path,
     transcript_path: Path,
+    echo: bool,
 ) -> Solver:
     prompt = build_prompt(task_prompt=task.prompt, variant=variant)
 
@@ -191,6 +192,7 @@ def make_claude_solver(
             model=model,
             trace_path=trace_path,
             transcript_path=transcript_path,
+            echo=echo,
         )
 
     return solve
@@ -204,13 +206,14 @@ def run_claude(
     model: str,
     trace_path: Path,
     transcript_path: Path,
+    echo: bool,
 ) -> None:
     MODEL_TIMEOUT_SECONDS: Final = 30 * 60
     started_at = datetime.datetime.now(datetime.timezone.utc)
     started_clock = time.monotonic()
     transcript_path.parent.mkdir(parents=True, exist_ok=True)
     with transcript_path.open("w", encoding="utf-8") as transcript:
-        reporter = TranscriptReporter(transcript=transcript)
+        reporter = TranscriptReporter(transcript=transcript, echo=echo)
         reporter.report_variant(variant=variant)
         reporter.report_prompt(prompt=prompt)
         reporter.report_tool_calls_header()
@@ -255,8 +258,11 @@ def run_claude(
 
 
 class TranscriptReporter:
-    def __init__(self, *, transcript: TextIO) -> None:
+    def __init__(self, *, transcript: TextIO, echo: bool) -> None:
         self._transcript = transcript
+        # Concurrent runs would interleave their live lines, so they write
+        # only the transcript file.
+        self._echo = echo
 
     def report_variant(self, *, variant: EvalVariant) -> None:
         self._emit(line=f"variant: {variant.name}")
@@ -269,10 +275,16 @@ class TranscriptReporter:
     def report_tool_calls_header(self) -> None:
         self._emit(line="tool calls:")
 
-    def report_result(self, *, result_line: str, usage_line: str) -> None:
+    def report_result(
+        self, *, result_line: str, usage_line: str, artifact_stem: str
+    ) -> None:
         self._emit(line="result:")
         self._emit(line=f"  {result_line}")
         self._emit(line=f"  {usage_line}")
+        if not self._echo:
+            # A quiet run still reports each outcome, named by the artifacts
+            # that hold its prompt and tool calls.
+            print(f"{result_line} ({artifact_stem})", flush=True)
 
     def consume_line(self, line: str, /) -> None:
         try:
@@ -296,7 +308,8 @@ class TranscriptReporter:
             self._emit(line=f"    {command_line}")
 
     def _emit(self, *, line: str) -> None:
-        print(line, flush=True)
+        if self._echo:
+            print(line, flush=True)
         self._transcript.write(f"{line}\n")
         self._transcript.flush()
 

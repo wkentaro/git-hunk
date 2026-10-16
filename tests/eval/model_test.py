@@ -273,6 +273,7 @@ def test_run_claude_writes_partial_trace_on_timeout(
             model=MODEL,
             trace_path=trace_path,
             transcript_path=transcript_path,
+            echo=True,
         )
 
     events = [json.loads(line) for line in trace_path.read_text().splitlines()]
@@ -344,6 +345,7 @@ def test_run_claude_streams_tool_calls_without_results(
         model=MODEL,
         trace_path=trace_path,
         transcript_path=transcript_path,
+        echo=True,
     )
 
     expected = "\n".join(
