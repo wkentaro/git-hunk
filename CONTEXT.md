@@ -13,8 +13,10 @@
   hunk** with no `@@` range. It is the top-level object in `--json` because the tool is
   hunk-centric, not file-centric.
 
-- **Untracked inventory entry**: a record for an untracked file in `list` output. It
-  is not a Hunk and has no Hunk ID, so no git-hunk command can address it.
+- **Untracked inventory entry**: a whole-file Hunk for an untracked file in `list`
+  output. Its Hunk ID covers the file's content, so `stage` and `commit` add the whole
+  file, and `discard` refuses it. An untracked path git-hunk cannot read, such as an
+  embedded repository, keeps an empty ID that no command can address.
 
 - **Hunk ID**: The deterministic address of one Hunk in the combined staged and
   unstaged inventory.

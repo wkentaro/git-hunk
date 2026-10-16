@@ -44,6 +44,8 @@ def _safe_escape(*, text: str) -> str:
 def _whole_file_label(*, hunk: Hunk) -> str:
     # Human label for a hunk with no @@ range, derived from its typed fields
     # (the data layer no longer stores the label string).
+    if hunk.status == "untracked":
+        return "Untracked file"
     if hunk.change_kind == "T":
         return f"Type change ({hunk.a_mode} -> {hunk.b_mode})"
     if hunk.binary:
@@ -115,7 +117,12 @@ def _print_status_section(
             if i < len(by_file) - 1:
                 out.print()
         else:
-            out.print(f"[{color}]{_safe_escape(text=filepath)}[/{color}]")
+            line = Text(_safe(text=filepath), style=color)
+            for hunk in file_hunks:
+                if hunk.id:
+                    line.append("  ")
+                    _append_hunk_id(text=line, hunk=hunk, style="cyan")
+            out.print(line)
 
 
 def print_hunk_list(hunks: list[Hunk], /) -> None:
@@ -328,6 +335,7 @@ _EXAMPLES_COMMIT: Final = [
         'git-hunk commit d161935 --exclude-matching debug -m "fix: ..."',
         "Commit all but matching lines",
     ),
+    ("git-hunk commit d161935 --fixup HEAD~2", "Fix up an earlier commit"),
 ]
 _EXAMPLES_SKILLS: Final = [
     ("git-hunk skills", "List available skills"),
@@ -432,13 +440,15 @@ HELP_COMMIT: Final = f"""\
 Stage one or more specific hunks and commit them in one step. Aborts if anything
 is already staged, so the commit contains exactly the selected hunks. If the
 commit is rejected (e.g. by a pre-commit hook) the hunks are left staged so you
-can retry with [bold cyan]git commit[/bold cyan].
+can retry with [bold cyan]git commit[/bold cyan] (plus any --amend or --fixup).
 {_TARGET_HELP}
 
 {USAGE_COMMIT}
 
 [bold green]Options:[/bold green]
-  [bold cyan]-m[/bold cyan] [cyan]<msg>[/cyan]    Commit message (required; repeat for more paragraphs)
+  [bold cyan]-m[/bold cyan] [cyan]<msg>[/cyan]    Commit message (repeat for more paragraphs; optional with --amend)
+  [bold cyan]--amend[/bold cyan]     Add the hunks to HEAD; keeps HEAD's message unless -m is given
+  [bold cyan]--fixup[/bold cyan] [cyan]<commit>[/cyan]  Commit as "fixup! <subject>" for autosquash (no -m)
 {_LINE_OPT_ROW}
 
 {_format_examples(rows=_EXAMPLES_COMMIT)}"""  # noqa: E501

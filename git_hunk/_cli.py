@@ -1,7 +1,9 @@
+import hashlib
 import json
 import os
 import posixpath
 import re
+import shlex
 import stat
 from collections.abc import Callable
 from dataclasses import dataclass
@@ -13,10 +15,13 @@ import click
 
 from . import __version__
 from ._git import GitCommandError
+from ._git import add_untracked_files
 from ._git import apply_patch
 from ._git import commit
 from ._git import discard_files
 from ._git import get_diff
+from ._git import get_head_subject
+from ._git import get_index_conflicts
 from ._git import get_unmerged_files
 from ._git import get_unsupported_changes
 from ._git import get_untracked_files
@@ -174,8 +179,9 @@ def _get_inventory(*, worktree_root: str) -> _Inventory:
     unstaged_hunks, unstaged_diff = _get_hunks(
         worktree_root=worktree_root, staged=False
     )
+    untracked_hunks = _get_untracked_entries(worktree_root=worktree_root)
     return _Inventory(
-        hunks=assign_hunk_ids(staged_hunks + unstaged_hunks),
+        hunks=assign_hunk_ids(staged_hunks + unstaged_hunks + untracked_hunks),
         staged_diff=staged_diff,
         unstaged_diff=unstaged_diff,
     )
@@ -374,7 +380,7 @@ def _apply_line_filter(
     if is_whole_file_hunk(hunks[0]):
         raise CliError(
             "line selection is not supported for binary, mode, or type changes, "
-            "or empty files"
+            "empty files, or untracked files"
         )
     if is_submodule_hunk(hunks[0]):
         raise CliError(
@@ -409,8 +415,8 @@ def _apply_selection(
     inventory: _Inventory | None,
 ) -> list[Hunk]:
     inventory = inventory or _get_inventory(worktree_root=worktree_root)
-    status = "staged" if staged else "unstaged"
-    hunks = [hunk for hunk in inventory.hunks if hunk.status == status]
+    statuses = {"staged"} if staged else {"unstaged", "untracked"}
+    hunks = [hunk for hunk in inventory.hunks if hunk.status in statuses]
     diff_output = inventory.staged_diff if staged else inventory.unstaged_diff
     selected = _select_hunks(
         hunks=hunks,
@@ -419,13 +425,22 @@ def _apply_selection(
         invocation_prefix=invocation_prefix,
         worktree_root=worktree_root,
     )
+    untracked_files = [hunk.file for hunk in selected if hunk.status == "untracked"]
+    if untracked_files and reverse:
+        paths = ", ".join(repr(path) for path in untracked_files)
+        raise CliError(
+            f"cannot discard untracked files: {paths}",
+            tip="git has no copy of an untracked file; delete it yourself if "
+            "that is intended",
+        )
     selected = _apply_line_filter(hunks=selected, selection=selection, reverse=reverse)
 
+    tracked = [hunk for hunk in selected if hunk.status != "untracked"]
     patch_hunks = [
-        hunk for hunk in selected if not hunk.binary and hunk.change_kind != "T"
+        hunk for hunk in tracked if not hunk.binary and hunk.change_kind != "T"
     ]
     file_command_hunks = [
-        hunk for hunk in selected if hunk.binary or hunk.change_kind == "T"
+        hunk for hunk in tracked if hunk.binary or hunk.change_kind == "T"
     ]
 
     changes_applied = False
@@ -462,8 +477,23 @@ def _apply_selection(
                 worktree_root=worktree_root,
                 dry_run=True,
             )
+        if untracked_files:
+            conflicts = get_index_conflicts(
+                untracked_files, worktree_root=worktree_root
+            )
+            if conflicts:
+                raise CliError(
+                    "untracked files conflict with tracked paths: "
+                    + ", ".join(repr(path) for path in conflicts),
+                    tip="stage the deletion and the new file with Git",
+                )
         if dry_run:
             return selected
+
+        # First, so that a refusal git still finds leaves the index untouched.
+        if untracked_files:
+            add_untracked_files(untracked_files, worktree_root=worktree_root)
+            changes_applied = True
 
         if patch is not None:
             apply_patch(
@@ -496,6 +526,7 @@ def _apply_selection(
                     worktree_root=worktree_root,
                     dry_run=False,
                 )
+                changes_applied = True
     except RuntimeError as exc:
         message = str(exc)
         if changes_applied:
@@ -561,23 +592,45 @@ def _working_tree_mode(*, path: str) -> str:
     return "100755" if mode & 0o100 else "100644"
 
 
+def _content_digest(*, path: str) -> str | None:
+    # Stands in for the blob id an untracked file does not have yet, so its
+    # Hunk ID changes whenever its content does.
+    digest = hashlib.sha256()
+    try:
+        if os.path.islink(path):
+            digest.update(os.fsencode(os.readlink(path)))
+        else:
+            with open(path, "rb") as f:
+                while chunk := f.read(1 << 20):
+                    digest.update(chunk)
+    except OSError:
+        return None
+    return digest.hexdigest()
+
+
+def _untracked_entry(*, worktree_root: str, path: str) -> Hunk:
+    full_path = posixpath.join(worktree_root, path)
+    digest = _content_digest(path=full_path)
+    hunk = whole_file_hunk(
+        path,
+        change_kind="A",
+        a_mode=None,
+        b_mode=_working_tree_mode(path=full_path),
+        binary=False,
+        a_object_id=None,
+        b_object_id=digest,
+        status="untracked",
+    )
+    # A path whose content cannot be read (an embedded repository shows up as
+    # a directory) stays an inventory entry that no command can address.
+    return hunk if digest is not None else replace(hunk, base_id="")
+
+
 def _get_untracked_entries(*, worktree_root: str) -> list[Hunk]:
     try:
-        paths = get_untracked_files(worktree_root=worktree_root)
-        if not paths:
-            return []
         return [
-            whole_file_hunk(
-                p,
-                change_kind="A",
-                a_mode=None,
-                b_mode=_working_tree_mode(path=posixpath.join(worktree_root, p)),
-                binary=False,
-                a_object_id=None,
-                b_object_id=None,
-                status="untracked",
-            )
-            for p in paths
+            _untracked_entry(worktree_root=worktree_root, path=p)
+            for p in get_untracked_files(worktree_root=worktree_root)
         ]
     except (OSError, RuntimeError) as exc:
         raise CliError(str(exc)) from exc
@@ -586,7 +639,6 @@ def _get_untracked_entries(*, worktree_root: str) -> list[Hunk]:
 def _filter_inventory_hunks(
     *,
     inventory: _Inventory,
-    worktree_root: str,
     staged: bool,
     unstaged: bool,
     include_untracked: bool,
@@ -598,10 +650,11 @@ def _filter_inventory_hunks(
     if staged or unstaged:
         status = "staged" if staged else "unstaged"
         return [hunk for hunk in inventory.hunks if hunk.status == status]
-    hunks = inventory.hunks[:]
-    if include_untracked:
-        hunks += _get_untracked_entries(worktree_root=worktree_root)
-    return hunks
+    return [
+        hunk
+        for hunk in inventory.hunks
+        if include_untracked or hunk.status != "untracked"
+    ]
 
 
 @cli.command("list", add_help_option=False)
@@ -630,7 +683,6 @@ def cmd_list(
     inventory = _get_inventory(worktree_root=worktree_root)
     hunks = _filter_inventory_hunks(
         inventory=inventory,
-        worktree_root=worktree_root,
         staged=staged,
         unstaged=unstaged,
         include_untracked=True,
@@ -667,10 +719,9 @@ def cmd_show(
     inventory = _get_inventory(worktree_root=worktree_root)
     hunks = _filter_inventory_hunks(
         inventory=inventory,
-        worktree_root=worktree_root,
         staged=staged,
         unstaged=unstaged,
-        include_untracked=False,
+        include_untracked=bool(ids),
         usage=USAGE_SHOW,
     )
 
@@ -889,12 +940,16 @@ def cmd_discard(
 @click.option("--exclude-matching", "exclude_matching", multiple=True)
 @click.option("--regex", "use_regex", is_flag=True)
 @click.option("--allow-one-sided", "allow_one_sided", is_flag=True)
+@click.option("--amend", "amend", is_flag=True)
+@click.option("--fixup", "fixup", default=None)
 @click.option("-h", "--help", "show_help", is_flag=True)
 @click.argument("targets", nargs=-1)
 def cmd_commit(
     *,
     targets: tuple[str, ...],
     messages: tuple[str, ...],
+    amend: bool,
+    fixup: str | None,
     line_spec: str | None,
     include_matching: tuple[str, ...],
     exclude_matching: tuple[str, ...],
@@ -908,7 +963,19 @@ def cmd_commit(
     # Each -m is its own paragraph, as in git commit; git's own cleanup then
     # collapses blank ones.
     message = "\n\n".join(messages)
-    if not message.strip():
+    if amend and fixup is not None:
+        raise CliError("--amend and --fixup cannot be combined", usage=USAGE_COMMIT)
+    if fixup is not None and messages:
+        raise CliError("--fixup takes no -m", usage=USAGE_COMMIT)
+    # git's reword: mode commits no changes, so the selected hunks would stay
+    # staged behind a success report.
+    if fixup is not None and fixup.startswith("reword:"):
+        raise CliError(
+            "--fixup reword: commits no hunks",
+            tip="use 'git commit --fixup=reword:<commit>' directly",
+        )
+    # Only a plain commit requires -m, but any -m given must say something.
+    if (messages or not (amend or fixup is not None)) and not message.strip():
         raise CliError("commit requires a message (-m)", usage=USAGE_COMMIT)
 
     worktree_root, invocation_prefix = _require_worktree_context()
@@ -945,11 +1012,16 @@ def cmd_commit(
         inventory=inventory,
     )
     try:
-        commit(message, worktree_root=worktree_root)
+        commit(message, amend=amend, fixup=fixup, worktree_root=worktree_root)
     except RuntimeError as exc:
+        retry = "git commit --amend" if amend else "git commit"
+        if fixup is not None:
+            retry += f" --fixup={shlex.quote(fixup)}"
         raise CliError(
             str(exc),
-            tip="the selected hunks are still staged; retry with 'git commit'",
+            tip=f"the selected hunks are still staged; retry with: {retry}",
         ) from exc
 
+    if not message:
+        message = get_head_subject(worktree_root=worktree_root)
     print_committed(selected, message=message)

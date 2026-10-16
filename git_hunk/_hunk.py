@@ -347,17 +347,13 @@ def whole_file_hunk(
     b_object_id: str | None,
     status: str = "unstaged",
 ) -> Hunk:
-    base_id = (
-        ""
-        if status == "untracked"
-        else _compute_whole_file_hunk_id(
-            filepath=filepath,
-            change_kind=change_kind,
-            a_mode=a_mode,
-            b_mode=b_mode,
-            a_object_id=a_object_id,
-            b_object_id=b_object_id,
-        )
+    base_id = _compute_whole_file_hunk_id(
+        filepath=filepath,
+        change_kind=change_kind,
+        a_mode=a_mode,
+        b_mode=b_mode,
+        a_object_id=a_object_id,
+        b_object_id=b_object_id,
     )
     return Hunk(
         id="",

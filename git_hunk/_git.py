@@ -179,6 +179,33 @@ def stage_files(files: list[str], /, *, worktree_root: str, dry_run: bool) -> No
     )
 
 
+def get_index_conflicts(files: list[str], /, *, worktree_root: str) -> list[str]:
+    # Index entries that block adding these paths: one below a path (it is a
+    # tracked directory) or one at a parent directory (it is a tracked file).
+    # A literal pathspec matches both the entry itself and entries below it.
+    parents = {f[:i] for f in files for i, char in enumerate(f) if char == "/"}
+    output = run_git(
+        _LITERAL_PATHSPECS,
+        "ls-files",
+        "-z",
+        "--",
+        *files,
+        *sorted(parents),
+        worktree_root=worktree_root,
+    )
+    return [
+        entry
+        for entry in output.split("\0")
+        if entry and (entry in parents or any(entry.startswith(f"{f}/") for f in files))
+    ]
+
+
+def add_untracked_files(files: list[str], /, *, worktree_root: str) -> None:
+    # Unlike git add, update-index refuses a path that would replace a tracked
+    # directory instead of also staging that directory's deletion.
+    run_git("update-index", "--add", "--", *files, worktree_root=worktree_root)
+
+
 def unstage_added_files(
     files: list[str], /, *, worktree_root: str, dry_run: bool
 ) -> None:
@@ -214,7 +241,23 @@ def discard_files(files: list[str], /, *, worktree_root: str) -> None:
     )
 
 
-def commit(message: str, /, *, worktree_root: str) -> None:
-    # Pass the message on stdin, not as -m: a failure reports the command line,
-    # and a hook rejection would otherwise repeat the whole message.
-    run_git("commit", "--file=-", worktree_root=worktree_root, input=message)
+def commit(
+    message: str, /, *, amend: bool, fixup: str | None, worktree_root: str
+) -> None:
+    args = ["commit"]
+    if amend:
+        args.append("--amend")
+    if fixup is not None:
+        args.append(f"--fixup={fixup}")
+    if message:
+        # Pass the message on stdin, not as -m: a failure reports the command
+        # line, and a hook rejection would otherwise repeat the whole message.
+        run_git(*args, "--file=-", worktree_root=worktree_root, input=message)
+    else:
+        # --no-edit keeps the existing or generated message, and stops git from
+        # opening an editor that nobody can answer.
+        run_git(*args, "--no-edit", worktree_root=worktree_root)
+
+
+def get_head_subject(*, worktree_root: str) -> str:
+    return run_git("log", "-1", "--format=%s", worktree_root=worktree_root).strip()
