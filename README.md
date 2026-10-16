@@ -224,14 +224,23 @@ git-hunk discard d161935 -l ^3,^5-7    # discard excluding specific lines
 `--include-matching` / `--exclude-matching` select changed lines by content
 instead of line number (literal substring by default, `--regex` for regular
 expressions). Both are repeatable and OR'd, case-sensitive, and error if nothing
-matches. They are mutually exclusive with `-l` and with each other.
+matches. They are mutually exclusive with `-l` and with each other. `-l` needs
+exactly one Hunk, but matching applies to every Hunk the targets select, so a
+path selects matching lines across a whole file: `--include-matching` leaves out
+a Hunk with no matching line, `--exclude-matching` takes it whole, and a Hunk
+whose every change is excluded is left out.
 
 Line selection accepts any subset of a pure addition or pure deletion. Selecting
 one side of a one-for-one replacement is rejected, because it would leave a
 deletion-only or addition-only half; select both lines, match text they share,
 or pass `--allow-one-sided` when that half is what you want. A grouped
-replacement with multiple deleted or added lines must be selected as a whole or
-not selected, and `--allow-one-sided` does not relax that. Numeric range
+replacement with multiple deleted or added lines can be selected partially only
+when the selection takes every line on the side the command consumes: every
+deletion for `stage` and `commit`, every addition for `unstage` and `discard`,
+plus some lines of the other side. Staging every deletion and one addition
+replaces the old lines with that addition alone. Any other partial selection is
+rejected, because nothing says where an unselected line would land, and
+`--allow-one-sided` does not relax that. Numeric range
 endpoints are checked against the Hunk before expansion, and no-newline state is
 preserved for each patch side. Submodule pointer changes and whole-file Hunks do
 not support line selection. Select the Hunk as a whole.

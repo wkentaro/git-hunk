@@ -101,13 +101,16 @@ def test_line_selection_rejected_for_multi_hunk_path(
     assert "exactly one hunk" in r.stderr
 
 
-def test_matching_selection_rejected_for_multi_hunk_path(
+def test_matching_selection_applies_to_every_hunk_of_a_path(
     *,
     multi_hunk_repo: GitHunkCLI,
 ) -> None:
-    r = multi_hunk_repo.run("stage", "big.py", "--include-matching", "L")
-    assert r.returncode != 0
-    assert "exactly one hunk" in r.stderr
+    cli = multi_hunk_repo
+
+    cli.run_ok("stage", "big.py", "--include-matching", "1")
+
+    assert cli.repo.git("diff", "--cached", "--name-only") == "big.py\n"
+    assert cli.repo.git("diff", "--name-only") == "b.py\n"
 
 
 def test_unknown_path_errors_clearly(*, multi_hunk_repo: GitHunkCLI) -> None:

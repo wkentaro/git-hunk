@@ -44,7 +44,7 @@ the tree still holds.
 
 ## Splitting and cleanup
 
-Select part of one hunk by content or by the 1-based body positions
+Select part of a hunk by content or by the 1-based body positions
 `git-hunk show` prints, counting context lines:
 
 ```bash
@@ -54,7 +54,12 @@ git-hunk commit d161935 -l 3,5-7 -m "add retry" && git-hunk list
 Prefer content matching when the line has distinctive text. `--include-matching`
 and `--exclude-matching` match changed-line content as a literal substring
 (`--regex` for a regular expression); each is repeatable and OR'd. Use only one
-of `-l`, `--include-matching`, or `--exclude-matching`.
+of `-l`, `--include-matching`, or `--exclude-matching`. `-l` needs exactly one
+hunk, but matching applies to every hunk a path or several IDs select, so one
+commit can take a rename spread across a file:
+`git-hunk commit app.py --include-matching total_cents -m "rename total"`.
+`--include-matching` leaves out a hunk with no match; `--exclude-matching` takes
+it whole.
 
 A partial selection of a one-for-one replacement must cover both its `-` and `+`
 line, or it fails and changes nothing. To lift `delay = base` into
@@ -72,11 +77,13 @@ git-hunk list
 
 A partial-line operation invalidates recorded IDs and body positions, and an
 operation on a Conditional Hunk ID (marked `conditional`, a Duplicate Hunk group
-member) renumbers its group. After either, only a bare Repository path may
-follow in that call; anything else needs a fresh `git-hunk list`. Whole-file
-hunks, submodule pointer changes, and replacements wider than one-for-one must
-be selected whole. Address a leftover by path only when no other work in that
-file must be kept.
+member) renumbers its group. After either, only Repository path targets may
+follow in that call; a Hunk ID needs a fresh `git-hunk list`. Whole-file
+hunks and submodule pointer changes must be selected whole. In a replacement
+wider than one-for-one, a commit or stage must take every `-` line, plus the `+`
+lines to keep; a match on text the old line and the kept new line share does
+this. Address a leftover by path only when no other work in that file must be
+kept.
 
 Use `git-hunk stage` plus `git commit` when the staged diff must be inspected,
 and `git-hunk unstage` to correct staging. `git-hunk discard` permanently

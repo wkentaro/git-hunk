@@ -38,6 +38,7 @@ from ._hunk import parse_diff
 from ._hunk import whole_file_hunk
 from ._lines import count_hunk_body_lines
 from ._lines import filter_hunk_lines
+from ._lines import no_match_message
 from ._lines import parse_line_spec
 from ._lines import resolve_matching_lines
 from ._patch import build_patch
@@ -327,13 +328,12 @@ class _Selection:
     def resolve(self, hunk: Hunk, /) -> tuple[set[int], bool]:
         if self.line_spec is not None:
             return parse_line_spec(self.line_spec, total=count_hunk_body_lines(hunk))
-        if self.include_matching:
-            lines = resolve_matching_lines(
-                hunk, self.include_matching, regex=self.regex
-            )
-            return lines, False
-        lines = resolve_matching_lines(hunk, self.exclude_matching, regex=self.regex)
-        return lines, True
+        patterns = self.include_matching or self.exclude_matching
+        # _apply_line_filter checks for a match across all selected hunks.
+        lines = resolve_matching_lines(
+            hunk, patterns, regex=self.regex, require_match=False
+        )
+        return lines, not self.include_matching
 
 
 def _build_selection(
@@ -375,31 +375,62 @@ def _apply_line_filter(
 ) -> list[Hunk]:
     if not selection.is_active():
         return hunks
-    if len(hunks) != 1:
-        raise CliError("line selection requires exactly one hunk")
-    if is_whole_file_hunk(hunks[0]):
+    if len(hunks) != 1 and selection.line_spec is not None:
         raise CliError(
-            "line selection is not supported for binary, mode, or type changes, "
-            "empty files, or untracked files"
+            "-l requires exactly one hunk",
+            tip="--include-matching and --exclude-matching select across hunks",
         )
-    if is_submodule_hunk(hunks[0]):
-        raise CliError(
-            "line selection is not supported for submodule changes",
-            tip="select the hunk as a whole",
-        )
-    try:
-        lines, exclude = selection.resolve(hunks[0])
-        return [
-            filter_hunk_lines(
-                hunks[0],
-                lines,
-                exclude=exclude,
-                reverse=reverse,
-                allow_one_sided=selection.allow_one_sided,
+    for hunk in hunks:
+        if is_whole_file_hunk(hunk):
+            raise CliError(
+                "line selection is not supported for binary, mode, or type changes, "
+                "empty files, or untracked files"
             )
-        ]
+        if is_submodule_hunk(hunk):
+            raise CliError(
+                "line selection is not supported for submodule changes",
+                tip="select the hunk as a whole",
+            )
+    # Content matching applies to every selected hunk. A hunk with no matching
+    # line is left out by --include-matching and taken whole by
+    # --exclude-matching, and one whose every change is excluded is left out;
+    # only a pattern that matches nowhere is an error.
+    filtered: list[Hunk] = []
+    matched = False
+    try:
+        for hunk in hunks:
+            lines, exclude = selection.resolve(hunk)
+            matched = matched or bool(lines)
+            if not lines:
+                if exclude:
+                    filtered.append(hunk)
+                continue
+            # Matched lines are changed lines only, so matching every change
+            # excludes the whole hunk; -l positions also count context lines.
+            if (
+                selection.line_spec is None
+                and exclude
+                and len(lines) == hunk.additions + hunk.deletions
+            ):
+                continue
+            filtered.append(
+                filter_hunk_lines(
+                    hunk,
+                    lines,
+                    exclude=exclude,
+                    reverse=reverse,
+                    allow_one_sided=selection.allow_one_sided,
+                )
+            )
     except ValueError as exc:
         raise CliError(str(exc)) from exc
+    if not matched:
+        raise CliError(
+            no_match_message(selection.include_matching or selection.exclude_matching)
+        )
+    if not filtered:
+        raise CliError("no changes remain after line filtering")
+    return filtered
 
 
 def _apply_selection(

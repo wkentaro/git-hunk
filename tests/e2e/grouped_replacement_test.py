@@ -1,4 +1,5 @@
 from pathlib import Path
+from typing import Final
 
 import pytest
 
@@ -134,3 +135,63 @@ def test_unstage_matching_selection_uses_group_validation(
 
     _assert_group_error(returncode=result.returncode, stderr=result.stderr)
     assert _capture_repo_state(cli=cli) == before
+
+
+_FINAL_TOTAL: Final = (
+    "def line_total(price, quantity):\n"
+    "    if quantity <= 0:\n"
+    '        raise ValueError("quantity must be positive")\n'
+    "    return Decimal(price) * quantity\n"
+)
+
+
+@pytest.fixture
+def mixed_replacement(*, cli: GitHunkCLI) -> GitHunkCLI:
+    # One deleted line replaced by three added ones that carry two intents:
+    # a Decimal switch and new validation.
+    BASE: Final = (
+        "def line_total(price, quantity):\n    return float(price) * quantity\n"
+    )
+    cli.repo.write_file("total.py", BASE)
+    cli.repo.git("add", "total.py")
+    cli.repo.git("commit", "-m", "init")
+    cli.repo.write_file("total.py", _FINAL_TOTAL)
+    return cli
+
+
+def test_commit_splits_a_grouped_replacement_by_content(
+    *, mixed_replacement: GitHunkCLI
+) -> None:
+    cli = mixed_replacement
+
+    cli.run_ok(
+        "commit",
+        cli.get_only_hunk_id("--unstaged"),
+        "--include-matching",
+        "price",
+        "-m",
+        "use Decimal",
+    )
+    cli.run_ok("commit", "total.py", "-m", "validate quantity")
+
+    DECIMAL_TOTAL: Final = (
+        "def line_total(price, quantity):\n    return Decimal(price) * quantity\n"
+    )
+    assert cli.repo.git("show", "HEAD~1:total.py") == DECIMAL_TOTAL
+    assert cli.repo.git("show", "HEAD:total.py") == _FINAL_TOTAL
+    assert cli.repo.git("status", "--short") == ""
+
+
+def test_discard_splits_a_grouped_replacement_by_content(
+    *, mixed_replacement: GitHunkCLI
+) -> None:
+    # Discarding takes every added line and restores only the selected deleted
+    # one, so it needs a group with two deletions to choose from.
+    cli = mixed_replacement
+    cli.repo.write_file("total.py", "a\nb\nc\n")
+    cli.repo.git("commit", "-am", "abc")
+    cli.repo.write_file("total.py", "a\nB\nC\n")
+
+    cli.run_ok("discard", cli.get_only_hunk_id("--unstaged"), "-l", "2,4,5")
+
+    assert (Path(cli.repo.path) / "total.py").read_text() == "a\nb\n"
