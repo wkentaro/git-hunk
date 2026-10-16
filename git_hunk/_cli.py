@@ -2,6 +2,7 @@ import json
 import os
 import posixpath
 import re
+import shlex
 import stat
 from collections.abc import Callable
 from dataclasses import dataclass
@@ -966,10 +967,10 @@ def cmd_commit(
     except RuntimeError as exc:
         retry = "git commit --amend" if amend else "git commit"
         if fixup is not None:
-            retry += f" --fixup={fixup}"
+            retry += f" --fixup={shlex.quote(fixup)}"
         raise CliError(
             str(exc),
-            tip=f"the selected hunks are still staged; retry with '{retry}'",
+            tip=f"the selected hunks are still staged; retry with: {retry}",
         ) from exc
 
     if not message:

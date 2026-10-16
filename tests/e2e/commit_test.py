@@ -319,6 +319,7 @@ def test_commit_fixup_failure_tip_keeps_fixup(*, cli: GitHunkCLI) -> None:
     hook.write_text("#!/bin/sh\nexit 1\n")
     hook.chmod(0o755)
 
-    r = cli.run("commit", "a.txt", "--fixup", "HEAD")
+    r = cli.run("commit", "a.txt", "--fixup", "HEAD^{/init}")
     assert r.returncode == 1
-    assert "retry with 'git commit --fixup=HEAD'" in r.stderr
+    # Quoted, so the tip can be pasted into a shell as is.
+    assert "retry with: git commit --fixup='HEAD^{/init}'" in r.stderr
