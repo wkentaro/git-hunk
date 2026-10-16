@@ -36,7 +36,9 @@
   between them. Partial line selection is unrestricted for pure additions and pure
   deletions. A one-for-one replacement is selected whole, or one-sided only with
   `--allow-one-sided`, which then applies just that half. A larger grouped
-  replacement is selected as a whole or not selected, whatever the flag says.
+  replacement is selected as a whole, not at all, or as every line on the side
+  the operation consumes (deletions to stage or commit, additions to unstage or
+  discard) plus some lines of the other side, whatever the flag says.
 
 - **Whole-file hunk**: a tracked Hunk with no `@@` text range: a binary change, a mode-only
   (chmod) change, a type change (e.g. file to symlink), or an empty tracked addition

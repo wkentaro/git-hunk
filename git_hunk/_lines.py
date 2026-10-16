@@ -170,12 +170,17 @@ def _render_body_lines(*, kept: list[_BodyLine]) -> list[str]:
 
 
 def _reject_partial_group(
-    *, group: list[tuple[int, str]], selected: set[int], allow_one_sided: bool
+    *,
+    group: list[tuple[int, str]],
+    selected: set[int],
+    allow_one_sided: bool,
+    consumed_prefix: str,
 ) -> None:
-    # Git pairs no old line with any new line inside a changed run, so a partial
-    # replacement wider than one-for-one has no defined meaning. A one-for-one
-    # replacement has defined halves, but requires an explicit opt-in because
-    # selecting one usually leaves a deletion or duplicate line behind.
+    # Git pairs no old line with any new line inside a changed run, so where an
+    # unselected line would land beside the selected ones is undefined: kept as
+    # context, it could sit before or after them. A one-for-one replacement has
+    # defined halves, but requires an explicit opt-in because selecting one
+    # usually leaves a deletion or duplicate line behind.
     deletions = sum(prefix == "-" for _, prefix in group)
     additions = sum(prefix == "+" for _, prefix in group)
     if not deletions or not additions:
@@ -191,15 +196,34 @@ def _reject_partial_group(
             "one-for-one replacement; match text both lines share, select both "
             "lines, or pass --allow-one-sided"
         )
+    # A wider group has one unambiguous partial selection: every line on the
+    # side the apply consumes plus some lines of the other side. No unselected
+    # line turns into context, so the selected lines simply replace the
+    # consumed side: staging every deletion and some additions replaces the
+    # old run with just those additions.
+    consumed_selected = all(
+        number in selected for number, prefix in group if prefix == consumed_prefix
+    )
+    other_selected = any(
+        number in selected for number, prefix in group if prefix != consumed_prefix
+    )
+    if consumed_selected and other_selected:
+        return
+    consumed_side = "deletion" if consumed_prefix == "-" else "addition"
     raise ValueError(
         f"cannot partially select lines {group[0][0]}-{group[-1][0]}: "
         f"grouped replacement (deletions: {deletions}, additions: {additions}); "
-        "select all or none"
+        f"select all, none, or every {consumed_side} plus the lines to keep "
+        "from the other side"
     )
 
 
 def _validate_group_selection(
-    *, body: list[_BodyLine], selected: set[int], allow_one_sided: bool
+    *,
+    body: list[_BodyLine],
+    selected: set[int],
+    allow_one_sided: bool,
+    consumed_prefix: str,
 ) -> None:
     group: list[tuple[int, str]] = []
     for line_num, line in enumerate(body, start=1):
@@ -207,11 +231,17 @@ def _validate_group_selection(
             group.append((line_num, line.prefix))
             continue
         _reject_partial_group(
-            group=group, selected=selected, allow_one_sided=allow_one_sided
+            group=group,
+            selected=selected,
+            allow_one_sided=allow_one_sided,
+            consumed_prefix=consumed_prefix,
         )
         group = []
     _reject_partial_group(
-        group=group, selected=selected, allow_one_sided=allow_one_sided
+        group=group,
+        selected=selected,
+        allow_one_sided=allow_one_sided,
+        consumed_prefix=consumed_prefix,
     )
 
 
@@ -287,13 +317,16 @@ def filter_hunk_lines(
     else:
         selected = lines
 
-    _validate_group_selection(
-        body=body, selected=selected, allow_one_sided=allow_one_sided
-    )
     # A forward apply matches OLD content, so unselected '-' lines become
     # context and unselected '+' lines drop. A reverse apply matches NEW
     # content, so the two sides swap.
     keep_prefix = "+" if reverse else "-"
+    _validate_group_selection(
+        body=body,
+        selected=selected,
+        allow_one_sided=allow_one_sided,
+        consumed_prefix=keep_prefix,
+    )
     kept = _select_body_lines(body=body, selected=selected, keep_prefix=keep_prefix)
     new_body = _render_body_lines(kept=kept)
 

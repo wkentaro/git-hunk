@@ -74,9 +74,11 @@ A partial-line operation invalidates recorded IDs and body positions, and an
 operation on a Conditional Hunk ID (marked `conditional`, a Duplicate Hunk group
 member) renumbers its group. After either, only a bare Repository path may
 follow in that call; anything else needs a fresh `git-hunk list`. Whole-file
-hunks, submodule pointer changes, and replacements wider than one-for-one must
-be selected whole. Address a leftover by path only when no other work in that
-file must be kept.
+hunks and submodule pointer changes must be selected whole. In a replacement
+wider than one-for-one, a commit or stage must take every `-` line, plus the `+`
+lines to keep; a match on text the old line and the kept new line share does
+this. Address a leftover by path only when no other work in that file must be
+kept.
 
 Use `git-hunk stage` plus `git commit` when the staged diff must be inspected,
 and `git-hunk unstage` to correct staging. `git-hunk discard` permanently

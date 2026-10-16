@@ -230,8 +230,13 @@ Line selection accepts any subset of a pure addition or pure deletion. Selecting
 one side of a one-for-one replacement is rejected, because it would leave a
 deletion-only or addition-only half; select both lines, match text they share,
 or pass `--allow-one-sided` when that half is what you want. A grouped
-replacement with multiple deleted or added lines must be selected as a whole or
-not selected, and `--allow-one-sided` does not relax that. Numeric range
+replacement with multiple deleted or added lines can be selected partially only
+when the selection takes every line on the side the command consumes: every
+deletion for `stage` and `commit`, every addition for `unstage` and `discard`,
+plus some lines of the other side. Staging every deletion and one addition
+replaces the old lines with that addition alone. Any other partial selection is
+rejected, because nothing says where an unselected line would land, and
+`--allow-one-sided` does not relax that. Numeric range
 endpoints are checked against the Hunk before expansion, and no-newline state is
 preserved for each patch side. Submodule pointer changes and whole-file Hunks do
 not support line selection. Select the Hunk as a whole.

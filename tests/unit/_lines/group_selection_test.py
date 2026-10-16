@@ -164,7 +164,50 @@ def test_exclude_selection_uses_the_same_group_rule(
     diff = "@@ -1,3 +1,3 @@\n a\n-b\n-c\n+B\n+C"
 
     with pytest.raises(ValueError, match="cannot partially select"):
-        filter_hunk_lines(make_hunk(diff), {5}, exclude=True, reverse=reverse)
+        filter_hunk_lines(make_hunk(diff), {2, 5}, exclude=True, reverse=reverse)
+
+
+@pytest.mark.parametrize(
+    ("reverse", "selected", "expected_diff"),
+    [
+        # Staging takes every deletion and replaces the old run with only the
+        # selected addition; the unselected addition stays behind.
+        (False, {2, 3, 4}, "@@ -1,3 +1,2 @@\n a\n-b\n-c\n+B"),
+        # Unstaging or discarding takes every addition and restores only the
+        # selected deletion; the unselected deletion stays applied.
+        (True, {2, 4, 5}, "@@ -1,2 +1,3 @@\n a\n-b\n+B\n+C"),
+    ],
+)
+def test_allows_partial_group_that_takes_the_whole_consumed_side(
+    *,
+    make_hunk: Callable[[str], Hunk],
+    reverse: bool,
+    selected: set[int],
+    expected_diff: str,
+) -> None:
+    diff = "@@ -1,3 +1,3 @@\n a\n-b\n-c\n+B\n+C"
+
+    result = filter_hunk_lines(
+        make_hunk(diff), selected, exclude=False, reverse=reverse
+    )
+
+    assert result.diff == expected_diff
+
+
+@pytest.mark.parametrize(
+    ("reverse", "selected"),
+    [(False, {2, 4, 5}), (True, {2, 3, 4})],
+)
+def test_rejects_partial_group_that_takes_only_the_other_whole_side(
+    *, make_hunk: Callable[[str], Hunk], reverse: bool, selected: set[int]
+) -> None:
+    # Taking the whole side the apply does not consume leaves an unselected
+    # line as context, and nothing says whether it goes before or after.
+    diff = "@@ -1,3 +1,3 @@\n a\n-b\n-c\n+B\n+C"
+    side = "addition" if reverse else "deletion"
+
+    with pytest.raises(ValueError, match=f"or every {side} plus the lines to keep"):
+        filter_hunk_lines(make_hunk(diff), selected, exclude=False, reverse=reverse)
 
 
 def test_context_line_does_not_change_group_classification(
