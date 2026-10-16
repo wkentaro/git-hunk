@@ -6,27 +6,13 @@ allowed-tools: Bash(git-hunk:*), Bash(git:*)
 
 # git-hunk logical commits
 
-Plan the entire commit series from the core skill's diff output before changing
-the repository, and follow that skill's command workflow.
+Plan the whole series from the core skill's output before changing anything.
 
-## Grouping
-
-- Put one intent in each commit: one feature, fix, refactor, test, or formatting
-  change.
-- Group by intent, not file. Related hunks across files belong together;
-  unrelated hunks in one file stay apart.
-- When the user marks some work as unrelated or in progress, commit only the
-  change they asked for and leave the rest in the worktree, even if it looks
-  finished. If intent remains genuinely ambiguous after reading the diff, ask
-  instead of guessing.
-
-## Ordering
-
-Each commit must stand alone: the build and tests would pass at every commit,
-not only the last. Put prerequisites first: a refactor, rename, or signature
-change precedes behavior that depends on it. Keep pure formatting separate.
-
-## Messages
-
-Follow any clear repository convention. Otherwise use a concise message
-describing only that commit's change.
+- One intent per commit, grouped by intent, not file.
+- When the user marks work as unrelated or in progress, commit only what they
+  asked for and leave the rest, even if it looks finished. Ask if intent is
+  genuinely ambiguous.
+- Each commit must build and pass tests alone: prerequisites (refactors,
+  renames) first, formatting separate.
+- Follow the repository's message convention, else a concise message for that
+  commit's change.
