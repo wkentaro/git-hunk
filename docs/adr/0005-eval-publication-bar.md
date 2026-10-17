@@ -60,8 +60,9 @@ keep the full runner table; its caveat travels with it, per ADR 0004.
 
 ### One pinned model suffices
 
-`claude-sonnet-5` at the pinned reasoning effort meets the bar when the
-published table names the model, effort, and harness version prominently. The
+The pinned model at the pinned reasoning effort meets the bar when the
+published table names the model, effort, and harness version prominently. A pin
+change needs a new qualifying run before the README table changes model. The
 claim is scoped to that agent, not to agents generally. A model matrix is a
 possible later extension, not a requirement of the bar.
 

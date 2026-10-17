@@ -18,7 +18,7 @@ from eval.scenario import Scenario
 from eval.scenario import Solver
 from eval.task import Task
 
-MODEL: Final = "claude-sonnet-5"
+MODEL: Final = "claude-sonnet-5-5"
 EFFORT: Final = "high"
 EFFORT_LEVELS: Final = ("low", "medium", "high", "xhigh", "max")
 

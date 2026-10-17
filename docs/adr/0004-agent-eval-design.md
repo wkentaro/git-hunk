@@ -158,7 +158,7 @@ grader.
 
 ### Pin the model and isolate the model phase
 
-`eval/model.py` pins the default model to `claude-sonnet-5` and the default
+`eval/model.py` pins the default model to `claude-sonnet-5-5` and the default
 effort to `high`. `--model ID` and `--effort LEVEL` run one invocation against
 another model or effort, so they can be compared without editing the pins. The
 runner requires the reported stream model to match the requested model, and the
