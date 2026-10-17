@@ -7,8 +7,8 @@
 
 Non-interactive, programmatic alternative to `git add -p`.
 
-Every staged or unstaged Hunk gets a durable ID so you can inspect, filter, and
-stage changes without interactive prompts. Duplicate Hunks get unique
+Every staged or unstaged Hunk gets a durable ID, so you can inspect, filter,
+and stage changes without interactive prompts. Duplicate Hunks get unique
 Conditional IDs.
 
 <img src="assets/teaser.png" alt="git-hunk teaser" width="800">
@@ -18,14 +18,14 @@ Conditional IDs.
 
 ## Why?
 
-`git add -p` requires interactive input. That makes it unusable for:
+`git add -p` asks a question for every hunk, so these callers cannot use it:
 
-- **AI agents** (Claude Code, Codex, etc.) that need to split changes into logical commits
-- **Scripts & CI/CD** that automate commit organization
-- **Editor integrations** that want hunk-level staging without shelling out to a TUI
+- AI agents (Claude Code, Codex, and others) that split changes into logical commits
+- Scripts and CI jobs that organize commits
+- Editor integrations that want hunk-level staging without running a TUI
 
-`git-hunk` solves this by assigning each staged or unstaged Hunk a durable ID
-and exposing simple stage/unstage/discard commands.
+`git-hunk` gives each staged or unstaged Hunk a durable ID and takes those IDs
+as arguments to `stage`, `unstage`, `discard`, and `commit`.
 
 ## Comparison
 
@@ -33,40 +33,41 @@ and exposing simple stage/unstage/discard commands.
 | ---------------- | ----------- | ------------ | -------- | ------------------ | ----------- |
 | `git add -p` | Yes | No | No | Yes | No |
 | `git add <file>` | No | Yes | No | No | No |
-| **`git-hunk`** | **No** | **Yes** | **Yes** | **Yes** | **Yes** |
+| **`git-hunk`** | No | Yes | Yes | Yes | Yes |
 
 ### Eval
 
-One agent (Claude Code 2.1.226, `claude-sonnet-5`, reasoning effort `high`)
+One agent (Claude Code 2.1.301, `claude-sonnet-5`, reasoning effort `high`)
 attempted the same eight tasks from identical repository state, five times per
-variant: organize a dirty working tree into correct, focused commits, once
-following git-hunk's bundled skills and once restricted to bare Git. The
-[checked-in eval harness](https://github.com/wkentaro/git-hunk/tree/0ef14bef657e187b5ab7283b0dbd64751a02736f/eval)
-grades the exact resulting repository state — commit partition and order, final
-tree, index, and leftovers. This table records the qualifying run; `just eval`
+variant. Each task asks the agent to organize a dirty working tree into correct,
+focused commits, once following git-hunk's bundled skills and once restricted to
+bare Git. The
+[checked-in eval harness](https://github.com/wkentaro/git-hunk/tree/0f610be/eval)
+grades the exact resulting repository state: commit partition and order, final
+tree, index, and leftovers. This table records the qualifying run. `just eval`
 reruns the protocol and prints a table in the same format.
 
 | Task | git-hunk | bare Git |
-| ------------------------------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------- | ----------------------------------------------- |
-| [split_refactor_vs_feature](https://github.com/wkentaro/git-hunk/blob/0ef14bef657e187b5ab7283b0dbd64751a02736f/eval/tasks/split_refactor_vs_feature.py) | PASS 5/5 · 3c · 4t | PASS 5/5 · 3c [2-5] · 4t [3-6] |
-| [separate_mixed_hunks](https://github.com/wkentaro/git-hunk/blob/0ef14bef657e187b5ab7283b0dbd64751a02736f/eval/tasks/separate_mixed_hunks.py) | PASS 5/5 · 3c · 4t | PASS 5/5 · 8c [7-12] · 9t [8-13] |
-| [drop_debug_lines](https://github.com/wkentaro/git-hunk/blob/0ef14bef657e187b5ab7283b0dbd64751a02736f/eval/tasks/drop_debug_lines.py) | PASS 5/5 · 3c [3-4] · 4t [4-5] | MIXED 4/5 partition · 8c [7-27] · 9t [8-28] |
-| [protect_unrelated_work](https://github.com/wkentaro/git-hunk/blob/0ef14bef657e187b5ab7283b0dbd64751a02736f/eval/tasks/protect_unrelated_work.py) | PASS 5/5 · 3c · 4t | PASS 5/5 · 3c [3-4] · 4t [4-5] |
-| [split_single_hunk](https://github.com/wkentaro/git-hunk/blob/0ef14bef657e187b5ab7283b0dbd64751a02736f/eval/tasks/split_single_hunk.py) | PASS 5/5 · 4c [3-4] · 5t [4-5] | PASS 5/5 · 11c [9-19] · 12t [10-20] |
-| [separate_formatter_noise](https://github.com/wkentaro/git-hunk/blob/0ef14bef657e187b5ab7283b0dbd64751a02736f/eval/tasks/separate_formatter_noise.py) | PASS 5/5 · 4c [4-6] · 5t [5-7] | PASS 5/5 · 13c [12-16] · 14t [13-17] |
-| [pick_duplicate_hunk](https://github.com/wkentaro/git-hunk/blob/0ef14bef657e187b5ab7283b0dbd64751a02736f/eval/tasks/pick_duplicate_hunk.py) | PASS 5/5 · 3c · 4t | PASS 5/5 · 8c [7-25] · 9t [8-26] |
-| [commit_parseable_subset](https://github.com/wkentaro/git-hunk/blob/0ef14bef657e187b5ab7283b0dbd64751a02736f/eval/tasks/commit_parseable_subset.py) | PASS 5/5 · 4c [3-5] · 5t [4-6] | MIXED 4/5 partition · 13c [10-23] · 14t [11-24] |
-| **total** | **8/8 · 27c [25-31] · 35t [33-39]** | **6/8 (2 mixed) · 67c [57-131] · 75t [65-139]** |
+| --- | --- | --- |
+| [split_refactor_vs_feature](https://github.com/wkentaro/git-hunk/blob/0f610be/eval/tasks/split_refactor_vs_feature.py) | PASS 5/5 · 3c [3-11] · 4t [4-12] | PASS 5/5 · 3c [3-5] · 4t [4-6] |
+| [separate_mixed_hunks](https://github.com/wkentaro/git-hunk/blob/0f610be/eval/tasks/separate_mixed_hunks.py) | PASS 5/5 · 3c [3-7] · 4t [4-8] | MIXED 4/5 partition · 6c [4-18] · 7t [5-19] |
+| [drop_debug_lines](https://github.com/wkentaro/git-hunk/blob/0f610be/eval/tasks/drop_debug_lines.py) | PASS 5/5 · 3c [3-4] · 4t [4-5] | PASS 5/5 · 6c [6-10] · 7t [7-11] |
+| [protect_unrelated_work](https://github.com/wkentaro/git-hunk/blob/0f610be/eval/tasks/protect_unrelated_work.py) | PASS 5/5 · 3c [2-4] · 4t [3-5] | PASS 5/5 · 2c · 3t |
+| [split_single_hunk](https://github.com/wkentaro/git-hunk/blob/0f610be/eval/tasks/split_single_hunk.py) | PASS 5/5 · 4c [3-5] · 5t [4-6] | PASS 5/5 · 8c [6-12] · 9t [7-13] |
+| [separate_formatter_noise](https://github.com/wkentaro/git-hunk/blob/0f610be/eval/tasks/separate_formatter_noise.py) | PASS 5/5 · 3c [2-9] · 4t [3-10] | PASS 5/5 · 10c [6-11] · 11t [7-12] |
+| [pick_duplicate_hunk](https://github.com/wkentaro/git-hunk/blob/0f610be/eval/tasks/pick_duplicate_hunk.py) | PASS 5/5 · 4c [3-4] · 5t [4-5] | PASS 5/5 · 5c [4-7] · 6t [5-8] |
+| [commit_parseable_subset](https://github.com/wkentaro/git-hunk/blob/0f610be/eval/tasks/commit_parseable_subset.py) | PASS 5/5 · 4c [4-6] · 5t [5-7] | PASS 5/5 · 9c [5-11] · 10t [6-12] |
+| **total** | **8/8 · 27c [23-50] · 35t [31-58]** | **7/8 (1 mixed) · 49c [36-76] · 57t [44-84]** |
 
-`c` = tool calls, `t` = turns; a cell reports the median of its five repeats
-with the observed range in brackets, dropped where every repeat agreed, and the
-pass column counts passing repeats. `MIXED j/5` means the variant passed j of its
-five repeats, and `partition` names the failure: the commits made do not match
-the required change groups. The cost column is omitted: bare Git runs second in
-each pair and partly reads the prompt cache the git-hunk run warmed, so raw costs
-are not order-neutral
-([#224](https://github.com/wkentaro/git-hunk/issues/224)). Five samples per task
-variant, dated 2026-08-10 at commit `0ef14be`.
+`c` is tool calls and `t` is turns. A cell reports the median of its five
+repeats, with the observed range in brackets when the repeats disagreed, and the
+pass column counts passing repeats. `MIXED j/5` means the variant passed j of
+its five repeats. `partition` names the failure: the commits made do not match
+the required change groups. The bare Git failure made no commit at all. The
+table omits cost, because bare Git runs second in each pair and partly reads
+the prompt cache the git-hunk run warmed
+([ADR 0005](https://github.com/wkentaro/git-hunk/blob/main/docs/adr/0005-eval-publication-bar.md)).
+Five samples per task variant, dated 2026-10-17 at commit `0f610be`.
 
 ## Install
 
@@ -90,8 +91,7 @@ git-hunk --version
 ```
 
 > [!TIP]
-> To try the latest development version (the head of `main` on GitHub) before
-> it is published:
+> To try the head of `main` before it reaches PyPI:
 >
 > ```bash
 > uv tool install git+https://github.com/wkentaro/git-hunk
@@ -99,31 +99,30 @@ git-hunk --version
 
 ### For AI agents
 
-A usage guide ships inside the CLI, so agents (Claude Code, Codex, etc.) can
-load it on demand. It always matches the installed version, so it never goes
-stale:
+The CLI ships its own usage guide, so an agent (Claude Code, Codex, and
+others) can load it on demand. The guide always matches the installed version:
 
 ```bash
 git-hunk skills get core
 ```
 
-`core` covers the tool itself. A separate `logical-commits` skill covers how to
-group hunks into commits and order them; it is optional, so a project that
-already defines its own commit conventions can load `core` alone:
+`core` covers the commands. The optional `logical-commits` skill covers how to
+group hunks into commits and order them. A project with its own commit
+conventions can load `core` alone:
 
 ```bash
 git-hunk skills                           # list available skills
 git-hunk skills get core logical-commits  # load both
 ```
 
-When the agent is about to commit the working tree, load the skills and the
-tree's hunks in one call, so planning needs no extra round trip:
+Before committing the working tree, an agent can load the skills and the
+tree's hunks in one call and plan from that output:
 
 ```bash
 git-hunk skills get core logical-commits && git-hunk list && git-hunk show
 ```
 
-`git-hunk --help` points here first.
+`git-hunk --help` also tells agents to start with `git-hunk skills get core`.
 
 ## Quick start
 
@@ -147,33 +146,33 @@ git commit -m "fix: handle empty response in API client"
 
 ### Repository paths
 
-A Repository path is relative to the worktree root, uses `/`, and has the same
-meaning from every invocation directory. Every path in output and every file
-operand for `list`, `stage`, `unstage`, `discard`, and `commit` is a Repository
-path. A leading `./` and internal `..` components are normalized. Absolute paths
-and paths that escape the worktree are rejected.
+A Repository path is relative to the worktree root, uses `/`, and means the
+same file from any directory you run git-hunk in. Every path in output and every
+file operand for `list`, `stage`, `unstage`, `discard`, and `commit` is a
+Repository path. git-hunk normalizes a leading `./` and internal `..`
+components, and rejects absolute paths and paths that leave the worktree.
 
-File operands select one exact changed file. Directories, globs, and Git pathspec
-syntax are not expanded. Quote operands that contain shell metacharacters so the
-shell passes them unchanged. For example, from `sub/`, `same.txt` selects the
-file at the worktree root, while `sub/same.txt` selects the file inside `sub/`.
-`show` remains ID-only.
+A file operand selects one exact changed file. git-hunk does not expand
+directories, globs, or Git pathspec syntax. Quote operands that contain shell
+metacharacters so the shell passes them unchanged. For example, from `sub/`,
+`same.txt` selects the file at the worktree root, and `sub/same.txt` selects the
+file inside `sub/`. `show` takes Hunk IDs only.
 
 ### Unsupported repository states
 
 git-hunk rejects detected rename, copy, and unmerged index states before it
-writes inventory output or changes the repository. This prevents partial JSON,
-partial inventory, false clean results, and partial mutation. Resolve an
-unmerged index with Git before retrying. Full rename and copy support is not yet
-available; it remains tracked in [#53](https://github.com/wkentaro/git-hunk/issues/53).
+writes output or changes the repository, so it never prints partial JSON, a
+partial inventory, or a false clean result, and never applies half a change.
+Resolve an unmerged index with Git, then retry. Rename and copy support is
+tracked in [#53](https://github.com/wkentaro/git-hunk/issues/53).
 
 ### Hunk IDs
 
 A canonical Hunk ID is a full SHA-256 value. JSON returns it in full. Human
 output shows the shortest unambiguous prefix of at least seven characters, and
-commands accept unambiguous prefixes without case sensitivity. IDs are
-calculated from the combined staged and unstaged inventory, including when a
-status filter shows only one side.
+commands accept any unambiguous prefix in either case. git-hunk computes IDs
+from the combined staged and unstaged inventory, even when a status filter shows
+only one side.
 
 An Unchanged Hunk keeps its ID when it moves completely between staged and
 unstaged state or when other complete Hunks move. A partial-line operation
@@ -221,29 +220,33 @@ git-hunk discard d161935               # restore from the index
 git-hunk discard d161935 -l ^3,^5-7    # discard excluding specific lines
 ```
 
-`--include-matching` / `--exclude-matching` select changed lines by content
-instead of line number (literal substring by default, `--regex` for regular
-expressions). Both are repeatable and OR'd, case-sensitive, and error if nothing
-matches. They are mutually exclusive with `-l` and with each other. `-l` needs
-exactly one Hunk, but matching applies to every Hunk the targets select, so a
-path selects matching lines across a whole file: `--include-matching` leaves out
-a Hunk with no matching line, `--exclude-matching` takes it whole, and a Hunk
-whose every change is excluded is left out.
+`--include-matching` and `--exclude-matching` select changed lines by content
+instead of position. They match a literal substring, or a regular expression
+with `--regex`. Both are repeatable, OR'd, and case-sensitive, and both fail if
+nothing matches. Use only one of `-l`, `--include-matching`, and
+`--exclude-matching`.
 
-Line selection accepts any subset of a pure addition or pure deletion. Selecting
-one side of a one-for-one replacement is rejected, because it would leave a
-deletion-only or addition-only half; select both lines, match text they share,
-or pass `--allow-one-sided` when that half is what you want. A grouped
-replacement with multiple deleted or added lines can be selected partially only
-when the selection takes every line on the side the command consumes: every
-deletion for `stage` and `commit`, every addition for `unstage` and `discard`,
-plus some lines of the other side. Staging every deletion and one addition
-replaces the old lines with that addition alone. Any other partial selection is
-rejected, because nothing says where an unselected line would land, and
-`--allow-one-sided` does not relax that. Numeric range
-endpoints are checked against the Hunk before expansion, and no-newline state is
-preserved for each patch side. Submodule pointer changes and whole-file Hunks do
-not support line selection. Select the Hunk as a whole.
+`-l` needs exactly one Hunk. Matching applies to every Hunk the targets select,
+so a path selects matching lines across a whole file. `--include-matching`
+leaves out a Hunk with no matching line, and `--exclude-matching` takes it
+whole. A Hunk whose every change is excluded is left out.
+
+Line selection accepts any subset of a pure addition or pure deletion. git-hunk
+rejects one side of a one-for-one replacement, because that leaves a lone
+deletion or addition. Select both lines, match text they share, or pass
+`--allow-one-sided` when the lone half is what you want.
+
+A grouped replacement has several deleted or added lines. A partial selection
+of one must take every line on the side the command consumes, plus some lines
+of the other side. `stage` and `commit` consume deletions, and `unstage` and
+`discard` consume additions. Staging every deletion and one addition replaces
+the old lines with that addition alone. git-hunk rejects any other partial
+selection, because nothing says where an unselected line would land.
+`--allow-one-sided` does not change this.
+
+git-hunk checks `-l` range endpoints against the Hunk before expanding them, and
+keeps each side's no-newline state. Submodule pointer changes and whole-file
+Hunks have no line selection. Select them whole.
 
 A binary, mode-only, type, or empty tracked file change is a whole-file Hunk.
 Plain output labels empty tracked changes as `Empty file (added)` or
@@ -271,10 +274,10 @@ git-hunk list --json     # inventory: every hunk, no body
 git-hunk show <id> --json # the same hunks plus a structured per-line body
 ```
 
-Both emit a versioned envelope (`schema_version` is currently `2`) so consumers
-can depend on a stable shape. `list --json` is a lean inventory and carries no
-body; `show --json` adds a structured `lines` array. A `show --json` hunk
-(`list --json` is identical but without the `lines` field):
+Both emit a versioned envelope, so consumers can rely on its shape.
+`schema_version` is currently `2`. `list --json` is an inventory without hunk
+bodies, and `show --json` adds a structured `lines` array. Here is a
+`show --json` hunk. `list --json` prints the same object without `lines`:
 
 ```json
 {
@@ -324,9 +327,9 @@ A `lines` entry is `{ "n", "op", "content", "no_newline"? }`:
 
 | Field | Type | Description |
 | ------------ | ------ | --------------------------------------------------------------------------------------------------- |
-| `n` | int | 1-based position within the hunk body — the index `-l` line selection uses. Counts every body line. |
+| `n` | int | 1-based position within the hunk body, the number `-l` takes. Counts every body line. |
 | `op` | string | `" "` context, `"+"` addition, `"-"` deletion. |
-| `content` | union | The line text **without** its leading op character, as a `{text\|bytes}` union. |
+| `content` | union | The line text without its leading op character, as a `{text\|bytes}` union. |
 | `no_newline` | bool | Present and `true` only when the line has no trailing newline; consumes no `n`. |
 
 Any field carrying arbitrary git/source bytes (`file`, `context_before`,
@@ -334,9 +337,9 @@ Any field carrying arbitrary git/source bytes (`file`, `context_before`,
 valid UTF-8, else `{"bytes": "<base64>"}`. It is always an object, so consumers
 have one code path and strict JSON parsers never see a lone surrogate.
 
-Adding a new field is backward-compatible and does not change `schema_version`;
-renaming, removing, or changing the type of an existing field bumps it. (Before
-`schema_version` existed, `list --json` returned a bare array.)
+A new field is backward-compatible and leaves `schema_version` alone. Renaming,
+removing, or retyping an existing field bumps it. Before `schema_version`
+existed, `list --json` returned a bare array.
 
 ## How it works
 
@@ -349,9 +352,9 @@ renaming, removing, or changing the type of an existing field bumps it. (Before
 
 Text IDs use the Repository path and patch body, including context and newline
 state. They exclude `@@` ranges, section headings, and staged state. Whole-file
-IDs include the actual binary, mode, or type change. This keeps an Unchanged
-Hunk stable while complete Hunks move. A partial operation changes the patch
-content and creates new IDs.
+IDs include the actual binary, mode, or type change. An Unchanged Hunk keeps
+its ID while complete Hunks move. A partial operation changes the patch content,
+so the resulting Hunks get new IDs.
 
 ## Contributing
 
@@ -359,8 +362,8 @@ Bug reports, feature requests, and pull requests are welcome on
 [GitHub](https://github.com/wkentaro/git-hunk).
 
 Install [just](https://just.systems/man/en/packages.html) 1.58.0 or newer and
-[uv](https://docs.astral.sh/uv/getting-started/installation/). Recipes use Bash;
-on Windows, install Git for Windows and make its Bash available on `PATH`.
+[uv](https://docs.astral.sh/uv/getting-started/installation/). Recipes use Bash.
+On Windows, install Git for Windows and put its Bash on `PATH`.
 
 ```bash
 git clone https://github.com/wkentaro/git-hunk.git
