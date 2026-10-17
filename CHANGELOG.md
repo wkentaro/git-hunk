@@ -9,6 +9,22 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 
 <!-- towncrier release notes start -->
 
+## 0.6.0 - 2026-10-17
+
+### Added
+
+- A grouped replacement wider than one-for-one can now be selected partially when the selection takes every deletion (for `stage` and `commit`) or every addition (for `unstage` and `discard`) plus some lines of the other side, so one rewritten line that became several can be split into separate commits. ([#318](https://github.com/wkentaro/git-hunk/pull/318))
+- `--include-matching` and `--exclude-matching` now apply to every Hunk a path or several Hunk IDs select, instead of requiring exactly one Hunk, so one command can commit a rename spread across a file. `-l` still needs exactly one Hunk. ([#319](https://github.com/wkentaro/git-hunk/pull/319))
+
+### Changed
+
+- The `core` skill skips its inspection step when the call that loaded it already ran `git-hunk list && git-hunk show`, and the README recommends that chained call, so an agent can plan its commits one round trip sooner. ([#316](https://github.com/wkentaro/git-hunk/pull/316))
+- The bundled `core` and `logical-commits` skills are 38% shorter with the same guidance, so an agent that loads them spends fewer tokens per run. ([#321](https://github.com/wkentaro/git-hunk/pull/321))
+
+### Fixed
+
+- The `logical-commits` skill now tells agents to leave work the user marked unrelated or in progress in the worktree, even when it looks finished, and the `core` skill is about 10% shorter. ([#315](https://github.com/wkentaro/git-hunk/pull/315))
+
 ## 0.5.0 - 2026-10-16
 
 ### Added
