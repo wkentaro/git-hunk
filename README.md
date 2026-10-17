@@ -37,37 +37,37 @@ as arguments to `stage`, `unstage`, `discard`, and `commit`.
 
 ### Eval
 
-One agent (Claude Code 2.1.301, `claude-sonnet-5`, reasoning effort `high`)
+One agent (Claude Code 2.1.302, `claude-sonnet-5-5`, reasoning effort `high`)
 attempted the same eight tasks from identical repository state, five times per
 variant. Each task asks the agent to organize a dirty working tree into correct,
 focused commits, once following git-hunk's bundled skills and once restricted to
 bare Git. The
-[checked-in eval harness](https://github.com/wkentaro/git-hunk/tree/0f610be/eval)
+[checked-in eval harness](https://github.com/wkentaro/git-hunk/tree/1112db7/eval)
 grades the exact resulting repository state: commit partition and order, final
 tree, index, and leftovers. This table records the qualifying run. `just eval`
 reruns the protocol and prints a table in the same format.
 
 | Task | git-hunk | bare Git |
 | --- | --- | --- |
-| [split_refactor_vs_feature](https://github.com/wkentaro/git-hunk/blob/0f610be/eval/tasks/split_refactor_vs_feature.py) | PASS 5/5 · 3c [3-11] · 4t [4-12] | PASS 5/5 · 3c [3-5] · 4t [4-6] |
-| [separate_mixed_hunks](https://github.com/wkentaro/git-hunk/blob/0f610be/eval/tasks/separate_mixed_hunks.py) | PASS 5/5 · 3c [3-7] · 4t [4-8] | MIXED 4/5 partition · 6c [4-18] · 7t [5-19] |
-| [drop_debug_lines](https://github.com/wkentaro/git-hunk/blob/0f610be/eval/tasks/drop_debug_lines.py) | PASS 5/5 · 3c [3-4] · 4t [4-5] | PASS 5/5 · 6c [6-10] · 7t [7-11] |
-| [protect_unrelated_work](https://github.com/wkentaro/git-hunk/blob/0f610be/eval/tasks/protect_unrelated_work.py) | PASS 5/5 · 3c [2-4] · 4t [3-5] | PASS 5/5 · 2c · 3t |
-| [split_single_hunk](https://github.com/wkentaro/git-hunk/blob/0f610be/eval/tasks/split_single_hunk.py) | PASS 5/5 · 4c [3-5] · 5t [4-6] | PASS 5/5 · 8c [6-12] · 9t [7-13] |
-| [separate_formatter_noise](https://github.com/wkentaro/git-hunk/blob/0f610be/eval/tasks/separate_formatter_noise.py) | PASS 5/5 · 3c [2-9] · 4t [3-10] | PASS 5/5 · 10c [6-11] · 11t [7-12] |
-| [pick_duplicate_hunk](https://github.com/wkentaro/git-hunk/blob/0f610be/eval/tasks/pick_duplicate_hunk.py) | PASS 5/5 · 4c [3-4] · 5t [4-5] | PASS 5/5 · 5c [4-7] · 6t [5-8] |
-| [commit_parseable_subset](https://github.com/wkentaro/git-hunk/blob/0f610be/eval/tasks/commit_parseable_subset.py) | PASS 5/5 · 4c [4-6] · 5t [5-7] | PASS 5/5 · 9c [5-11] · 10t [6-12] |
-| **total** | **8/8 · 27c [23-50] · 35t [31-58]** | **7/8 (1 mixed) · 49c [36-76] · 57t [44-84]** |
+| [split_refactor_vs_feature](https://github.com/wkentaro/git-hunk/blob/1112db7/eval/tasks/split_refactor_vs_feature.py) | PASS 5/5 · 2c [2-3] · 3t [3-4] | PASS 5/5 · 3c [2-3] · 4t [3-4] |
+| [separate_mixed_hunks](https://github.com/wkentaro/git-hunk/blob/1112db7/eval/tasks/separate_mixed_hunks.py) | PASS 5/5 · 2c · 3t | PASS 5/5 · 3c [2-3] · 4t [3-4] |
+| [drop_debug_lines](https://github.com/wkentaro/git-hunk/blob/1112db7/eval/tasks/drop_debug_lines.py) | PASS 5/5 · 2c · 3t | PASS 5/5 · 3c [2-3] · 4t [3-4] |
+| [protect_unrelated_work](https://github.com/wkentaro/git-hunk/blob/1112db7/eval/tasks/protect_unrelated_work.py) | PASS 5/5 · 2c · 3t | PASS 5/5 · 2c · 3t |
+| [split_single_hunk](https://github.com/wkentaro/git-hunk/blob/1112db7/eval/tasks/split_single_hunk.py) | PASS 5/5 · 2c [2-3] · 3t [3-4] | PASS 5/5 · 3c [2-3] · 4t [3-4] |
+| [separate_formatter_noise](https://github.com/wkentaro/git-hunk/blob/1112db7/eval/tasks/separate_formatter_noise.py) | PASS 5/5 · 2c [2-3] · 3t [3-4] | MIXED 3/5 partition · 3c [2-4] · 4t [3-5] |
+| [pick_duplicate_hunk](https://github.com/wkentaro/git-hunk/blob/1112db7/eval/tasks/pick_duplicate_hunk.py) | PASS 5/5 · 2c · 3t | MIXED 3/5 partition · 3c [2-3] · 4t [3-4] |
+| [commit_parseable_subset](https://github.com/wkentaro/git-hunk/blob/1112db7/eval/tasks/commit_parseable_subset.py) | PASS 5/5 · 2c [2-3] · 3t [3-4] | PASS 5/5 · 3c [2-3] · 4t [3-4] |
+| **total** | **8/8 · 16c [16-20] · 24t [24-28]** | **6/8 (2 mixed) · 23c [16-24] · 31t [24-32]** |
 
 `c` is tool calls and `t` is turns. A cell reports the median of its five
 repeats, with the observed range in brackets when the repeats disagreed, and the
 pass column counts passing repeats. `MIXED j/5` means the variant passed j of
 its five repeats. `partition` names the failure: the commits made do not match
-the required change groups. The bare Git failure made no commit at all. The
+the required change groups. The bare Git failures made no commit at all. The
 table omits cost, because bare Git runs second in each pair and partly reads
 the prompt cache the git-hunk run warmed
 ([ADR 0005](https://github.com/wkentaro/git-hunk/blob/main/docs/adr/0005-eval-publication-bar.md)).
-Five samples per task variant, dated 2026-10-17 at commit `0f610be`.
+Five samples per task variant, dated 2026-10-17 at commit `1112db7`.
 
 ## Install
 
