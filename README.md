@@ -63,8 +63,16 @@ reruns the protocol and prints a table in the same format.
 repeats, with the observed range in brackets when the repeats disagreed, and the
 pass column counts passing repeats. `MIXED j/5` means the variant passed j of
 its five repeats. `partition` names the failure: the commits made do not match
-the required change groups. The bare Git failures made no commit at all. The
-table omits cost, because bare Git runs second in each pair and partly reads
+the required change groups.
+
+Every bare Git failure made no commit. In each one, the agent passed answers to
+`git add -p` through a here-string. The eval's permission settings
+(`Bash(git:*)` in `dontAsk` mode) denied that command, and the agent stopped to
+ask for permission. Passing runs split the same changes by piping the answers
+or by writing a patch for `git apply --cached`. git-hunk takes Hunk IDs and
+patterns as arguments, so it never needs stdin.
+
+The table omits cost, because bare Git runs second in each pair and partly reads
 the prompt cache the git-hunk run warmed
 ([ADR 0005](https://github.com/wkentaro/git-hunk/blob/main/docs/adr/0005-eval-publication-bar.md)).
 Five samples per task variant, dated 2026-10-17 at commit `1112db7`.
