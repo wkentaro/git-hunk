@@ -3,6 +3,7 @@ from typing import Final
 from eval.scenario import Scenario
 from eval.tasks import commit_parseable_subset
 from eval.tasks import drop_debug_lines
+from eval.tasks import inspect_untracked_files
 from eval.tasks import pick_duplicate_hunk
 from eval.tasks import protect_unrelated_work
 from eval.tasks import separate_formatter_noise
@@ -21,4 +22,5 @@ SCENARIOS: Final[tuple[Scenario, ...]] = (
     separate_formatter_noise.SCENARIO,
     pick_duplicate_hunk.SCENARIO,
     commit_parseable_subset.SCENARIO,
+    inspect_untracked_files.SCENARIO,
 )
