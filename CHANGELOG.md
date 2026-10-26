@@ -9,6 +9,18 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 
 <!-- towncrier release notes start -->
 
+## 0.7.0 - 2026-10-26
+
+### Added
+
+- Read commit messages from a file with `git-hunk commit -F`, validating the message before staging any changes. ([#327](https://github.com/wkentaro/git-hunk/pull/327))
+- Inspect Hunks with `git-hunk show <Repository-path>`, including mixed path and Hunk ID selections with status filtering. ([#328](https://github.com/wkentaro/git-hunk/pull/328))
+
+### Fixed
+
+- Treat copied files as ordinary additions so templates and snapshots no longer block inventory or mutations, while retaining rename and conflict rejection. ([#330](https://github.com/wkentaro/git-hunk/pull/330))
+- Clarify the bundled agent workflow for complete inspection, exact root-relative targets, safe partial commits, and recovery that preserves unrelated work. ([#331](https://github.com/wkentaro/git-hunk/pull/331))
+
 ## 0.6.0 - 2026-10-17
 
 ### Added
