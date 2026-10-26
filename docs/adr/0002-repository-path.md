@@ -91,10 +91,14 @@ A Repository path only has meaning inside a worktree. The repository root is res
 before any operand is normalized, so an invocation outside a repository reports "not a
 git repository" rather than complaining about the shape of a path.
 
-### 6. `show` stays ID-only
+### 6. `show` accepts Hunk IDs and Repository paths
 
-A Hunk ID already has the same meaning from every invocation directory, so `show` needs
-no path operand.
+Amended 2026-10-26: `show` accepts the same exact Repository paths as mutations,
+alongside Hunk IDs. Agents repeatedly tried file operands to inspect a smaller
+diff. Resolve paths with the shared target selector so path normalization,
+ID precedence, and duplicate removal agree across commands. A path selects every
+visible Hunk in that file; status flags restrict the selection. An unmatched
+target is an error. With no operands, `show` still omits untracked files.
 
 ## Consequences
 
@@ -114,5 +118,6 @@ no path operand.
 - Cross-process rollback. Selection, patch, and forward whole-file validation finish
   before the first mutation. An external race or I/O failure between the textual
   `git apply` leg and the whole-file leg can still leave the first leg applied.
-- Rename and copy support. These states remain rejected before output or mutation
-  (#53).
+- Rename support. Detected renames remain rejected before output or mutation (#53).
+  Amended 2026-10-26: copies are ordinary additions, with copy detection disabled
+  in canonical patches (#200).

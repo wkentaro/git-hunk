@@ -1,3 +1,5 @@
+import pytest
+
 from git_hunk._hunk import NO_NEWLINE_MARKER
 
 from .conftest import GitHunkCLI
@@ -90,6 +92,70 @@ def test_show_no_args_shows_all(*, cli: GitHunkCLI) -> None:
     assert r.returncode == 0
     assert "+staged" in r.stdout
     assert "+unstaged" in r.stdout
+
+
+@pytest.mark.parametrize(
+    ("flags", "statuses"),
+    [
+        ([], ["staged", "unstaged"]),
+        (["--staged"], ["staged"]),
+        (["--unstaged"], ["unstaged"]),
+    ],
+)
+def test_show_path_selects_every_visible_hunk_in_that_file(
+    *, cli: GitHunkCLI, flags: list[str], statuses: list[str]
+) -> None:
+    cli.repo.write_file("f.py", "old\n")
+    cli.repo.write_file("other.py", "old\n")
+    cli.repo.git("add", ".")
+    cli.repo.git("commit", "-m", "init")
+    cli.repo.write_file("f.py", "staged\n")
+    cli.repo.git("add", "f.py")
+    cli.repo.write_file("f.py", "unstaged\n")
+    cli.repo.write_file("other.py", "other\n")
+
+    hunks = cli.run_list_json("show", "f.py", *flags, "--json")
+
+    assert [h["status"] for h in hunks] == statuses
+    assert all(h["file"]["text"] == "f.py" and h["lines"] for h in hunks)
+    assert "other.py" not in cli.run_ok("show", "f.py", *flags)
+
+
+def test_show_mixes_paths_and_ids_without_duplicates(*, cli: GitHunkCLI) -> None:
+    for path in ("a.py", "b.py"):
+        cli.repo.write_file(path, "old\n")
+    cli.repo.git("add", ".")
+    cli.repo.git("commit", "-m", "init")
+    for path in ("a.py", "b.py"):
+        cli.repo.write_file(path, "new\n")
+    a, b = cli.run_list_json("list", "--json")
+
+    hunks = cli.run_list_json("show", "a.py", b["id"][:7], a["id"], "--json")
+
+    assert [h["id"] for h in hunks] == [a["id"], b["id"]]
+
+
+def test_show_hex_filename_takes_precedence_over_id_lookup(*, cli: GitHunkCLI) -> None:
+    cli.repo.write_file("abcdef0", "old\n")
+    cli.repo.git("add", ".")
+    cli.repo.git("commit", "-m", "init")
+    cli.repo.write_file("abcdef0", "new\n")
+
+    assert "+new" in cli.run_ok("show", "abcdef0")
+
+
+def test_show_rejects_id_outside_status_before_json_output(*, cli: GitHunkCLI) -> None:
+    cli.repo.write_file("f.py", "old\n")
+    cli.repo.git("add", ".")
+    cli.repo.git("commit", "-m", "init")
+    cli.repo.write_file("f.py", "new\n")
+    hunk_id = cli.get_only_hunk_id()
+
+    result = cli.run("show", hunk_id, "--staged", "--json")
+
+    assert result.returncode == 1
+    assert result.stdout == ""
+    assert "not eligible" in result.stderr
 
 
 def test_show_excludes_untracked_files_that_list_includes(*, cli: GitHunkCLI) -> None:

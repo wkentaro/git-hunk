@@ -157,7 +157,7 @@ def _get_hunks(*, worktree_root: str, staged: bool) -> tuple[list[Hunk], str]:
             )
             raise CliError(
                 f"unsupported file changes: {details}",
-                tip="use Git directly for rename and copy changes",
+                tip="use Git directly for rename changes",
             )
         diff_output = get_diff(worktree_root=worktree_root, staged=staged)
     except RuntimeError as exc:
@@ -733,34 +733,42 @@ def cmd_list(
 @click.option("--unstaged", is_flag=True)
 @click.option("--json", "force_json", is_flag=True)
 @click.option("-h", "--help", "show_help", is_flag=True)
-@click.argument("ids", nargs=-1)
+@click.argument("targets", nargs=-1)
 def cmd_show(
     *,
     staged: bool,
     unstaged: bool,
     force_json: bool,
     show_help: bool,
-    ids: tuple[str, ...],
+    targets: tuple[str, ...],
 ) -> None:
     if show_help:
         print_help(HELP_SHOW)
         return
 
-    worktree_root, _ = _require_worktree_context()
+    worktree_root, invocation_prefix = _require_worktree_context()
     inventory = _get_inventory(worktree_root=worktree_root)
     hunks = _filter_inventory_hunks(
         inventory=inventory,
         staged=staged,
         unstaged=unstaged,
-        include_untracked=bool(ids),
+        include_untracked=bool(targets),
         usage=USAGE_SHOW,
     )
 
-    if ids:
-        matched = _find_hunks_by_ids(hunks=inventory.hunks, ids=list(ids))
-        visible_ids = {hunk.id for hunk in hunks}
-        if any(hunk.id not in visible_ids for hunk in matched):
-            raise CliError("requested hunk is outside the selected status")
+    if targets:
+        matched = _select_hunks(
+            hunks=hunks,
+            targets=_make_targets(
+                args=list(targets),
+                worktree_root=worktree_root,
+                command_name="show",
+                usage=USAGE_SHOW,
+            ),
+            inventory_hunks=inventory.hunks,
+            invocation_prefix=invocation_prefix,
+            worktree_root=worktree_root,
+        )
     else:
         matched = hunks
 
@@ -966,6 +974,9 @@ def cmd_discard(
 
 @cli.command("commit", add_help_option=False)
 @click.option("-m", "messages", multiple=True)
+@click.option(
+    "-F", "message_file", type=click.Path(exists=True, dir_okay=False, path_type=Path)
+)
 @click.option("-l", "line_spec", default=None)
 @click.option("--include-matching", "include_matching", multiple=True)
 @click.option("--exclude-matching", "exclude_matching", multiple=True)
@@ -979,6 +990,7 @@ def cmd_commit(
     *,
     targets: tuple[str, ...],
     messages: tuple[str, ...],
+    message_file: Path | None,
     amend: bool,
     fixup: str | None,
     line_spec: str | None,
@@ -991,13 +1003,15 @@ def cmd_commit(
     if show_help:
         print_help(HELP_COMMIT)
         return
+    if messages and message_file is not None:
+        raise CliError("-m and -F cannot be combined", usage=USAGE_COMMIT)
     # Each -m is its own paragraph, as in git commit; git's own cleanup then
     # collapses blank ones.
     message = "\n\n".join(messages)
     if amend and fixup is not None:
         raise CliError("--amend and --fixup cannot be combined", usage=USAGE_COMMIT)
-    if fixup is not None and messages:
-        raise CliError("--fixup takes no -m", usage=USAGE_COMMIT)
+    if fixup is not None and (messages or message_file is not None):
+        raise CliError("--fixup takes no -m or -F", usage=USAGE_COMMIT)
     # git's reword: mode commits no changes, so the selected hunks would stay
     # staged behind a success report.
     if fixup is not None and fixup.startswith("reword:"):
@@ -1005,9 +1019,16 @@ def cmd_commit(
             "--fixup reword: commits no hunks",
             tip="use 'git commit --fixup=reword:<commit>' directly",
         )
-    # Only a plain commit requires -m, but any -m given must say something.
-    if (messages or not (amend or fixup is not None)) and not message.strip():
-        raise CliError("commit requires a message (-m)", usage=USAGE_COMMIT)
+    if message_file is not None:
+        try:
+            message = message_file.read_text(encoding="utf-8", errors="surrogateescape")
+        except OSError as exc:
+            raise CliError(f"cannot read commit message file: {exc}") from exc
+    # Only a plain commit requires a message; any supplied message must say something.
+    if (
+        messages or message_file is not None or not (amend or fixup is not None)
+    ) and not message.strip():
+        raise CliError("commit requires a message (-m or -F)", usage=USAGE_COMMIT)
 
     worktree_root, invocation_prefix = _require_worktree_context()
     commit_targets = _make_targets(

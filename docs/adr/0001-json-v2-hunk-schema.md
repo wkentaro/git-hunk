@@ -42,8 +42,9 @@ values derive from one source and cannot diverge.
 
 `change_kind`: one of `"A"` (added), `"D"` (deleted), `"M"` (modified), `"T"` (typechange).
 **Always present, non-null.** `"R"` (rename) and `"C"` (copy) are **reserved** for when
-rename and copy support lands (#53). These states are currently rejected before
-inventory output or mutation. Single letters match `git diff --name-status` and are
+rename and copy support lands (#53). Amended 2026-10-26: detected renames are rejected
+before inventory output or mutation; copies are represented as ordinary additions
+with `"A"`, so `"C"` remains reserved. Single letters match `git diff --name-status` and are
 consistent with the per-line `op` field's git-native single chars (see §6).
 
 ### 3. `a_mode` / `b_mode` — octal strings, always present
@@ -199,8 +200,8 @@ Binary modify (whole-file hunk):
 
 ## Out of scope
 
-- Rename and copy support (#53). `R` and `C` are reserved in `change_kind`, not
-  produced, and currently rejected before output or mutation.
+- Rename and copy metadata (#53). `R` and `C` are reserved in `change_kind` and not
+  produced. Renames are rejected; copied files are represented as additions.
 - Untracked/new-file staging (#22).
 - The schema-doc/versioning *process* (#23); this ADR is the schema, not the doc tooling.
 

@@ -156,7 +156,7 @@ git commit -m "fix: handle empty response in API client"
 
 A Repository path is relative to the worktree root, uses `/`, and means the
 same file from any directory you run git-hunk in. Every path in output and every
-file operand for `list`, `stage`, `unstage`, `discard`, and `commit` is a
+file operand for `list`, `show`, `stage`, `unstage`, `discard`, and `commit` is a
 Repository path. git-hunk normalizes a leading `./` and internal `..`
 components, and rejects absolute paths and paths that leave the worktree.
 
@@ -164,15 +164,18 @@ A file operand selects one exact changed file. git-hunk does not expand
 directories, globs, or Git pathspec syntax. Quote operands that contain shell
 metacharacters so the shell passes them unchanged. For example, from `sub/`,
 `same.txt` selects the file at the worktree root, and `sub/same.txt` selects the
-file inside `sub/`. `show` takes Hunk IDs only.
+file inside `sub/`. `show` accepts Hunk IDs and Repository paths too.
 
 ### Unsupported repository states
 
-git-hunk rejects detected rename, copy, and unmerged index states before it
+git-hunk rejects detected rename and unmerged index states before it
 writes output or changes the repository, so it never prints partial JSON, a
 partial inventory, or a false clean result, and never applies half a change.
-Resolve an unmerged index with Git, then retry. Rename and copy support is
+Resolve an unmerged index with Git, then retry. Rename support is
 tracked in [#53](https://github.com/wkentaro/git-hunk/issues/53).
+
+Copied files are ordinary additions. git-hunk disables copy detection in its
+patches, so a copied template or snapshot does not block inventory or mutations.
 
 ### Hunk IDs
 
@@ -210,6 +213,7 @@ git-hunk list --json                   # JSON output for scripting
 git-hunk show                          # show all hunks (staged + unstaged)
 git-hunk show d161935                  # show a single hunk
 git-hunk show d161935 a3f82c1          # show multiple hunks
+git-hunk show src/foo.py              # show every hunk in one exact file
 git-hunk show --staged                 # show all staged hunks
 git-hunk show --unstaged               # show all unstaged hunks
 ```
@@ -266,6 +270,7 @@ change, and selecting the mode Hunk does not apply text.
 
 ```bash
 git-hunk commit d161935 -m "fix: ..."      # stage a hunk and commit it in one step
+git-hunk commit d161935 -F message.txt     # read the commit message from a file
 git-hunk commit d161935 -l 3,5-7 -m "..."  # stage specific lines and commit
 git-hunk commit d161935 --exclude-matching debug -m "..."  # commit all but matching lines
 ```
@@ -274,6 +279,10 @@ git-hunk commit d161935 --exclude-matching debug -m "..."  # commit all but matc
 the selected hunks. It accepts the same `-l`, `--include-matching`,
 `--exclude-matching`, `--regex`, and `--allow-one-sided` selection options as
 `stage`.
+
+Use `-m` for a message argument or `-F` to read a message file, including its
+body. A message file path is relative to the current directory. `-m` and `-F`
+cannot be combined, and `--fixup` accepts neither.
 
 ### JSON output
 
@@ -351,7 +360,7 @@ existed, `list --json` returned a bare array.
 
 ## How it works
 
-1. Rejects detected rename, copy, and unmerged states.
+1. Rejects detected rename and unmerged states, and represents copies as additions.
 2. Parses staged and unstaged `git diff` output into one combined Hunk inventory.
 3. Assigns each Hunk a full canonical SHA-256 ID and a unique human prefix.
 4. Gives members of a Duplicate Hunk group unique Conditional Hunk IDs.

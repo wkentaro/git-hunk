@@ -210,9 +210,8 @@ def unstaged_change(*, cli: GitHunkCLI) -> GitHunkCLI:
     return cli
 
 
-# `stage`, `unstage`, `discard` and `commit` route an operand through
+# `show`, `stage`, `unstage`, `discard` and `commit` route an operand through
 # _make_repository_path, so each must refuse to touch its own state.
-# `show` is ID-only and keeps the separate hunk-id guard below.
 def test_empty_operand_rejected_on_stage(*, unstaged_change: GitHunkCLI) -> None:
     r = unstaged_change.run("stage", "")
     assert r.returncode != 0
@@ -236,7 +235,7 @@ def test_empty_operand_rejected_on_commit(*, unstaged_change: GitHunkCLI) -> Non
     assert unstaged_change.repo.git("rev-parse", "HEAD") == head
 
 
-def test_empty_hunk_id_rejected_on_show(*, cli: GitHunkCLI) -> None:
+def test_empty_operand_rejected_on_show(*, cli: GitHunkCLI) -> None:
     cli.repo.write_file("f.py", "old\n")
     cli.repo.git("add", ".")
     cli.repo.git("commit", "-m", "init")
@@ -244,7 +243,7 @@ def test_empty_hunk_id_rejected_on_show(*, cli: GitHunkCLI) -> None:
 
     r = cli.run("show", "")
     assert r.returncode != 0
-    assert "hunk id must not be empty" in r.stderr
+    assert "repository path must not be empty" in r.stderr
 
 
 def test_ambiguous_hunk_id_rejected(*, cli: GitHunkCLI) -> None:

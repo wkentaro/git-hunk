@@ -47,12 +47,6 @@ def _make_unstaged_rename(*, cli: GitHunkCLI) -> None:
     cli.repo.git("add", "--intent-to-add", "new.txt")
 
 
-def _make_unstaged_copy(*, cli: GitHunkCLI) -> None:
-    _commit_source(cli=cli, path="source.txt")
-    cli.repo.write_file("copy.txt", "one\ntwo\nthree\nfour\nfive\n")
-    cli.repo.git("add", "--intent-to-add", "copy.txt")
-
-
 def _run_git_bytes(
     *args: bytes, cli: GitHunkCLI, input: bytes | None
 ) -> subprocess.CompletedProcess[bytes]:
@@ -84,7 +78,7 @@ def test_list_rejects_staged_rename_before_json_output(*, cli: GitHunkCLI) -> No
     assert "rename" in result.stderr
     assert "old.txt" in result.stderr
     assert "new.txt" in result.stderr
-    assert "tip: use Git directly for rename and copy changes" in result.stderr
+    assert "tip: use Git directly for rename changes" in result.stderr
 
 
 @pytest.mark.parametrize(
@@ -122,67 +116,6 @@ def test_unstage_rejects_staged_rename_before_mutation(*, cli: GitHunkCLI) -> No
     assert result.returncode != 0
     assert result.stdout == ""
     assert "rename" in result.stderr
-    assert cli.repo.git("diff", "--cached", "--raw") == before
-
-
-@pytest.mark.parametrize("edit", [False, True], ids=["unchanged", "edited"])
-def test_list_rejects_staged_copy(*, cli: GitHunkCLI, edit: bool) -> None:
-    _commit_source(cli=cli, path="source.txt")
-    content = (
-        "one\ntwo changed\nthree\nfour\nfive\n"
-        if edit
-        else "one\ntwo\nthree\nfour\nfive\n"
-    )
-    cli.repo.write_file("copy.txt", content)
-    cli.repo.git("add", "copy.txt")
-
-    result = cli.run("list", "--staged", "--json")
-
-    assert result.returncode != 0
-    assert result.stdout == ""
-    assert "copy" in result.stderr
-    assert "source.txt" in result.stderr
-    assert "copy.txt" in result.stderr
-    assert "tip: use Git directly for rename and copy changes" in result.stderr
-
-
-@pytest.mark.parametrize(
-    "args",
-    [
-        ("list", "--unstaged", "--json"),
-        ("show", "--unstaged"),
-        ("stage", "copy.txt"),
-        ("stage", "copy.txt", "--dry-run"),
-        ("discard", "copy.txt"),
-        ("discard", "copy.txt", "--dry-run"),
-        ("commit", "copy.txt", "-m", "must reject"),
-    ],
-)
-def test_commands_reject_unstaged_copy_before_output_or_mutation(
-    *, cli: GitHunkCLI, args: tuple[str, ...]
-) -> None:
-    _make_unstaged_copy(cli=cli)
-    before = cli.repo.git("status", "--porcelain=v1", "-z")
-
-    result = cli.run(*args)
-
-    assert result.returncode != 0
-    assert result.stdout == ""
-    assert "copy" in result.stderr
-    assert cli.repo.git("status", "--porcelain=v1", "-z") == before
-
-
-def test_unstage_rejects_staged_copy_before_mutation(*, cli: GitHunkCLI) -> None:
-    _commit_source(cli=cli, path="source.txt")
-    cli.repo.write_file("copy.txt", "one\ntwo\nthree\nfour\nfive\n")
-    cli.repo.git("add", "copy.txt")
-    before = cli.repo.git("diff", "--cached", "--raw")
-
-    result = cli.run("unstage", "copy.txt")
-
-    assert result.returncode != 0
-    assert result.stdout == ""
-    assert "copy" in result.stderr
     assert cli.repo.git("diff", "--cached", "--raw") == before
 
 
@@ -228,12 +161,14 @@ def test_list_rejects_quoted_and_ambiguous_renames(
     assert "y.txt b/z.txt" not in result.stderr
 
 
-def test_rename_detection_ignores_weak_repository_configuration(
+@pytest.mark.parametrize("renames", ["false", "copies"])
+def test_rename_detection_ignores_repository_configuration(
     *,
     cli: GitHunkCLI,
+    renames: str,
 ) -> None:
     _make_staged_rename(cli=cli, old="old.txt", new="new.txt")
-    cli.repo.git("config", "diff.renames", "false")
+    cli.repo.git("config", "diff.renames", renames)
     cli.repo.git("config", "diff.renameLimit", "1")
 
     result = cli.run("list", "--staged", "--json")

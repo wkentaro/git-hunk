@@ -277,11 +277,11 @@ other kind of operand is a Hunk ID.
 
 USAGE: Final = "[bold green]Usage:[/bold green] [bold cyan]git-hunk[/bold cyan] [cyan]<COMMAND>[/cyan]"  # noqa: E501
 USAGE_LIST: Final = "[bold green]Usage:[/bold green] [bold cyan]git-hunk list[/bold cyan] [cyan][OPTIONS][/cyan] [cyan][<Repository-path>...][/cyan]"  # noqa: E501
-USAGE_SHOW: Final = "[bold green]Usage:[/bold green] [bold cyan]git-hunk show[/bold cyan] [cyan][<id>...][/cyan] [cyan][OPTIONS][/cyan]"  # noqa: E501
+USAGE_SHOW: Final = "[bold green]Usage:[/bold green] [bold cyan]git-hunk show[/bold cyan] [cyan][<id|Repository-path>...][/cyan] [cyan][OPTIONS][/cyan]"  # noqa: E501
 USAGE_STAGE: Final = "[bold green]Usage:[/bold green] [bold cyan]git-hunk stage[/bold cyan] [cyan]<id|Repository-path>[/cyan] [cyan][<id|Repository-path>...][/cyan] [cyan][OPTIONS][/cyan]"  # noqa: E501
 USAGE_UNSTAGE: Final = "[bold green]Usage:[/bold green] [bold cyan]git-hunk unstage[/bold cyan] [cyan]<id|Repository-path>[/cyan] [cyan][<id|Repository-path>...][/cyan] [cyan][OPTIONS][/cyan]"  # noqa: E501
 USAGE_DISCARD: Final = "[bold green]Usage:[/bold green] [bold cyan]git-hunk discard[/bold cyan] [cyan]<id|Repository-path>[/cyan] [cyan][<id|Repository-path>...][/cyan] [cyan][OPTIONS][/cyan]"  # noqa: E501
-USAGE_COMMIT: Final = "[bold green]Usage:[/bold green] [bold cyan]git-hunk commit[/bold cyan] [cyan]<id|Repository-path>[/cyan] [cyan][<id|Repository-path>...][/cyan] [bold cyan]-m[/bold cyan] [cyan]<msg>[/cyan] [cyan][OPTIONS][/cyan]"  # noqa: E501
+USAGE_COMMIT: Final = "[bold green]Usage:[/bold green] [bold cyan]git-hunk commit[/bold cyan] [cyan]<id|Repository-path>[/cyan] [cyan][<id|Repository-path>...][/cyan] [cyan](-m <msg> | -F <file>)[/cyan] [cyan][OPTIONS][/cyan]"  # noqa: E501
 USAGE_SKILLS: Final = "[bold green]Usage:[/bold green] [bold cyan]git-hunk skills[/bold cyan] [cyan][SUBCOMMAND][/cyan] [cyan][<name>...][/cyan]"  # noqa: E501
 
 
@@ -303,6 +303,7 @@ _EXAMPLES_LIST: Final = [
 ]
 _EXAMPLES_SHOW: Final = [
     ("git-hunk show", "Show all hunks"),
+    ("git-hunk show src/foo.py", "Show every hunk in one Repository path"),
     ("git-hunk show d161935", "Show a single hunk"),
     ("git-hunk show d161935 a3f82c1", "Show multiple hunks"),
     ("git-hunk show --staged", "Show all staged hunks"),
@@ -330,6 +331,7 @@ _EXAMPLES_DISCARD: Final = [
 ]
 _EXAMPLES_COMMIT: Final = [
     ('git-hunk commit d161935 -m "fix: ..."', "Stage a hunk and commit it"),
+    ("git-hunk commit d161935 -F message.txt", "Read the commit message from a file"),
     ('git-hunk commit src/foo.py -m "..."', "Commit every hunk in one Repository path"),
     (
         'git-hunk commit d161935 --exclude-matching debug -m "fix: ..."',
@@ -394,8 +396,8 @@ File operands are exact Repository paths relative to the worktree root.
 {_format_examples(rows=_EXAMPLES_LIST)}"""  # noqa: E501
 
 HELP_SHOW: Final = f"""\
-Show the diff for one or more hunks. Shows all hunks when no IDs given.
-{_ID_HELP}
+Show the diff for one or more hunks. Shows all tracked hunks when no targets given.
+{_TARGET_HELP}
 
 {USAGE_SHOW}
 
@@ -447,8 +449,9 @@ can retry with [bold cyan]git commit[/bold cyan] (plus any --amend or --fixup).
 
 [bold green]Options:[/bold green]
   [bold cyan]-m[/bold cyan] [cyan]<msg>[/cyan]    Commit message (repeat for more paragraphs; optional with --amend)
-  [bold cyan]--amend[/bold cyan]     Add the hunks to HEAD; keeps HEAD's message unless -m is given
-  [bold cyan]--fixup[/bold cyan] [cyan]<commit>[/cyan]  Commit as "fixup! <subject>" for autosquash (no -m)
+  [bold cyan]-F[/bold cyan] [cyan]<file>[/cyan]   Read the commit message from a file relative to the current directory (excludes -m)
+  [bold cyan]--amend[/bold cyan]     Add the hunks to HEAD; keeps HEAD's message unless -m or -F is given
+  [bold cyan]--fixup[/bold cyan] [cyan]<commit>[/cyan]  Commit as "fixup! <subject>" for autosquash (no -m or -F)
 {_LINE_OPT_ROW}
 
 {_format_examples(rows=_EXAMPLES_COMMIT)}"""  # noqa: E501
