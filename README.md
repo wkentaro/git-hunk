@@ -156,7 +156,7 @@ git commit -m "fix: handle empty response in API client"
 
 A Repository path is relative to the worktree root, uses `/`, and means the
 same file from any directory you run git-hunk in. Every path in output and every
-file operand for `list`, `stage`, `unstage`, `discard`, and `commit` is a
+file operand for `list`, `show`, `stage`, `unstage`, `discard`, and `commit` is a
 Repository path. git-hunk normalizes a leading `./` and internal `..`
 components, and rejects absolute paths and paths that leave the worktree.
 
@@ -164,7 +164,7 @@ A file operand selects one exact changed file. git-hunk does not expand
 directories, globs, or Git pathspec syntax. Quote operands that contain shell
 metacharacters so the shell passes them unchanged. For example, from `sub/`,
 `same.txt` selects the file at the worktree root, and `sub/same.txt` selects the
-file inside `sub/`. `show` takes Hunk IDs only.
+file inside `sub/`. `show` accepts Hunk IDs and Repository paths too.
 
 ### Unsupported repository states
 
@@ -210,6 +210,7 @@ git-hunk list --json                   # JSON output for scripting
 git-hunk show                          # show all hunks (staged + unstaged)
 git-hunk show d161935                  # show a single hunk
 git-hunk show d161935 a3f82c1          # show multiple hunks
+git-hunk show src/foo.py              # show every hunk in one exact file
 git-hunk show --staged                 # show all staged hunks
 git-hunk show --unstaged               # show all unstaged hunks
 ```

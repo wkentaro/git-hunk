@@ -70,30 +70,38 @@ def test_inventory_is_stable_from_root_and_subdirectory(
         (UNTRACKED_LITERAL_PATH, UNTRACKED_LITERAL_PATH),
     ],
 )
-def test_list_selects_one_exact_repository_path(
-    *, inventory_cli: GitHunkCLI, operand: str, expected: str
+@pytest.mark.parametrize("command", ["list", "show"])
+def test_inventory_selects_one_exact_repository_path(
+    *, inventory_cli: GitHunkCLI, operand: str, expected: str, command: str
 ) -> None:
-    hunks = inventory_cli.run_list_json("list", "--json", operand, subdir="sub")
+    hunks = inventory_cli.run_list_json(command, "--json", operand, subdir="sub")
     assert _get_paths(hunks=hunks) == [expected]
 
 
-def _assert_rejected(*, cli: GitHunkCLI, operand: str) -> None:
-    result = cli.run("list", "--json", operand, subdir="sub")
+def _assert_rejected(*, cli: GitHunkCLI, operand: str, command: str) -> None:
+    result = cli.run(command, "--json", operand, subdir="sub")
     assert result.returncode != 0
     assert "schema_version" not in result.stdout
     assert '"hunks"' not in result.stdout
 
 
-def test_list_rejects_an_escaping_path(*, inventory_cli: GitHunkCLI) -> None:
-    _assert_rejected(cli=inventory_cli, operand="../same.txt")
+@pytest.mark.parametrize("command", ["list", "show"])
+def test_inventory_rejects_an_escaping_path(
+    *, inventory_cli: GitHunkCLI, command: str
+) -> None:
+    _assert_rejected(cli=inventory_cli, operand="../same.txt", command=command)
 
 
-def test_list_rejects_an_absolute_path_even_inside_the_worktree(
+@pytest.mark.parametrize("command", ["list", "show"])
+def test_inventory_rejects_an_absolute_path_even_inside_the_worktree(
     *,
     inventory_cli: GitHunkCLI,
+    command: str,
 ) -> None:
     _assert_rejected(
-        cli=inventory_cli, operand=str(Path(inventory_cli.repo.path) / "same.txt")
+        cli=inventory_cli,
+        operand=str(Path(inventory_cli.repo.path) / "same.txt"),
+        command=command,
     )
 
 
@@ -103,6 +111,13 @@ def test_list_does_not_expand_non_file_operands(
 ) -> None:
     hunks = inventory_cli.run_list_json("list", "--json", operand, subdir="sub")
     assert hunks == []
+
+
+@pytest.mark.parametrize("operand", ["sub", "*.txt", ":(glob)*.txt", "missing.txt"])
+def test_show_rejects_non_file_operands(
+    *, inventory_cli: GitHunkCLI, operand: str
+) -> None:
+    _assert_rejected(cli=inventory_cli, operand=operand, command="show")
 
 
 def test_show_id_has_same_meaning_from_root_and_subdirectory(

@@ -277,7 +277,7 @@ other kind of operand is a Hunk ID.
 
 USAGE: Final = "[bold green]Usage:[/bold green] [bold cyan]git-hunk[/bold cyan] [cyan]<COMMAND>[/cyan]"  # noqa: E501
 USAGE_LIST: Final = "[bold green]Usage:[/bold green] [bold cyan]git-hunk list[/bold cyan] [cyan][OPTIONS][/cyan] [cyan][<Repository-path>...][/cyan]"  # noqa: E501
-USAGE_SHOW: Final = "[bold green]Usage:[/bold green] [bold cyan]git-hunk show[/bold cyan] [cyan][<id>...][/cyan] [cyan][OPTIONS][/cyan]"  # noqa: E501
+USAGE_SHOW: Final = "[bold green]Usage:[/bold green] [bold cyan]git-hunk show[/bold cyan] [cyan][<id|Repository-path>...][/cyan] [cyan][OPTIONS][/cyan]"  # noqa: E501
 USAGE_STAGE: Final = "[bold green]Usage:[/bold green] [bold cyan]git-hunk stage[/bold cyan] [cyan]<id|Repository-path>[/cyan] [cyan][<id|Repository-path>...][/cyan] [cyan][OPTIONS][/cyan]"  # noqa: E501
 USAGE_UNSTAGE: Final = "[bold green]Usage:[/bold green] [bold cyan]git-hunk unstage[/bold cyan] [cyan]<id|Repository-path>[/cyan] [cyan][<id|Repository-path>...][/cyan] [cyan][OPTIONS][/cyan]"  # noqa: E501
 USAGE_DISCARD: Final = "[bold green]Usage:[/bold green] [bold cyan]git-hunk discard[/bold cyan] [cyan]<id|Repository-path>[/cyan] [cyan][<id|Repository-path>...][/cyan] [cyan][OPTIONS][/cyan]"  # noqa: E501
@@ -303,6 +303,7 @@ _EXAMPLES_LIST: Final = [
 ]
 _EXAMPLES_SHOW: Final = [
     ("git-hunk show", "Show all hunks"),
+    ("git-hunk show src/foo.py", "Show every hunk in one Repository path"),
     ("git-hunk show d161935", "Show a single hunk"),
     ("git-hunk show d161935 a3f82c1", "Show multiple hunks"),
     ("git-hunk show --staged", "Show all staged hunks"),
@@ -395,8 +396,8 @@ File operands are exact Repository paths relative to the worktree root.
 {_format_examples(rows=_EXAMPLES_LIST)}"""  # noqa: E501
 
 HELP_SHOW: Final = f"""\
-Show the diff for one or more hunks. Shows all hunks when no IDs given.
-{_ID_HELP}
+Show the diff for one or more hunks. Shows all tracked hunks when no targets given.
+{_TARGET_HELP}
 
 {USAGE_SHOW}
 

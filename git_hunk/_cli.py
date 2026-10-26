@@ -733,34 +733,42 @@ def cmd_list(
 @click.option("--unstaged", is_flag=True)
 @click.option("--json", "force_json", is_flag=True)
 @click.option("-h", "--help", "show_help", is_flag=True)
-@click.argument("ids", nargs=-1)
+@click.argument("targets", nargs=-1)
 def cmd_show(
     *,
     staged: bool,
     unstaged: bool,
     force_json: bool,
     show_help: bool,
-    ids: tuple[str, ...],
+    targets: tuple[str, ...],
 ) -> None:
     if show_help:
         print_help(HELP_SHOW)
         return
 
-    worktree_root, _ = _require_worktree_context()
+    worktree_root, invocation_prefix = _require_worktree_context()
     inventory = _get_inventory(worktree_root=worktree_root)
     hunks = _filter_inventory_hunks(
         inventory=inventory,
         staged=staged,
         unstaged=unstaged,
-        include_untracked=bool(ids),
+        include_untracked=bool(targets),
         usage=USAGE_SHOW,
     )
 
-    if ids:
-        matched = _find_hunks_by_ids(hunks=inventory.hunks, ids=list(ids))
-        visible_ids = {hunk.id for hunk in hunks}
-        if any(hunk.id not in visible_ids for hunk in matched):
-            raise CliError("requested hunk is outside the selected status")
+    if targets:
+        matched = _select_hunks(
+            hunks=hunks,
+            targets=_make_targets(
+                args=list(targets),
+                worktree_root=worktree_root,
+                command_name="show",
+                usage=USAGE_SHOW,
+            ),
+            inventory_hunks=inventory.hunks,
+            invocation_prefix=invocation_prefix,
+            worktree_root=worktree_root,
+        )
     else:
         matched = hunks
 
