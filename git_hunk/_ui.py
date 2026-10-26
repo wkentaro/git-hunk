@@ -281,7 +281,7 @@ USAGE_SHOW: Final = "[bold green]Usage:[/bold green] [bold cyan]git-hunk show[/b
 USAGE_STAGE: Final = "[bold green]Usage:[/bold green] [bold cyan]git-hunk stage[/bold cyan] [cyan]<id|Repository-path>[/cyan] [cyan][<id|Repository-path>...][/cyan] [cyan][OPTIONS][/cyan]"  # noqa: E501
 USAGE_UNSTAGE: Final = "[bold green]Usage:[/bold green] [bold cyan]git-hunk unstage[/bold cyan] [cyan]<id|Repository-path>[/cyan] [cyan][<id|Repository-path>...][/cyan] [cyan][OPTIONS][/cyan]"  # noqa: E501
 USAGE_DISCARD: Final = "[bold green]Usage:[/bold green] [bold cyan]git-hunk discard[/bold cyan] [cyan]<id|Repository-path>[/cyan] [cyan][<id|Repository-path>...][/cyan] [cyan][OPTIONS][/cyan]"  # noqa: E501
-USAGE_COMMIT: Final = "[bold green]Usage:[/bold green] [bold cyan]git-hunk commit[/bold cyan] [cyan]<id|Repository-path>[/cyan] [cyan][<id|Repository-path>...][/cyan] [bold cyan]-m[/bold cyan] [cyan]<msg>[/cyan] [cyan][OPTIONS][/cyan]"  # noqa: E501
+USAGE_COMMIT: Final = "[bold green]Usage:[/bold green] [bold cyan]git-hunk commit[/bold cyan] [cyan]<id|Repository-path>[/cyan] [cyan][<id|Repository-path>...][/cyan] [cyan](-m <msg> | -F <file>)[/cyan] [cyan][OPTIONS][/cyan]"  # noqa: E501
 USAGE_SKILLS: Final = "[bold green]Usage:[/bold green] [bold cyan]git-hunk skills[/bold cyan] [cyan][SUBCOMMAND][/cyan] [cyan][<name>...][/cyan]"  # noqa: E501
 
 
@@ -330,6 +330,7 @@ _EXAMPLES_DISCARD: Final = [
 ]
 _EXAMPLES_COMMIT: Final = [
     ('git-hunk commit d161935 -m "fix: ..."', "Stage a hunk and commit it"),
+    ("git-hunk commit d161935 -F message.txt", "Read the commit message from a file"),
     ('git-hunk commit src/foo.py -m "..."', "Commit every hunk in one Repository path"),
     (
         'git-hunk commit d161935 --exclude-matching debug -m "fix: ..."',
@@ -447,8 +448,9 @@ can retry with [bold cyan]git commit[/bold cyan] (plus any --amend or --fixup).
 
 [bold green]Options:[/bold green]
   [bold cyan]-m[/bold cyan] [cyan]<msg>[/cyan]    Commit message (repeat for more paragraphs; optional with --amend)
-  [bold cyan]--amend[/bold cyan]     Add the hunks to HEAD; keeps HEAD's message unless -m is given
-  [bold cyan]--fixup[/bold cyan] [cyan]<commit>[/cyan]  Commit as "fixup! <subject>" for autosquash (no -m)
+  [bold cyan]-F[/bold cyan] [cyan]<file>[/cyan]   Read the commit message from a file relative to the current directory (excludes -m)
+  [bold cyan]--amend[/bold cyan]     Add the hunks to HEAD; keeps HEAD's message unless -m or -F is given
+  [bold cyan]--fixup[/bold cyan] [cyan]<commit>[/cyan]  Commit as "fixup! <subject>" for autosquash (no -m or -F)
 {_LINE_OPT_ROW}
 
 {_format_examples(rows=_EXAMPLES_COMMIT)}"""  # noqa: E501

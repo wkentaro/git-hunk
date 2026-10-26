@@ -1,3 +1,4 @@
+import subprocess
 from pathlib import Path
 
 import pytest
@@ -136,6 +137,69 @@ def test_commit_joins_repeated_messages_as_paragraphs(*, cli: GitHunkCLI) -> Non
 
     body = cli.repo.git("log", "-1", "--format=%B").strip()
     assert body == "feat: subject\n\nBody paragraph."
+
+
+@pytest.mark.parametrize("amend", [False, True])
+def test_commit_reads_message_file_from_invocation_directory(
+    *, cli: GitHunkCLI, amend: bool
+) -> None:
+    _init(cli=cli, files={"f.txt": "before\n"})
+    cli.repo.write_file("f.txt", "after\n")
+    message = 'feat: 日本語 and "quotes"\n\nKeep $variables and `commands` literal.\n'
+    Path(cli.repo.write_file("sub/message.txt", "")).write_text(
+        message, encoding="utf-8"
+    )
+    extra = ["--amend"] if amend else []
+
+    cli.run_ok("commit", "f.txt", "-F", "message.txt", *extra, subdir="sub")
+
+    body = subprocess.check_output(
+        ["git", "log", "-1", "--format=%B"], cwd=cli.repo.path
+    ).decode("utf-8")
+    assert body.strip() == message.strip()
+    assert cli.repo.git("show", "HEAD:f.txt") == "after\n"
+    assert cli.repo.git("diff", "--cached") == ""
+    assert cli.repo.git("ls-tree", "--name-only", "HEAD").splitlines() == ["f.txt"]
+
+
+@pytest.mark.parametrize(
+    ("content", "extra"),
+    [
+        ("", []),
+        (" \n\t", ["--amend"]),
+        ("feat: message\n", ["-m", "other"]),
+        ("feat: message\n", ["--fixup", "HEAD"]),
+    ],
+    ids=["empty", "blank-amend", "with-m", "with-fixup"],
+)
+def test_commit_rejects_invalid_message_file_options_before_staging(
+    *, cli: GitHunkCLI, content: str, extra: list[str], tmp_path: Path
+) -> None:
+    _init(cli=cli, files={"f.txt": "before\n"})
+    cli.repo.write_file("f.txt", "after\n")
+    message_file = tmp_path / "message.txt"
+    message_file.write_text(content, encoding="utf-8")
+    head = cli.repo.git("rev-parse", "HEAD")
+
+    result = cli.run("commit", "f.txt", "-F", str(message_file), *extra)
+
+    assert result.returncode == 2
+    assert cli.repo.git("rev-parse", "HEAD") == head
+    assert cli.repo.git("diff", "--cached") == ""
+
+
+def test_commit_missing_message_file_leaves_index_unchanged(
+    *, cli: GitHunkCLI, tmp_path: Path
+) -> None:
+    _init(cli=cli, files={"f.txt": "before\n"})
+    cli.repo.write_file("f.txt", "after\n")
+
+    result = cli.run("commit", "f.txt", "-F", str(tmp_path / "missing.txt"))
+
+    assert result.returncode == 2
+    assert "does not exist" in result.stderr
+    assert _commit_count(cli=cli) == 1
+    assert cli.repo.git("diff", "--cached") == ""
 
 
 def test_commit_requires_message(*, cli: GitHunkCLI) -> None:

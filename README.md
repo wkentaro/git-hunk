@@ -266,6 +266,7 @@ change, and selecting the mode Hunk does not apply text.
 
 ```bash
 git-hunk commit d161935 -m "fix: ..."      # stage a hunk and commit it in one step
+git-hunk commit d161935 -F message.txt     # read the commit message from a file
 git-hunk commit d161935 -l 3,5-7 -m "..."  # stage specific lines and commit
 git-hunk commit d161935 --exclude-matching debug -m "..."  # commit all but matching lines
 ```
@@ -274,6 +275,10 @@ git-hunk commit d161935 --exclude-matching debug -m "..."  # commit all but matc
 the selected hunks. It accepts the same `-l`, `--include-matching`,
 `--exclude-matching`, `--regex`, and `--allow-one-sided` selection options as
 `stage`.
+
+Use `-m` for a message argument or `-F` to read a message file, including its
+body. A message file path is relative to the current directory. `-m` and `-F`
+cannot be combined, and `--fixup` accepts neither.
 
 ### JSON output
 

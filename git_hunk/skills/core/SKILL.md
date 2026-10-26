@@ -24,6 +24,9 @@ whole file. It aborts if the index already holds staged changes. `--amend` and
 `--fixup <commit>` fold hunks into history. Committing whole hunks keeps other
 IDs valid.
 
+Use `-F <file>` instead of `-m` to read a commit message with its body from a
+file relative to the current directory. `--fixup` accepts neither `-m` nor `-F`.
+
 The final `list` is the whole verification: it should show only work meant to
 stay; do not re-check with `git log`, `git show`, or `git diff`. If a step fails, run `git-hunk list` alone and re-key the plan. Close with one
 line per commit plus what the tree still holds.
