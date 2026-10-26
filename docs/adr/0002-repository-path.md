@@ -118,5 +118,6 @@ target is an error. With no operands, `show` still omits untracked files.
 - Cross-process rollback. Selection, patch, and forward whole-file validation finish
   before the first mutation. An external race or I/O failure between the textual
   `git apply` leg and the whole-file leg can still leave the first leg applied.
-- Rename and copy support. These states remain rejected before output or mutation
-  (#53).
+- Rename support. Detected renames remain rejected before output or mutation (#53).
+  Amended 2026-10-26: copies are ordinary additions, with copy detection disabled
+  in canonical patches (#200).

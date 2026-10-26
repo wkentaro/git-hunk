@@ -55,6 +55,8 @@ def get_diff(*, worktree_root: str, staged: bool) -> str:
         "--no-color",
         "--no-ext-diff",
         "--no-textconv",
+        # Copies are additions; the separate rename guard rejects two-path changes.
+        "--no-renames",
         "--no-relative",
         "--src-prefix=a/",
         "--dst-prefix=b/",
@@ -99,20 +101,18 @@ def get_unsupported_changes(
         "--name-status",
         "-z",
         "--find-renames=50%",
-        "--find-copies=50%",
-        "--find-copies-harder",
         "-l0",
-        "--diff-filter=RC",
+        "--diff-filter=R",
     ]
     if staged:
         args.append("--cached")
     output = run_git(*args, worktree_root=worktree_root)
     fields = output.removesuffix("\0").split("\0") if output else []
     if len(fields) % 3 != 0:
-        raise RuntimeError("cannot parse git rename/copy status")
+        raise RuntimeError("cannot parse git rename status")
     return [
         UnsupportedChange(
-            kind="rename" if fields[i].startswith("R") else "copy",
+            kind="rename",
             source=fields[i + 1],
             destination=fields[i + 2],
         )

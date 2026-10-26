@@ -168,11 +168,14 @@ file inside `sub/`. `show` accepts Hunk IDs and Repository paths too.
 
 ### Unsupported repository states
 
-git-hunk rejects detected rename, copy, and unmerged index states before it
+git-hunk rejects detected rename and unmerged index states before it
 writes output or changes the repository, so it never prints partial JSON, a
 partial inventory, or a false clean result, and never applies half a change.
-Resolve an unmerged index with Git, then retry. Rename and copy support is
+Resolve an unmerged index with Git, then retry. Rename support is
 tracked in [#53](https://github.com/wkentaro/git-hunk/issues/53).
+
+Copied files are ordinary additions. git-hunk disables copy detection in its
+patches, so a copied template or snapshot does not block inventory or mutations.
 
 ### Hunk IDs
 
@@ -357,7 +360,7 @@ existed, `list --json` returned a bare array.
 
 ## How it works
 
-1. Rejects detected rename, copy, and unmerged states.
+1. Rejects detected rename and unmerged states, and represents copies as additions.
 2. Parses staged and unstaged `git diff` output into one combined Hunk inventory.
 3. Assigns each Hunk a full canonical SHA-256 ID and a unique human prefix.
 4. Gives members of a Duplicate Hunk group unique Conditional Hunk IDs.

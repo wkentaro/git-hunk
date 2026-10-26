@@ -157,7 +157,7 @@ def _get_hunks(*, worktree_root: str, staged: bool) -> tuple[list[Hunk], str]:
             )
             raise CliError(
                 f"unsupported file changes: {details}",
-                tip="use Git directly for rename and copy changes",
+                tip="use Git directly for rename changes",
             )
         diff_output = get_diff(worktree_root=worktree_root, staged=staged)
     except RuntimeError as exc:

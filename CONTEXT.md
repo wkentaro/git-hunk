@@ -46,8 +46,9 @@
 
 - **change_kind**: the git status letter for the hunk's file: `A` added, `D` deleted,
   `M` modified, `T` typechange. Always present. `R` (rename) and `C` (copy) are
-  reserved and currently rejected before inventory or mutation (see #53). Mirrors
-  `git diff --name-status`.
+  reserved. Detected renames are rejected before inventory or mutation (see #53);
+  copies are ordinary additions. Mirrors `git diff --no-renames --name-status`
+  after the rename guard.
 
 - **a_mode / b_mode** — the file's git mode (6-digit octal *string*, e.g. `"100644"`) on
   the pre-image (`a`) and post-image (`b`) side; `null` when that side does not exist.
@@ -132,7 +133,8 @@
   *JSON projection* is normalized (bared header, byte-safe union).
 - A mode change and text changes in one file are separate, independently selectable
   Hunks.
-- Detected rename, copy, and unmerged states fail before inventory output or mutation.
+- Detected rename and unmerged states fail before inventory output or mutation.
+- Copies are represented as additions; canonical patches disable rename/copy detection.
 - An Unchanged Hunk keeps its Hunk ID when other complete Hunks move between staged
   and unstaged state.
 - Moving a complete Hunk between staged and unstaged state does not change its Hunk ID.
