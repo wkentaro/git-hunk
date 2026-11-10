@@ -25,7 +25,7 @@ def test_allows_unambiguous_group_selection(
     reverse: bool,
 ) -> None:
     result = filter_hunk_lines(
-        make_hunk(diff), selected, exclude=False, reverse=reverse
+        hunk=make_hunk(diff), lines=selected, exclude=False, reverse=reverse
     )
 
     assert result.additions + result.deletions > 0
@@ -44,7 +44,7 @@ def test_rejects_one_sided_one_for_one_replacement_by_default(
 ) -> None:
     with pytest.raises(ValueError, match="cannot select one side of lines 2-3"):
         filter_hunk_lines(
-            make_hunk(_ONE_FOR_ONE), selected, exclude=False, reverse=reverse
+            hunk=make_hunk(_ONE_FOR_ONE), lines=selected, exclude=False, reverse=reverse
         )
 
 
@@ -57,8 +57,8 @@ def test_allows_one_sided_one_for_one_replacement_when_opted_in(
     reverse: bool,
 ) -> None:
     result = filter_hunk_lines(
-        make_hunk(_ONE_FOR_ONE),
-        selected,
+        hunk=make_hunk(_ONE_FOR_ONE),
+        lines=selected,
         exclude=False,
         reverse=reverse,
         allow_one_sided=True,
@@ -78,7 +78,7 @@ def test_exclude_selection_rejects_the_other_side_of_a_pair(
     # Excluding one side of the pair still leaves the other side alone.
     with pytest.raises(ValueError, match="cannot select one side of lines 2-3"):
         filter_hunk_lines(
-            make_hunk(_ONE_FOR_ONE), selected, exclude=True, reverse=reverse
+            hunk=make_hunk(_ONE_FOR_ONE), lines=selected, exclude=True, reverse=reverse
         )
 
 
@@ -87,7 +87,7 @@ def test_one_for_one_error_names_both_lines_and_the_override(
     make_hunk: Callable[[str], Hunk],
 ) -> None:
     with pytest.raises(ValueError) as excinfo:
-        filter_hunk_lines(make_hunk(_ONE_FOR_ONE), {2}, exclude=False)
+        filter_hunk_lines(hunk=make_hunk(_ONE_FOR_ONE), lines={2}, exclude=False)
 
     assert str(excinfo.value) == (
         "cannot select one side of lines 2-3: one-for-one replacement; "
@@ -117,7 +117,9 @@ def test_rejects_partial_composite_replacement(
     reverse: bool,
 ) -> None:
     with pytest.raises(ValueError, match=message):
-        filter_hunk_lines(make_hunk(diff), selected, exclude=False, reverse=reverse)
+        filter_hunk_lines(
+            hunk=make_hunk(diff), lines=selected, exclude=False, reverse=reverse
+        )
 
 
 @pytest.mark.parametrize("reverse", [False, True])
@@ -138,8 +140,8 @@ def test_allow_one_sided_does_not_relax_the_wider_group_rule(
 ) -> None:
     with pytest.raises(ValueError, match="cannot partially select"):
         filter_hunk_lines(
-            make_hunk(diff),
-            selected,
+            hunk=make_hunk(diff),
+            lines=selected,
             exclude=False,
             reverse=reverse,
             allow_one_sided=True,
@@ -152,7 +154,9 @@ def test_allows_unselected_composite_group_when_another_group_changes(
 ) -> None:
     diff = "@@ -1,4 +1,5 @@\n a\n-b\n-c\n+B\n+C\n x\n+tail"
 
-    result = filter_hunk_lines(make_hunk(diff), {7}, exclude=False, reverse=reverse)
+    result = filter_hunk_lines(
+        hunk=make_hunk(diff), lines={7}, exclude=False, reverse=reverse
+    )
 
     assert result.additions + result.deletions > 0
 
@@ -164,7 +168,9 @@ def test_exclude_selection_uses_the_same_group_rule(
     diff = "@@ -1,3 +1,3 @@\n a\n-b\n-c\n+B\n+C"
 
     with pytest.raises(ValueError, match="cannot partially select"):
-        filter_hunk_lines(make_hunk(diff), {2, 5}, exclude=True, reverse=reverse)
+        filter_hunk_lines(
+            hunk=make_hunk(diff), lines={2, 5}, exclude=True, reverse=reverse
+        )
 
 
 @pytest.mark.parametrize(
@@ -188,7 +194,7 @@ def test_allows_partial_group_that_takes_the_whole_consumed_side(
     diff = "@@ -1,3 +1,3 @@\n a\n-b\n-c\n+B\n+C"
 
     result = filter_hunk_lines(
-        make_hunk(diff), selected, exclude=False, reverse=reverse
+        hunk=make_hunk(diff), lines=selected, exclude=False, reverse=reverse
     )
 
     assert result.diff == expected_diff
@@ -207,7 +213,9 @@ def test_rejects_partial_group_that_takes_only_the_other_whole_side(
     side = "addition" if reverse else "deletion"
 
     with pytest.raises(ValueError, match=f"or every {side} plus the lines to keep"):
-        filter_hunk_lines(make_hunk(diff), selected, exclude=False, reverse=reverse)
+        filter_hunk_lines(
+            hunk=make_hunk(diff), lines=selected, exclude=False, reverse=reverse
+        )
 
 
 def test_context_line_does_not_change_group_classification(
@@ -216,7 +224,9 @@ def test_context_line_does_not_change_group_classification(
 ) -> None:
     diff = "@@ -1,3 +1,3 @@\n a\n-b\n-c\n+B\n+C"
 
-    result = filter_hunk_lines(make_hunk(diff), {1, 2, 3, 4, 5}, exclude=False)
+    result = filter_hunk_lines(
+        hunk=make_hunk(diff), lines={1, 2, 3, 4, 5}, exclude=False
+    )
 
     assert result.additions == 2
     assert result.deletions == 2

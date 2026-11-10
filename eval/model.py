@@ -278,10 +278,13 @@ def run_claude(
 
 
 class TranscriptReporter:
+    _transcript: TextIO
+    # Concurrent runs would interleave their live lines, so they write
+    # only the transcript file.
+    _echo: bool
+
     def __init__(self, *, transcript: TextIO, echo: bool) -> None:
         self._transcript = transcript
-        # Concurrent runs would interleave their live lines, so they write
-        # only the transcript file.
         self._echo = echo
 
     def report_variant(self, *, variant: EvalVariant) -> None:

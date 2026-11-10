@@ -94,7 +94,7 @@ class CliError(Exception):
 class CliGroup(click.Group):
     def resolve_command(
         self, ctx: click.Context, args: list[str]
-    ) -> tuple[str | None, click.Command | None, list[str]]:  # noqa: GR005 -- framework override
+    ) -> tuple[str | None, click.Command | None, list[str]]:  # noqa: GR005, GR013 -- framework override
         try:
             return super().resolve_command(ctx, args)
         except click.UsageError:
@@ -103,11 +103,11 @@ class CliGroup(click.Group):
                 f"unrecognized subcommand '{cmd_name}'", usage=USAGE
             ) from None
 
-    def invoke(self, ctx: click.Context) -> None:  # noqa: GR005 -- framework override
+    def invoke(self, ctx: click.Context) -> None:  # noqa: GR005, GR013 -- framework override
         try:
             super().invoke(ctx)
         except CliError as exc:
-            print_error(str(exc), tip=exc.tip, usage=exc.usage)
+            print_error(msg=str(exc), tip=exc.tip, usage=exc.usage)
             ctx.exit(2 if exc.usage else 1)
         except KeyboardInterrupt:
             ctx.exit(130)
@@ -162,7 +162,7 @@ def _get_hunks(*, worktree_root: str, staged: bool) -> tuple[list[Hunk], str]:
         diff_output = get_diff(worktree_root=worktree_root, staged=staged)
     except RuntimeError as exc:
         raise CliError(str(exc)) from exc
-    hunks = parse_diff(diff_output)
+    hunks = parse_diff(diff_output=diff_output)
     status = "staged" if staged else "unstaged"
     hunks = [replace(h, status=status) for h in hunks]
     return hunks, diff_output
@@ -182,7 +182,7 @@ def _get_inventory(*, worktree_root: str) -> _Inventory:
     )
     untracked_hunks = _get_untracked_entries(worktree_root=worktree_root)
     return _Inventory(
-        hunks=assign_hunk_ids(staged_hunks + unstaged_hunks + untracked_hunks),
+        hunks=assign_hunk_ids(hunks=staged_hunks + unstaged_hunks + untracked_hunks),
         staged_diff=staged_diff,
         unstaged_diff=unstaged_diff,
     )
@@ -191,7 +191,7 @@ def _get_inventory(*, worktree_root: str) -> _Inventory:
 def _find_hunks_by_ids(*, hunks: list[Hunk], ids: list[str]) -> list[Hunk]:
     def format_candidate(hunk: Hunk, /) -> str:
         marker = " (conditional)" if hunk.id_stability == "conditional" else ""
-        return format_hunk_id(hunk) + marker
+        return format_hunk_id(hunk=hunk) + marker
 
     found = []
     for hunk_id in ids:
@@ -325,13 +325,15 @@ class _Selection:
             or bool(self.exclude_matching)
         )
 
-    def resolve(self, hunk: Hunk, /) -> tuple[set[int], bool]:
+    def resolve(self, *, hunk: Hunk) -> tuple[set[int], bool]:
         if self.line_spec is not None:
-            return parse_line_spec(self.line_spec, total=count_hunk_body_lines(hunk))
+            return parse_line_spec(
+                spec=self.line_spec, total=count_hunk_body_lines(hunk=hunk)
+            )
         patterns = self.include_matching or self.exclude_matching
         # _apply_line_filter checks for a match across all selected hunks.
         lines = resolve_matching_lines(
-            hunk, patterns, regex=self.regex, require_match=False
+            hunk=hunk, patterns=patterns, regex=self.regex, require_match=False
         )
         return lines, not self.include_matching
 
@@ -381,12 +383,12 @@ def _apply_line_filter(
             tip="--include-matching and --exclude-matching select across hunks",
         )
     for hunk in hunks:
-        if is_whole_file_hunk(hunk):
+        if is_whole_file_hunk(hunk=hunk):
             raise CliError(
                 "line selection is not supported for binary, mode, or type changes, "
                 "empty files, or untracked files"
             )
-        if is_submodule_hunk(hunk):
+        if is_submodule_hunk(hunk=hunk):
             raise CliError(
                 "line selection is not supported for submodule changes",
                 tip="select the hunk as a whole",
@@ -399,7 +401,7 @@ def _apply_line_filter(
     matched = False
     try:
         for hunk in hunks:
-            lines, exclude = selection.resolve(hunk)
+            lines, exclude = selection.resolve(hunk=hunk)
             matched = matched or bool(lines)
             if not lines:
                 if exclude:
@@ -415,8 +417,8 @@ def _apply_line_filter(
                 continue
             filtered.append(
                 filter_hunk_lines(
-                    hunk,
-                    lines,
+                    hunk=hunk,
+                    lines=lines,
                     exclude=exclude,
                     reverse=reverse,
                     allow_one_sided=selection.allow_one_sided,
@@ -426,7 +428,9 @@ def _apply_line_filter(
         raise CliError(str(exc)) from exc
     if not matched:
         raise CliError(
-            no_match_message(selection.include_matching or selection.exclude_matching)
+            no_match_message(
+                patterns=selection.include_matching or selection.exclude_matching
+            )
         )
     if not filtered:
         raise CliError("no changes remain after line filtering")
@@ -477,13 +481,13 @@ def _apply_selection(
     changes_applied = False
     try:
         patch = (
-            build_patch(patch_hunks, diff_output, reverse=reverse)
+            build_patch(hunks=patch_hunks, diff_output=diff_output, reverse=reverse)
             if patch_hunks
             else None
         )
         if patch is not None:
             apply_patch(
-                patch,
+                patch=patch,
                 worktree_root=worktree_root,
                 cached=cached,
                 reverse=reverse,
@@ -498,19 +502,19 @@ def _apply_selection(
         ]
         if file_command_files and not reverse:
             stage_files(
-                file_command_files,
+                files=file_command_files,
                 worktree_root=worktree_root,
                 dry_run=True,
             )
         if added_file_command_files and reverse and cached:
             unstage_added_files(
-                added_file_command_files,
+                files=added_file_command_files,
                 worktree_root=worktree_root,
                 dry_run=True,
             )
         if untracked_files:
             conflicts = get_index_conflicts(
-                untracked_files, worktree_root=worktree_root
+                files=untracked_files, worktree_root=worktree_root
             )
             if conflicts:
                 raise CliError(
@@ -523,12 +527,12 @@ def _apply_selection(
 
         # First, so that a refusal git still finds leaves the index untouched.
         if untracked_files:
-            add_untracked_files(untracked_files, worktree_root=worktree_root)
+            add_untracked_files(files=untracked_files, worktree_root=worktree_root)
             changes_applied = True
 
         if patch is not None:
             apply_patch(
-                patch,
+                patch=patch,
                 worktree_root=worktree_root,
                 cached=cached,
                 reverse=reverse,
@@ -537,23 +541,23 @@ def _apply_selection(
             changes_applied = True
         if file_command_files:
             if reverse and not cached:
-                discard_files(file_command_files, worktree_root=worktree_root)
+                discard_files(files=file_command_files, worktree_root=worktree_root)
             elif reverse:
                 if added_file_command_files:
                     unstage_added_files(
-                        added_file_command_files,
+                        files=added_file_command_files,
                         worktree_root=worktree_root,
                         dry_run=False,
                     )
                     changes_applied = True
                 if tracked_file_command_files:
                     unstage_files(
-                        tracked_file_command_files,
+                        files=tracked_file_command_files,
                         worktree_root=worktree_root,
                     )
             else:
                 stage_files(
-                    file_command_files,
+                    files=file_command_files,
                     worktree_root=worktree_root,
                     dry_run=False,
                 )
@@ -600,7 +604,7 @@ def _run_patch_command(
         dry_run=dry_run,
         inventory=None,
     )
-    print_applied(selected, verb=f"would {command_name}" if dry_run else verb)
+    print_applied(hunks=selected, verb=f"would {command_name}" if dry_run else verb)
 
 
 @click.group(cls=CliGroup, invoke_without_command=True, add_help_option=False)
@@ -609,10 +613,10 @@ def _run_patch_command(
 @click.pass_context
 def cli(ctx: click.Context, /, *, show_help: bool, show_version: bool) -> None:
     if show_version:
-        print_version(__version__)
+        print_version(version=__version__)
         ctx.exit()
     if show_help or ctx.invoked_subcommand is None:
-        print_help(HELP)
+        print_help(text=HELP)
         ctx.exit()
 
 
@@ -643,7 +647,7 @@ def _untracked_entry(*, worktree_root: str, path: str) -> Hunk:
     full_path = posixpath.join(worktree_root, path)
     digest = _content_digest(path=full_path)
     hunk = whole_file_hunk(
-        path,
+        filepath=path,
         change_kind="A",
         a_mode=None,
         b_mode=_working_tree_mode(path=full_path),
@@ -703,7 +707,7 @@ def cmd_list(
     files: tuple[str, ...],
 ) -> None:
     if show_help:
-        print_help(HELP_LIST)
+        print_help(text=HELP_LIST)
         return
 
     worktree_root, _ = _require_worktree_context()
@@ -725,7 +729,7 @@ def cmd_list(
     if force_json:
         _echo_hunks_json(hunks=hunks, include_lines=False)
     else:
-        print_hunk_list(hunks)
+        print_hunk_list(hunks=hunks)
 
 
 @cli.command("show", add_help_option=False)
@@ -743,7 +747,7 @@ def cmd_show(
     targets: tuple[str, ...],
 ) -> None:
     if show_help:
-        print_help(HELP_SHOW)
+        print_help(text=HELP_SHOW)
         return
 
     worktree_root, invocation_prefix = _require_worktree_context()
@@ -775,7 +779,7 @@ def cmd_show(
     if force_json:
         _echo_hunks_json(hunks=matched, include_lines=True)
     else:
-        print_hunk_diffs(matched)
+        print_hunk_diffs(hunks=matched)
 
 
 def _find_skill(*, skills: list[Skill], name: str) -> Skill:
@@ -795,7 +799,7 @@ def _find_skill(*, skills: list[Skill], name: str) -> Skill:
 @click.argument("args", nargs=-1)
 def cmd_skills(*, args: tuple[str, ...], force_json: bool, show_help: bool) -> None:
     if show_help:
-        print_help(HELP_SKILLS)
+        print_help(text=HELP_SKILLS)
         return
 
     subcommand = args[0] if args else "list"
@@ -809,7 +813,7 @@ def cmd_skills(*, args: tuple[str, ...], force_json: bool, show_help: bool) -> N
             data = [{"name": s.name, "description": s.description} for s in skills]
             _echo_json(data=data)
         else:
-            print_skill_list(skills)
+            print_skill_list(skills=skills)
         return
 
     if subcommand == "get":
@@ -875,7 +879,7 @@ def cmd_stage(
     show_help: bool,
 ) -> None:
     if show_help:
-        print_help(HELP_STAGE)
+        print_help(text=HELP_STAGE)
         return
     selection = _build_selection(
         line_spec=line_spec,
@@ -912,7 +916,7 @@ def cmd_unstage(
     show_help: bool,
 ) -> None:
     if show_help:
-        print_help(HELP_UNSTAGE)
+        print_help(text=HELP_UNSTAGE)
         return
     selection = _build_selection(
         line_spec=line_spec,
@@ -949,7 +953,7 @@ def cmd_discard(
     show_help: bool,
 ) -> None:
     if show_help:
-        print_help(HELP_DISCARD)
+        print_help(text=HELP_DISCARD)
         return
     selection = _build_selection(
         line_spec=line_spec,
@@ -1001,7 +1005,7 @@ def cmd_commit(
     show_help: bool,
 ) -> None:
     if show_help:
-        print_help(HELP_COMMIT)
+        print_help(text=HELP_COMMIT)
         return
     if messages and message_file is not None:
         raise CliError("-m and -F cannot be combined", usage=USAGE_COMMIT)
@@ -1064,7 +1068,7 @@ def cmd_commit(
         inventory=inventory,
     )
     try:
-        commit(message, amend=amend, fixup=fixup, worktree_root=worktree_root)
+        commit(message=message, amend=amend, fixup=fixup, worktree_root=worktree_root)
     except RuntimeError as exc:
         retry = "git commit --amend" if amend else "git commit"
         if fixup is not None:
@@ -1076,4 +1080,4 @@ def cmd_commit(
 
     if not message:
         message = get_head_subject(worktree_root=worktree_root)
-    print_committed(selected, message=message)
+    print_committed(hunks=selected, message=message)

@@ -23,12 +23,9 @@ def _parse_line_number(*, token: str) -> int:
     return n
 
 
-def parse_line_spec(spec: str, /, *, total: int) -> tuple[set[int], bool]:
-    """Parse "-l" value into (line_numbers, exclude_mode).
-
-    "3,5-7"   -> ({3, 5, 6, 7}, False)
-    "^3,^5-7" -> ({3, 5, 6, 7}, True)
-    """
+def parse_line_spec(*, spec: str, total: int) -> tuple[set[int], bool]:
+    # Returns the -l value's line numbers and whether they are excluded:
+    # "3,5-7" gives ({3, 5, 6, 7}, False) and "^3,^5-7" ({3, 5, 6, 7}, True).
     parts = [p.strip() for p in spec.split(",") if p.strip()]
     if not parts:
         raise ValueError("empty line specification")
@@ -82,7 +79,7 @@ class _BodyLine(NamedTuple):
 def _parse_body_lines(*, body: list[str]) -> list[_BodyLine]:
     parsed: list[_BodyLine] = []
     for line in body:
-        if not is_no_newline_marker(line):
+        if not is_no_newline_marker(line=line):
             parsed.append(
                 _BodyLine(
                     prefix=line[:1],
@@ -101,8 +98,8 @@ def _parse_body_lines(*, body: list[str]) -> list[_BodyLine]:
     return parsed
 
 
-def count_hunk_body_lines(hunk: Hunk, /) -> int:
-    body = split_diff_body(hunk.diff)
+def count_hunk_body_lines(*, hunk: Hunk) -> int:
+    body = split_diff_body(diff=hunk.diff)
     return len(_parse_body_lines(body=body))
 
 
@@ -246,20 +243,17 @@ def _validate_group_selection(
 
 
 def resolve_matching_lines(
-    hunk: Hunk, patterns: Sequence[str], /, *, regex: bool, require_match: bool = True
+    *, hunk: Hunk, patterns: Sequence[str], regex: bool, require_match: bool = True
 ) -> set[int]:
-    """Return 1-based body line numbers of changed lines matching any pattern.
-
-    Patterns are OR'd. Only changed ('+'/'-') lines are considered, matched
-    against their content (the text after the prefix). Raises if nothing matches,
-    so a typo'd pattern never silently selects nothing or everything, unless
-    require_match is False: a multi-hunk caller checks for a match across all
-    of its hunks instead.
-
-    An empty pattern is rejected: it would match every changed line and silently
-    select the whole hunk, mirroring how an empty -l spec errors rather than
-    falling through to select everything.
-    """
+    # Returns 1-based body line numbers. Patterns are OR'd and match only the
+    # content of '+' and '-' lines, after the prefix. Raises if nothing matches,
+    # so a typo'd pattern never silently selects nothing or everything, unless
+    # require_match is False: a multi-hunk caller checks for a match across all
+    # of its hunks instead.
+    #
+    # An empty pattern is rejected: it would match every changed line and
+    # silently select the whole hunk, mirroring how an empty -l spec errors
+    # rather than falling through to select everything.
     if "" in patterns:
         raise ValueError("empty match pattern")
 
@@ -271,7 +265,7 @@ def resolve_matching_lines(
             raise ValueError(f"invalid regex: {exc}") from exc
 
     selected: set[int] = set()
-    body = _parse_body_lines(body=split_diff_body(hunk.diff))
+    body = _parse_body_lines(body=split_diff_body(diff=hunk.diff))
     for line_num, line in enumerate(body, start=1):
         if line.prefix not in ("+", "-"):
             continue
@@ -283,32 +277,28 @@ def resolve_matching_lines(
             selected.add(line_num)
 
     if not selected and require_match:
-        raise ValueError(no_match_message(patterns))
+        raise ValueError(no_match_message(patterns=patterns))
     return selected
 
 
-def no_match_message(patterns: Sequence[str], /) -> str:
+def no_match_message(*, patterns: Sequence[str]) -> str:
     return "no changed line matches " + ", ".join(repr(p) for p in patterns)
 
 
 def filter_hunk_lines(
+    *,
     hunk: Hunk,
     lines: set[int],
-    /,
-    *,
     exclude: bool,
     reverse: bool = False,
     allow_one_sided: bool = False,
 ) -> Hunk:
-    """Return a new Hunk with only the selected lines as changes.
-
-    Unselected changes on the side the apply consumes become context; the other
-    side drops. A forward apply keeps unselected '-' lines and drops '+';
-    reverse=True (unstage, discard) swaps those so the patch applies against the
-    NEW content the index or working tree already holds.
-    """
+    # Unselected changes on the side the apply consumes become context; the
+    # other side drops. A forward apply keeps unselected '-' lines and drops
+    # '+'; reverse=True (unstage, discard) swaps those so the patch applies
+    # against the NEW content the index or working tree already holds.
     header = hunk.diff.split("\n", 1)[0]
-    body = _parse_body_lines(body=split_diff_body(hunk.diff))
+    body = _parse_body_lines(body=split_diff_body(diff=hunk.diff))
     total = len(body)
 
     out_of_range = [n for n in lines if n < 1 or n > total]
@@ -335,16 +325,16 @@ def filter_hunk_lines(
     kept = _select_body_lines(body=body, selected=selected, keep_prefix=keep_prefix)
     new_body = _render_body_lines(kept=kept)
 
-    additions, deletions = count_changes(new_body)
+    additions, deletions = count_changes(lines=new_body)
     if additions == 0 and deletions == 0:
         raise ValueError("no changes remain after line filtering")
 
-    markers = sum(1 for line in new_body if is_no_newline_marker(line))
+    markers = sum(1 for line in new_body if is_no_newline_marker(line=line))
     context_count = len(new_body) - additions - deletions - markers
     old_count = context_count + deletions
     new_count = context_count + additions
 
-    hunk_range = parse_hunk_range(header)
+    hunk_range = parse_hunk_range(header=header)
 
     # Git writes start 0 only for an empty side. Filtering can give an added
     # file's old side (or a deleted file's new side) context lines, so the side
@@ -352,7 +342,7 @@ def filter_hunk_lines(
     old_start = 1 if hunk_range.old_start == 0 and old_count else hunk_range.old_start
     new_start = 1 if hunk_range.new_start == 0 and new_count else hunk_range.new_start
     range_header = format_hunk_range(
-        replace(
+        hunk_range=replace(
             hunk_range,
             old_start=old_start,
             old_count=old_count,

@@ -121,7 +121,7 @@ def test_staged_duplicate_member_ignores_unstaged_hunks_in_other_files(
     members = duplicate_hunks.run_list_json("list", "--json")
     assert [hunk["id_stability"] for hunk in members] == ["conditional", "conditional"]
     first_start, second_start = (
-        parse_hunk_range(hunk["header"]).new_start for hunk in members
+        parse_hunk_range(header=hunk["header"]).new_start for hunk in members
     )
     assert first_start < second_start
     # Size the unrelated files from the fixture's own geometry. A miscount only
@@ -149,7 +149,7 @@ def test_staged_duplicate_member_ignores_unstaged_hunks_in_other_files(
     # did not move it. Given that, collapsing either unrelated path to one line
     # deletes four more lines than separate the pair, which is what makes a
     # miscount reorder them.
-    assert parse_hunk_range(staged[0]["header"]).new_start == second_start
+    assert parse_hunk_range(header=staged[0]["header"]).new_start == second_start
     # --json reports canonical IDs, so no prefix length can hide a renumbering.
     staged_id = staged[0]["id"]
     unstaged_id = duplicate_hunks.get_only_hunk_id("--unstaged")

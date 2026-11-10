@@ -14,11 +14,11 @@ _MODE_LINE_PREFIXES: Final = ("old mode ", "new mode ")
 
 def _extract_file_headers(*, diff_output: str) -> dict[str, str]:
     headers: dict[str, str] = {}
-    for file_diff in split_file_diffs(diff_output):
-        filepath = extract_file_path(file_diff)
+    for file_diff in split_file_diffs(diff_output=diff_output):
+        filepath = extract_file_path(file_diff=file_diff)
         if filepath is None:
             continue
-        headers[filepath] = split_at_hunk_headers(file_diff, maxsplit=1)[0]
+        headers[filepath] = split_at_hunk_headers(file_diff=file_diff, maxsplit=1)[0]
     return headers
 
 
@@ -44,7 +44,7 @@ def _needs_modification_header(*, hunk: Hunk) -> bool:
     # Its "/dev/null" header no longer describes the patch and git rejects it.
     if not hunk.diff:
         return False
-    hunk_range = parse_hunk_range(hunk.diff.splitlines()[0])
+    hunk_range = parse_hunk_range(header=hunk.diff.splitlines()[0])
     return (hunk.change_kind == "A" and hunk_range.old_count > 0) or (
         hunk.change_kind == "D" and hunk_range.new_count > 0
     )
@@ -73,7 +73,7 @@ def _normalize_hunk_ranges(*, hunks: list[Hunk], reverse: bool) -> list[str]:
     parsed = []
     for hunk in hunks:
         header, separator, body = hunk.diff.partition("\n")
-        hunk_range = parse_hunk_range(header)
+        hunk_range = parse_hunk_range(header=header)
         target_start = hunk_range.new_start if reverse else hunk_range.old_start
         parsed.append((target_start, hunk_range, separator, body))
 
@@ -90,12 +90,12 @@ def _normalize_hunk_ranges(*, hunks: list[Hunk], reverse: bool) -> list[str]:
                 hunk_range.old_start + selected_delta if hunk_range.new_count else 0
             )
             hunk_range = replace(hunk_range, new_start=new_start)
-        normalized.append(format_hunk_range(hunk_range) + separator + body)
+        normalized.append(format_hunk_range(hunk_range=hunk_range) + separator + body)
         selected_delta += hunk_range.new_count - hunk_range.old_count
     return normalized
 
 
-def build_patch(hunks: list[Hunk], diff_output: str, /, *, reverse: bool) -> str:
+def build_patch(*, hunks: list[Hunk], diff_output: str, reverse: bool) -> str:
     files: dict[str, list[Hunk]] = {}
     for hunk in hunks:
         files.setdefault(hunk.file, []).append(hunk)
@@ -106,7 +106,7 @@ def build_patch(hunks: list[Hunk], diff_output: str, /, *, reverse: bool) -> str
     for filepath, file_hunks in files.items():
         if filepath not in headers:
             raise ValueError(f"File header not found for {filepath}")
-        mode_selected = any(is_mode_hunk(hunk) for hunk in file_hunks)
+        mode_selected = any(is_mode_hunk(hunk=hunk) for hunk in file_hunks)
         text_selected = any(hunk.diff for hunk in file_hunks)
         if mode_selected and not text_selected:
             header = _make_mode_header(header=headers[filepath])

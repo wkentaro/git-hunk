@@ -23,7 +23,7 @@ def test_one_section_maps_to_one_hunk() -> None:
         "+added_bottom\n"
         " line9\n"
     )
-    hunks = parse_diff(diff)
+    hunks = parse_diff(diff_output=diff)
     assert len(hunks) == 1
     assert hunks[0].additions == 2
     assert hunks[0].change_kind == "M"
@@ -45,7 +45,7 @@ def test_binary_file() -> None:
         "index abc1234..def5678 100644\n"
         "Binary files a/foo.qm and b/foo.qm differ\n"
     )
-    hunks = parse_diff(diff)
+    hunks = parse_diff(diff_output=diff)
     assert len(hunks) == 1
     assert hunks[0].file == "foo.qm"
     assert hunks[0].binary is True
@@ -71,7 +71,7 @@ def test_binary_file_mixed_with_text() -> None:
         " \n"
         " def main():\n"
     )
-    hunks = parse_diff(diff)
+    hunks = parse_diff(diff_output=diff)
     assert len(hunks) == 2
     assert hunks[0].file == "foo.qm"
     assert hunks[0].binary is True
@@ -87,7 +87,7 @@ def test_deleted_binary_distinguished() -> None:
         "index 885b32b..0000000\n"
         "Binary files a/d.bin and /dev/null differ\n"
     )
-    hunks = parse_diff(diff)
+    hunks = parse_diff(diff_output=diff)
     assert len(hunks) == 1
     assert hunks[0].binary is True
     assert hunks[0].change_kind == "D"
@@ -103,7 +103,7 @@ def test_added_binary_distinguished() -> None:
         "index 0000000..abc1234\n"
         "Binary files /dev/null and b/n.bin differ\n"
     )
-    hunks = parse_diff(diff)
+    hunks = parse_diff(diff_output=diff)
     assert len(hunks) == 1
     assert hunks[0].binary is True
     assert hunks[0].change_kind == "A"
@@ -118,7 +118,7 @@ def test_empty_added_file_is_whole_file_hunk() -> None:
         "index 0000000..e69de29\n"
     )
 
-    [hunk] = parse_diff(diff)
+    [hunk] = parse_diff(diff_output=diff)
 
     assert hunk.file == "empty.txt"
     assert hunk.change_kind == "A"
@@ -138,7 +138,7 @@ def test_empty_deleted_file_is_whole_file_hunk() -> None:
         "index e69de29..0000000\n"
     )
 
-    [hunk] = parse_diff(diff)
+    [hunk] = parse_diff(diff_output=diff)
 
     assert hunk.file == "empty.txt"
     assert hunk.change_kind == "D"
@@ -153,7 +153,7 @@ def test_empty_deleted_file_is_whole_file_hunk() -> None:
 
 def test_mode_only_change_surfaced() -> None:
     diff = "diff --git a/m.sh b/m.sh\nold mode 100644\nnew mode 100755\n"
-    hunks = parse_diff(diff)
+    hunks = parse_diff(diff_output=diff)
     assert len(hunks) == 1
     assert hunks[0].file == "m.sh"
     assert hunks[0].change_kind == "M"
@@ -178,7 +178,7 @@ def test_mode_and_content_change_together() -> None:
         "-line one\n"
         "+line one changed\n"
     )
-    hunks = parse_diff(diff)
+    hunks = parse_diff(diff_output=diff)
     assert len(hunks) == 2
 
     mode_hunk, text_hunk = hunks
@@ -224,7 +224,7 @@ def test_typechange_is_single_whole_file_hunk() -> None:
         "+target\n"
         "\\ No newline at end of file\n"
     )
-    hunks = parse_diff(diff)
+    hunks = parse_diff(diff_output=diff)
     assert len(hunks) == 1
     assert hunks[0].file == "link"
     assert hunks[0].change_kind == "T"
@@ -252,7 +252,7 @@ def test_typechange_from_binary_is_marked_binary() -> None:
         "+target\n"
         "\\ No newline at end of file\n"
     )
-    hunks = parse_diff(diff)
+    hunks = parse_diff(diff_output=diff)
     assert len(hunks) == 1
     assert hunks[0].change_kind == "T"
     assert hunks[0].binary is True
@@ -281,7 +281,7 @@ def test_delete_then_unrelated_add_is_not_merged_as_typechange() -> None:
         "@@ -0,0 +1 @@\n"
         "+fresh\n"
     )
-    hunks = parse_diff(diff)
+    hunks = parse_diff(diff_output=diff)
     assert len(hunks) == 2
     assert hunks[0].file == "a.txt"
     assert hunks[0].change_kind == "D"
@@ -309,7 +309,7 @@ def test_chunk_without_diff_header_is_skipped() -> None:
         "+b\n"
         " c\n"
     )
-    hunks = parse_diff(diff)
+    hunks = parse_diff(diff_output=diff)
     assert len(hunks) == 1
     assert hunks[0].file == "f.py"
     assert hunks[0].additions == 1

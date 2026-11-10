@@ -10,7 +10,7 @@ from git_hunk._hunk import count_changes
 def make_hunk() -> Callable[[str], Hunk]:
     def _make(diff: str, /) -> Hunk:
         body = diff.split("\n")[1:]
-        additions, deletions = count_changes(body)
+        additions, deletions = count_changes(lines=body)
         return Hunk(
             id="abc1234",
             file="test.py",
