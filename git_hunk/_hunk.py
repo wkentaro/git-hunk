@@ -12,7 +12,7 @@ HUMAN_ID_MIN_LENGTH: Final = 7
 _HUNK_RANGE_RE: Final = re.compile(r"@@ -(\d+)(?:,(\d+))? \+(\d+)(?:,(\d+))? @@")
 
 
-def is_no_newline_marker(line: str, /) -> bool:
+def is_no_newline_marker(*, line: str) -> bool:
     return line == NO_NEWLINE_MARKER
 
 
@@ -80,7 +80,7 @@ class HunkRange:
     suffix: str = ""
 
 
-def parse_hunk_range(header: str, /) -> HunkRange:
+def parse_hunk_range(*, header: str) -> HunkRange:
     match = _HUNK_RANGE_RE.match(header)
     if match is None:
         raise ValueError(f"cannot parse hunk header: {header}")
@@ -94,7 +94,7 @@ def parse_hunk_range(header: str, /) -> HunkRange:
 
 
 def format_hunk_range(
-    hunk_range: HunkRange, /, *, include_single_counts: bool = False
+    *, hunk_range: HunkRange, include_single_counts: bool = False
 ) -> str:
     def format_side(start: int, count: int, /) -> str:
         if count == 1 and not include_single_counts:
@@ -108,15 +108,15 @@ def format_hunk_range(
     )
 
 
-def format_hunk_id(hunk: Hunk, /) -> str:
+def format_hunk_id(*, hunk: Hunk) -> str:
     return hunk.id[: hunk.id_prefix_length]
 
 
-def is_whole_file_hunk(hunk: Hunk, /) -> bool:
+def is_whole_file_hunk(*, hunk: Hunk) -> bool:
     return not hunk.diff
 
 
-def is_mode_hunk(hunk: Hunk, /) -> bool:
+def is_mode_hunk(*, hunk: Hunk) -> bool:
     return (
         hunk.change_kind == "M"
         and not hunk.binary
@@ -127,7 +127,7 @@ def is_mode_hunk(hunk: Hunk, /) -> bool:
     )
 
 
-def is_submodule_hunk(hunk: Hunk, /) -> bool:
+def is_submodule_hunk(*, hunk: Hunk) -> bool:
     # A gitlink bump has a real one-line text diff, so it is not a whole-file
     # hunk, but its line is a commit pointer rather than selectable content.
     # This check stays separate from whole-file routing so whole-hunk gitlink
@@ -138,8 +138,8 @@ def is_submodule_hunk(hunk: Hunk, /) -> bool:
 
 def _body_lines(*, diff: str) -> list[dict[str, Any]]:
     lines: list[dict[str, Any]] = []
-    for line in split_diff_body(diff):
-        if is_no_newline_marker(line):
+    for line in split_diff_body(diff=diff):
+        if is_no_newline_marker(line=line):
             if lines:
                 lines[-1]["no_newline"] = True
             continue
@@ -149,13 +149,13 @@ def _body_lines(*, diff: str) -> list[dict[str, Any]]:
     return lines
 
 
-def count_changes(lines: list[str], /) -> tuple[int, int]:
+def count_changes(*, lines: list[str]) -> tuple[int, int]:
     additions = sum(1 for line in lines if line.startswith("+"))
     deletions = sum(1 for line in lines if line.startswith("-"))
     return additions, deletions
 
 
-def split_diff_body(diff: str, /) -> list[str]:
+def split_diff_body(*, diff: str) -> list[str]:
     body_lines = diff.split("\n")[1:]
     while body_lines and body_lines[-1] == "":
         body_lines.pop()
@@ -201,7 +201,7 @@ def _compute_whole_file_hunk_id(
 def _compute_worktree_position(*, hunk: Hunk, hunks: list[Hunk]) -> int:
     if hunk.header is None:
         return 0
-    hunk_range = parse_hunk_range(hunk.header)
+    hunk_range = parse_hunk_range(header=hunk.header)
     b_start = hunk_range.new_start
     if hunk.status == "unstaged":
         return b_start
@@ -212,7 +212,7 @@ def _compute_worktree_position(*, hunk: Hunk, hunks: list[Hunk]) -> int:
             continue
         if peer.header is None:
             continue
-        peer_range = parse_hunk_range(peer.header)
+        peer_range = parse_hunk_range(header=peer.header)
         a_start = peer_range.old_start
         a_count = peer_range.old_count
         b_count = peer_range.new_count
@@ -221,7 +221,7 @@ def _compute_worktree_position(*, hunk: Hunk, hunks: list[Hunk]) -> int:
     return position
 
 
-def assign_hunk_ids(hunks: list[Hunk], /) -> list[Hunk]:
+def assign_hunk_ids(*, hunks: list[Hunk]) -> list[Hunk]:
     result = hunks[:]
     groups: dict[str, list[tuple[int, Hunk]]] = {}
     for index, hunk in enumerate(hunks):
@@ -262,11 +262,11 @@ def _assign_id_prefix_lengths(*, hunks: list[Hunk]) -> list[Hunk]:
     return result
 
 
-def split_file_diffs(diff_output: str, /) -> list[str]:
+def split_file_diffs(*, diff_output: str) -> list[str]:
     return re.split(r"(?=^diff --git )", diff_output, flags=re.MULTILINE)
 
 
-def split_at_hunk_headers(file_diff: str, /, *, maxsplit: int = 0) -> list[str]:
+def split_at_hunk_headers(*, file_diff: str, maxsplit: int = 0) -> list[str]:
     return re.split(r"(?=^@@)", file_diff, maxsplit=maxsplit, flags=re.MULTILINE)
 
 
@@ -299,7 +299,7 @@ def _unquote_c_path(*, path: str) -> str:
     return "".join(chars)
 
 
-def extract_file_path(file_diff: str, /) -> str | None:
+def extract_file_path(*, file_diff: str) -> str | None:
     first_line = file_diff.split("\n", 1)[0]
     # git double-quotes and C-escapes the header when a path contains a tab,
     # newline, backslash, or double-quote (regardless of core.quotePath). Both
@@ -336,9 +336,8 @@ def _extract_context_before(*, header: str) -> str | None:
 
 
 def whole_file_hunk(
-    filepath: str,
-    /,
     *,
+    filepath: str,
     change_kind: str,
     a_mode: str | None,
     b_mode: str | None,
@@ -407,17 +406,17 @@ def _is_binary(*, file_diff: str) -> bool:
     )
 
 
-def parse_diff(diff_output: str, /) -> list[Hunk]:
+def parse_diff(*, diff_output: str) -> list[Hunk]:
     if not diff_output.strip():
         return []
 
-    file_diffs = [fd for fd in split_file_diffs(diff_output) if fd.strip()]
+    file_diffs = [fd for fd in split_file_diffs(diff_output=diff_output) if fd.strip()]
 
     hunks = []
     i = 0
     while i < len(file_diffs):
         file_diff = file_diffs[i]
-        filepath = extract_file_path(file_diff)
+        filepath = extract_file_path(file_diff=file_diff)
         if filepath is None:
             i += 1
             continue
@@ -430,11 +429,11 @@ def parse_diff(diff_output: str, /) -> list[Hunk]:
         next_diff = file_diffs[i + 1] if i + 1 < len(file_diffs) else None
         if change_kind == "D" and next_diff is not None:
             next_kind, _, new_b_mode = _parse_file_change(file_diff=next_diff)
-            if next_kind == "A" and extract_file_path(next_diff) == filepath:
+            if next_kind == "A" and extract_file_path(file_diff=next_diff) == filepath:
                 _, new_object_id = _extract_block_object_ids(file_diff=next_diff)
                 hunks.append(
                     whole_file_hunk(
-                        filepath,
+                        filepath=filepath,
                         change_kind="T",
                         a_mode=a_mode,
                         b_mode=new_b_mode,
@@ -450,7 +449,7 @@ def parse_diff(diff_output: str, /) -> list[Hunk]:
         if _is_binary(file_diff=file_diff):
             hunks.append(
                 whole_file_hunk(
-                    filepath,
+                    filepath=filepath,
                     change_kind=change_kind,
                     a_mode=a_mode,
                     b_mode=b_mode,
@@ -462,12 +461,12 @@ def parse_diff(diff_output: str, /) -> list[Hunk]:
             i += 1
             continue
 
-        parts = split_at_hunk_headers(file_diff)
+        parts = split_at_hunk_headers(file_diff=file_diff)
 
         if change_kind == "M" and a_mode != b_mode:
             hunks.append(
                 whole_file_hunk(
-                    filepath,
+                    filepath=filepath,
                     change_kind=change_kind,
                     a_mode=a_mode,
                     b_mode=b_mode,
@@ -481,7 +480,7 @@ def parse_diff(diff_output: str, /) -> list[Hunk]:
             if change_kind in ("A", "D"):
                 hunks.append(
                     whole_file_hunk(
-                        filepath,
+                        filepath=filepath,
                         change_kind=change_kind,
                         a_mode=a_mode,
                         b_mode=b_mode,
@@ -498,9 +497,9 @@ def parse_diff(diff_output: str, /) -> list[Hunk]:
         # section, so there is nothing finer to split here (use -l for that).
         for part in parts[1:]:
             header_line = part.split("\n", 1)[0]
-            body_lines = split_diff_body(part)
+            body_lines = split_diff_body(diff=part)
 
-            additions, deletions = count_changes(body_lines)
+            additions, deletions = count_changes(lines=body_lines)
             hunks.append(
                 Hunk(
                     id="",

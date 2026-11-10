@@ -14,24 +14,28 @@ def test_literal_matches_changed_line_content(
     *,
     make_hunk: Callable[[str], Hunk],
 ) -> None:
-    assert resolve_matching_lines(make_hunk(_TWO_GROUP), ["B"], regex=False) == {3}
+    assert resolve_matching_lines(
+        hunk=make_hunk(_TWO_GROUP), patterns=["B"], regex=False
+    ) == {3}
 
 
 def test_literal_ignores_context_lines(*, make_hunk: Callable[[str], Hunk]) -> None:
     # 'a' and 'c' are context; only the changed +/- lines are matchable.
     with pytest.raises(ValueError, match="no changed line matches"):
-        resolve_matching_lines(make_hunk(_TWO_GROUP), ["a"], regex=False)
+        resolve_matching_lines(hunk=make_hunk(_TWO_GROUP), patterns=["a"], regex=False)
 
 
 def test_multiple_patterns_are_ored(*, make_hunk: Callable[[str], Hunk]) -> None:
-    result = resolve_matching_lines(make_hunk(_TWO_GROUP), ["b", "D"], regex=False)
+    result = resolve_matching_lines(
+        hunk=make_hunk(_TWO_GROUP), patterns=["b", "D"], regex=False
+    )
     assert result == {2, 6}
 
 
 def test_literal_is_case_sensitive(*, make_hunk: Callable[[str], Hunk]) -> None:
     hunk = make_hunk(_TWO_GROUP)
-    assert resolve_matching_lines(hunk, ["b"], regex=False) == {2}
-    assert resolve_matching_lines(hunk, ["B"], regex=False) == {3}
+    assert resolve_matching_lines(hunk=hunk, patterns=["b"], regex=False) == {2}
+    assert resolve_matching_lines(hunk=hunk, patterns=["B"], regex=False) == {3}
 
 
 def test_literal_treats_metacharacters_literally(
@@ -39,24 +43,26 @@ def test_literal_treats_metacharacters_literally(
     make_hunk: Callable[[str], Hunk],
 ) -> None:
     hunk = make_hunk("@@ -1,1 +1,2 @@\n ctx\n+value = items[0].get('x')")
-    assert resolve_matching_lines(hunk, ["[0]"], regex=False) == {2}
+    assert resolve_matching_lines(hunk=hunk, patterns=["[0]"], regex=False) == {2}
     with pytest.raises(ValueError, match="no changed line matches"):
-        resolve_matching_lines(hunk, ["x.y"], regex=False)
+        resolve_matching_lines(hunk=hunk, patterns=["x.y"], regex=False)
 
 
 def test_regex_search(*, make_hunk: Callable[[str], Hunk]) -> None:
     hunk = make_hunk("@@ -1,1 +1,3 @@\n ctx\n+foo123\n+bar")
-    assert resolve_matching_lines(hunk, [r"\d+"], regex=True) == {2}
+    assert resolve_matching_lines(hunk=hunk, patterns=[r"\d+"], regex=True) == {2}
 
 
 def test_regex_metacharacters_are_special(*, make_hunk: Callable[[str], Hunk]) -> None:
     hunk = make_hunk("@@ -1,1 +1,3 @@\n ctx\n+value = items[0]\n+plain")
-    assert resolve_matching_lines(hunk, [r"items\[0\]"], regex=True) == {2}
+    assert resolve_matching_lines(hunk=hunk, patterns=[r"items\[0\]"], regex=True) == {
+        2
+    }
 
 
 def test_invalid_regex_errors(*, make_hunk: Callable[[str], Hunk]) -> None:
     with pytest.raises(ValueError, match="invalid regex"):
-        resolve_matching_lines(make_hunk(_TWO_GROUP), ["("], regex=True)
+        resolve_matching_lines(hunk=make_hunk(_TWO_GROUP), patterns=["("], regex=True)
 
 
 def test_zero_matches_errors_with_pattern_in_message(
@@ -64,23 +70,27 @@ def test_zero_matches_errors_with_pattern_in_message(
     make_hunk: Callable[[str], Hunk],
 ) -> None:
     with pytest.raises(ValueError, match="nonexistent"):
-        resolve_matching_lines(make_hunk(_TWO_GROUP), ["nonexistent"], regex=False)
+        resolve_matching_lines(
+            hunk=make_hunk(_TWO_GROUP), patterns=["nonexistent"], regex=False
+        )
 
 
 def test_empty_pattern_rejected(*, make_hunk: Callable[[str], Hunk]) -> None:
     # An empty pattern matches every line; reject it instead of silently
     # selecting the whole hunk (parallels an empty -l spec erroring).
     with pytest.raises(ValueError, match="empty match pattern"):
-        resolve_matching_lines(make_hunk(_TWO_GROUP), [""], regex=False)
+        resolve_matching_lines(hunk=make_hunk(_TWO_GROUP), patterns=[""], regex=False)
     with pytest.raises(ValueError, match="empty match pattern"):
-        resolve_matching_lines(make_hunk(_TWO_GROUP), ["B", ""], regex=False)
+        resolve_matching_lines(
+            hunk=make_hunk(_TWO_GROUP), patterns=["B", ""], regex=False
+        )
 
 
 def test_whitespace_pattern_allowed(*, make_hunk: Callable[[str], Hunk]) -> None:
     # A whitespace pattern is meaningful (matches lines containing it), unlike an
     # empty one, so it is not rejected.
     hunk = make_hunk("@@ -1,1 +1,2 @@\n ctx\n+a b")
-    assert resolve_matching_lines(hunk, [" "], regex=False) == {2}
+    assert resolve_matching_lines(hunk=hunk, patterns=[" "], regex=False) == {2}
 
 
 def test_interleaved_no_newline_marker_does_not_consume_a_line_number(
@@ -91,8 +101,8 @@ def test_interleaved_no_newline_marker_does_not_consume_a_line_number(
     # without incrementing the count, so '+new' stays line 3, matching -l's
     # numbering (context counted, markers excluded).
     hunk = make_hunk(f"@@ -1,2 +1,2 @@\n a\n-old\n{NO_NEWLINE_MARKER}\n+new")
-    assert resolve_matching_lines(hunk, ["old"], regex=False) == {2}
-    assert resolve_matching_lines(hunk, ["new"], regex=False) == {3}
+    assert resolve_matching_lines(hunk=hunk, patterns=["old"], regex=False) == {2}
+    assert resolve_matching_lines(hunk=hunk, patterns=["new"], regex=False) == {3}
 
 
 def test_trailing_no_newline_marker_does_not_shift_line_numbers(
@@ -100,4 +110,4 @@ def test_trailing_no_newline_marker_does_not_shift_line_numbers(
     make_hunk: Callable[[str], Hunk],
 ) -> None:
     hunk = make_hunk(f"{_TWO_GROUP}\n{NO_NEWLINE_MARKER}")
-    assert resolve_matching_lines(hunk, ["D"], regex=False) == {6}
+    assert resolve_matching_lines(hunk=hunk, patterns=["D"], regex=False) == {6}

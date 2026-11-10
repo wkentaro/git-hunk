@@ -19,13 +19,13 @@ _DIFF: Final = (
 
 
 def test_preserves_no_newline_marker_in_diff() -> None:
-    hunks = parse_diff(_DIFF)
+    hunks = parse_diff(diff_output=_DIFF)
     assert len(hunks) == 1
     assert hunks[0].diff.count(NO_NEWLINE_MARKER) == 2
     assert hunks[0].diff.endswith(NO_NEWLINE_MARKER)
 
 
 def test_marker_not_counted_as_change() -> None:
-    hunks = parse_diff(_DIFF)
+    hunks = parse_diff(diff_output=_DIFF)
     assert hunks[0].additions == 1
     assert hunks[0].deletions == 1

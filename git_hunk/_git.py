@@ -143,9 +143,8 @@ def get_unmerged_files(*, worktree_root: str) -> list[str]:
 
 
 def apply_patch(
-    patch: str,
-    /,
     *,
+    patch: str,
     worktree_root: str,
     cached: bool,
     reverse: bool,
@@ -167,7 +166,7 @@ def apply_patch(
 _LITERAL_PATHSPECS: Final = "--literal-pathspecs"
 
 
-def stage_files(files: list[str], /, *, worktree_root: str, dry_run: bool) -> None:
+def stage_files(*, files: list[str], worktree_root: str, dry_run: bool) -> None:
     args = [_LITERAL_PATHSPECS, "add"]
     if dry_run:
         args.append("--dry-run")
@@ -179,7 +178,7 @@ def stage_files(files: list[str], /, *, worktree_root: str, dry_run: bool) -> No
     )
 
 
-def get_index_conflicts(files: list[str], /, *, worktree_root: str) -> list[str]:
+def get_index_conflicts(*, files: list[str], worktree_root: str) -> list[str]:
     # Index entries that block adding these paths: one below a path (it is a
     # tracked directory) or one at a parent directory (it is a tracked file).
     # A literal pathspec matches both the entry itself and entries below it.
@@ -200,15 +199,13 @@ def get_index_conflicts(files: list[str], /, *, worktree_root: str) -> list[str]
     ]
 
 
-def add_untracked_files(files: list[str], /, *, worktree_root: str) -> None:
+def add_untracked_files(*, files: list[str], worktree_root: str) -> None:
     # Unlike git add, update-index refuses a path that would replace a tracked
     # directory instead of also staging that directory's deletion.
     run_git("update-index", "--add", "--", *files, worktree_root=worktree_root)
 
 
-def unstage_added_files(
-    files: list[str], /, *, worktree_root: str, dry_run: bool
-) -> None:
+def unstage_added_files(*, files: list[str], worktree_root: str, dry_run: bool) -> None:
     args = [_LITERAL_PATHSPECS, "rm", "--cached", "--force"]
     if dry_run:
         args.append("--dry-run")
@@ -220,7 +217,7 @@ def unstage_added_files(
     )
 
 
-def unstage_files(files: list[str], /, *, worktree_root: str) -> None:
+def unstage_files(*, files: list[str], worktree_root: str) -> None:
     run_git(
         _LITERAL_PATHSPECS,
         "restore",
@@ -231,7 +228,7 @@ def unstage_files(files: list[str], /, *, worktree_root: str) -> None:
     )
 
 
-def discard_files(files: list[str], /, *, worktree_root: str) -> None:
+def discard_files(*, files: list[str], worktree_root: str) -> None:
     run_git(
         _LITERAL_PATHSPECS,
         "restore",
@@ -241,9 +238,7 @@ def discard_files(files: list[str], /, *, worktree_root: str) -> None:
     )
 
 
-def commit(
-    message: str, /, *, amend: bool, fixup: str | None, worktree_root: str
-) -> None:
+def commit(*, message: str, amend: bool, fixup: str | None, worktree_root: str) -> None:
     args = ["commit"]
     if amend:
         args.append("--amend")

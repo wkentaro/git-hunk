@@ -62,7 +62,7 @@ def _header_text(*, hunk: Hunk) -> str:
 
 
 def _append_hunk_id(*, text: Text, hunk: Hunk, style: str) -> None:
-    text.append(format_hunk_id(hunk), style=style)
+    text.append(format_hunk_id(hunk=hunk), style=style)
     if hunk.id_stability == "conditional":
         text.append(" conditional", style="yellow")
 
@@ -125,7 +125,7 @@ def _print_status_section(
             out.print(line)
 
 
-def print_hunk_list(hunks: list[Hunk], /) -> None:
+def print_hunk_list(*, hunks: list[Hunk]) -> None:
     if not hunks:
         _err().print("[dim]No hunks.[/dim]")
         return
@@ -161,14 +161,14 @@ def _print_hunk_diff(*, out: Console, hunk: Hunk) -> None:
     heading.append("  ")
     _append_hunk_id(text=heading, hunk=hunk, style="dim cyan")
     out.print(heading)
-    if is_whole_file_hunk(hunk):
+    if is_whole_file_hunk(hunk=hunk):
         out.print(Text(_safe(text=_header_text(hunk=hunk)), style="dim"))
         return
     line_num = 0
     for line in hunk.diff.split("\n"):
         if line.startswith("@@"):
             out.print(Text(_safe(text=line), style="cyan"))
-        elif is_no_newline_marker(line):
+        elif is_no_newline_marker(line=line):
             out.print(Text("    " + line, style="dim"))
         else:
             line_num += 1
@@ -182,7 +182,7 @@ def _print_hunk_diff(*, out: Console, hunk: Hunk) -> None:
             out.print(Text.assemble(prefix, Text(_safe(text=line), style=style)))
 
 
-def print_skill_list(skills: list[Skill], /) -> None:
+def print_skill_list(*, skills: list[Skill]) -> None:
     if not skills:
         _err().print("[dim]No skills.[/dim]")
         return
@@ -195,7 +195,7 @@ def print_skill_list(skills: list[Skill], /) -> None:
         out.print(line, no_wrap=True, overflow="ellipsis")
 
 
-def print_hunk_diffs(hunks: list[Hunk], /) -> None:
+def print_hunk_diffs(*, hunks: list[Hunk]) -> None:
     out = _out()
     for i, hunk in enumerate(hunks):
         if i > 0:
@@ -203,7 +203,7 @@ def print_hunk_diffs(hunks: list[Hunk], /) -> None:
         _print_hunk_diff(out=out, hunk=hunk)
 
 
-def print_applied(hunks: list[Hunk], /, *, verb: str) -> None:
+def print_applied(*, hunks: list[Hunk], verb: str) -> None:
     err = _err()
     for hunk in hunks:
         line = Text()
@@ -216,7 +216,7 @@ def print_applied(hunks: list[Hunk], /, *, verb: str) -> None:
         err.print(line)
 
 
-def print_committed(hunks: list[Hunk], /, *, message: str) -> None:
+def print_committed(*, hunks: list[Hunk], message: str) -> None:
     summary = message.strip().splitlines()[0]
     count = len(hunks)
     line = Text()
@@ -227,9 +227,8 @@ def print_committed(hunks: list[Hunk], /, *, message: str) -> None:
 
 
 def print_error(
-    msg: str,
-    /,
     *,
+    msg: str,
     tip: str | None = None,
     usage: str | None = None,
 ) -> None:
@@ -242,7 +241,7 @@ def print_error(
         err.print("\nFor more information, try '[bold cyan]--help[/bold cyan]'.")
 
 
-def print_version(version: str, /) -> None:
+def print_version(*, version: str) -> None:
     _err().print(f"git-hunk [dim]{version}[/dim]")
 
 
@@ -473,5 +472,5 @@ git-hunk version, so prefer them over guessing commands from flags alone.
 {_format_examples(rows=_EXAMPLES_SKILLS)}"""
 
 
-def print_help(text: str, /) -> None:
+def print_help(*, text: str) -> None:
     _err().print(text)

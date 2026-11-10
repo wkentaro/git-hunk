@@ -99,7 +99,7 @@ def test_duplicate_group_gets_unique_conditional_ids() -> None:
         _make_hunk(hunk_id=base_id, header="@@ -20 +20 @@", status="unstaged"),
     ]
 
-    result = assign_hunk_ids(hunks)
+    result = assign_hunk_ids(hunks=hunks)
 
     assert result[0].id != result[1].id
     assert {hunk.id_stability for hunk in result} == {"conditional"}
@@ -108,13 +108,13 @@ def test_duplicate_group_gets_unique_conditional_ids() -> None:
 def test_conditional_ids_follow_duplicate_order_across_status_changes() -> None:
     base_id = "a" * 64
     before = assign_hunk_ids(
-        [
+        hunks=[
             _make_hunk(hunk_id=base_id, header="@@ -1 +1 @@", status="unstaged"),
             _make_hunk(hunk_id=base_id, header="@@ -20 +20 @@", status="unstaged"),
         ]
     )
     after = assign_hunk_ids(
-        [
+        hunks=[
             _make_hunk(
                 hunk_id=base_id,
                 header="@@ -1 +1 @@",
@@ -145,7 +145,9 @@ def test_staged_position_reads_a_peer_start_from_its_pre_image_side() -> None:
         hunk_id="c" * 64, header="@@ -20 +30,6 @@", status="unstaged"
     )
 
-    result = assign_hunk_ids([staged, peer_in_group, earlier_peer, straddling_peer])
+    result = assign_hunk_ids(
+        hunks=[staged, peer_in_group, earlier_peer, straddling_peer]
+    )
 
     # Ordinals spelled out, not reread from a second assignment run: an oracle that
     # shares the sort cancels out the ordering under test.
@@ -164,8 +166,8 @@ def test_staged_position_counts_only_same_start_pure_insertion() -> None:
         hunk_id="b" * 64, header="@@ -20 +20,3 @@", status="unstaged"
     )
 
-    with_insertion = assign_hunk_ids([staged, group_peer, insertion])
-    with_replacement = assign_hunk_ids([staged, group_peer, replacement])
+    with_insertion = assign_hunk_ids(hunks=[staged, group_peer, insertion])
+    with_replacement = assign_hunk_ids(hunks=[staged, group_peer, replacement])
 
     assert with_insertion[0].id == _hash_id("conditional", group_id, "1")
     assert with_replacement[0].id == _hash_id("conditional", group_id, "0")
@@ -175,7 +177,7 @@ def test_single_group_member_uses_stable_base_id() -> None:
     base_id = "a" * 64
     hunk = _make_hunk(hunk_id=base_id, header="@@ -1 +1 @@", status="unstaged")
 
-    [result] = assign_hunk_ids([hunk])
+    [result] = assign_hunk_ids(hunks=[hunk])
 
     assert result.id == base_id
     assert result.id_stability == "stable"
@@ -194,7 +196,7 @@ def test_human_prefix_extends_until_ids_are_unique() -> None:
         ),
     ]
 
-    result = assign_hunk_ids(hunks)
+    result = assign_hunk_ids(hunks=hunks)
 
     assert [hunk.id_prefix_length for hunk in result] == [8, 8, 7]
 
@@ -202,12 +204,12 @@ def test_human_prefix_extends_until_ids_are_unique() -> None:
 def test_count_changes_mixed() -> None:
     lines = [" ctx", "+add1", "+add2", "-del1", " ctx2"]
 
-    assert count_changes(lines) == (2, 1)
+    assert count_changes(lines=lines) == (2, 1)
 
 
 def test_count_changes_empty() -> None:
-    assert count_changes([]) == (0, 0)
+    assert count_changes(lines=[]) == (0, 0)
 
 
 def test_count_changes_context_only() -> None:
-    assert count_changes([" a", " b"]) == (0, 0)
+    assert count_changes(lines=[" a", " b"]) == (0, 0)
