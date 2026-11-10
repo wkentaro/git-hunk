@@ -24,11 +24,8 @@ def _parse_line_number(*, token: str) -> int:
 
 
 def parse_line_spec(*, spec: str, total: int) -> tuple[set[int], bool]:
-    """Parse "-l" value into (line_numbers, exclude_mode).
-
-    "3,5-7"   -> ({3, 5, 6, 7}, False)
-    "^3,^5-7" -> ({3, 5, 6, 7}, True)
-    """
+    # Returns the -l value's line numbers and whether they are excluded:
+    # "3,5-7" gives ({3, 5, 6, 7}, False) and "^3,^5-7" ({3, 5, 6, 7}, True).
     parts = [p.strip() for p in spec.split(",") if p.strip()]
     if not parts:
         raise ValueError("empty line specification")
@@ -248,18 +245,15 @@ def _validate_group_selection(
 def resolve_matching_lines(
     *, hunk: Hunk, patterns: Sequence[str], regex: bool, require_match: bool = True
 ) -> set[int]:
-    """Return 1-based body line numbers of changed lines matching any pattern.
-
-    Patterns are OR'd. Only changed ('+'/'-') lines are considered, matched
-    against their content (the text after the prefix). Raises if nothing matches,
-    so a typo'd pattern never silently selects nothing or everything, unless
-    require_match is False: a multi-hunk caller checks for a match across all
-    of its hunks instead.
-
-    An empty pattern is rejected: it would match every changed line and silently
-    select the whole hunk, mirroring how an empty -l spec errors rather than
-    falling through to select everything.
-    """
+    # Returns 1-based body line numbers. Patterns are OR'd and match only the
+    # content of '+' and '-' lines, after the prefix. Raises if nothing matches,
+    # so a typo'd pattern never silently selects nothing or everything, unless
+    # require_match is False: a multi-hunk caller checks for a match across all
+    # of its hunks instead.
+    #
+    # An empty pattern is rejected: it would match every changed line and
+    # silently select the whole hunk, mirroring how an empty -l spec errors
+    # rather than falling through to select everything.
     if "" in patterns:
         raise ValueError("empty match pattern")
 
@@ -299,13 +293,10 @@ def filter_hunk_lines(
     reverse: bool = False,
     allow_one_sided: bool = False,
 ) -> Hunk:
-    """Return a new Hunk with only the selected lines as changes.
-
-    Unselected changes on the side the apply consumes become context; the other
-    side drops. A forward apply keeps unselected '-' lines and drops '+';
-    reverse=True (unstage, discard) swaps those so the patch applies against the
-    NEW content the index or working tree already holds.
-    """
+    # Unselected changes on the side the apply consumes become context; the
+    # other side drops. A forward apply keeps unselected '-' lines and drops
+    # '+'; reverse=True (unstage, discard) swaps those so the patch applies
+    # against the NEW content the index or working tree already holds.
     header = hunk.diff.split("\n", 1)[0]
     body = _parse_body_lines(body=split_diff_body(diff=hunk.diff))
     total = len(body)

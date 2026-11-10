@@ -184,9 +184,12 @@ class GitRepo:
 
 
 class _WindowsJob:
+    _kernel32: ctypes.CDLL
+    _handle: int | None
+
     def __init__(self, *, kernel32: ctypes.CDLL, handle: int) -> None:
         self._kernel32 = kernel32
-        self._handle: int | None = handle
+        self._handle = handle
 
     @classmethod
     def create_for_suspended_process(

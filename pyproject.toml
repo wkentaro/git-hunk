@@ -59,7 +59,7 @@ include = ["/README.md", "/git_hunk"]
 
 [dependency-groups]
 dev = [
-  "gruff>=0.0.10",
+  "gruff>=0.2.5",
   "mdformat-frontmatter>=2.0.10",
   "mdformat>=0.7",
   "pytest-cov>=4",
@@ -116,3 +116,5 @@ force-single-line = true
 
 [tool.gruff.lint]
 select = ["GR"]
+# GR013 enforces the stricter form of GR001.
+ignore = ["GR001"]
